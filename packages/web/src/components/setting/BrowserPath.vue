@@ -5,7 +5,7 @@
 			size="small"
 			placeholder="输入您的浏览器路径，否则无法正常启动，路径获取教程点击右侧问号查看。"
 			class="w-100"
-			@blur="onDiy"
+			@change="onDiy"
 		>
 			<template #suffix>
 				<a-popover>
@@ -32,12 +32,19 @@
 	</Description>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { store } from '../../store';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 import { remote } from '../../utils/remote';
 import Description from '../Description.vue';
 import Icon from '../Icon.vue';
+import { Folder } from '../../fs/folder';
+import { h } from 'vue';
+import { SyncOutlined } from '@ant-design/icons-vue';
+import { Browser } from '../../fs/browser';
 const launchOptions = store.render.setting.launchOptions;
 
 /**
@@ -49,10 +56,39 @@ async function onDiy() {
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');
 		} else {
-			Message.success('配置浏览器路径成功');
+			const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
+			if (browsers.length > 0) {
+				const modal = Modal.warning({
+					title: '提示',
+					content: () =>
+						h('div', [
+							h(SyncOutlined, { spin: true }),
+							' 检测到您更换浏览器路径，正在删除全部浏览器缓存，否则无法运行...'
+						]),
+					maskClosable: false,
+					closable: false,
+					footer: false
+				});
+
+				for (const browser of browsers) {
+					try {
+						await remote.fs.call('rmSync', browser.cachePath, { recursive: true, force: true });
+					} catch (err) {
+						console.log(err);
+					}
+				}
+
+				setTimeout(() => {
+					modal.close();
+					Message.success('配置浏览器路径成功');
+				}, 3000);
+			}
 		}
 	}
 }
 </script>
 
-<style scoped lang="less"></style>
+<style
+	scoped
+	lang="less"
+></style>
