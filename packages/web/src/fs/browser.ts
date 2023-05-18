@@ -26,10 +26,18 @@ export class Browser extends Entity implements BrowserOptions {
 		this.tags = opts.tags;
 		this.notes = opts.notes;
 		this.checked = opts.checked;
-		this.cachePath = opts.cachePath;
 		this.histories = opts.histories;
 		this.parent = opts.parent;
 		this.playwrightScripts = opts.playwrightScripts;
+
+
+		this.cachePath = opts.cachePath;
+		// 解析相对路径
+		if (opts.cachePath === '$CACHE_PATH') {
+			remote.path.call('join', store.paths.userDataDirsFolder, this.uid).then((result) => {
+				this.cachePath = result
+			})
+		} 
 	}
 
 	/**

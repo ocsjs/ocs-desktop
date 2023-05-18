@@ -150,7 +150,10 @@
 	</div>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { fetchRemoteNotify, date, about } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
@@ -158,8 +161,10 @@ import { Message, Modal } from '@arco-design/web-vue';
 import { store } from '../store/index';
 import { electron } from '../utils/node';
 import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities } from '../fs/index';
-import { root } from '../fs/folder';
+import { Folder, root } from '../fs/folder';
 import { h } from 'vue';
+import { FolderOptions, FolderType } from '../fs/interface';
+import { Browser } from '../fs/browser';
 
 const { shell } = electron;
 
@@ -233,7 +238,28 @@ function exportData() {
 		})
 		.then(async ({ canceled, filePath }) => {
 			if (canceled === false && filePath) {
-				await remote.fs.call('copyFileSync', store.paths['config-path'], filePath + '.ocsdata');
+				const _store: typeof store = JSON.parse(
+					(await remote.fs.call('readFileSync', store.paths['config-path'], { encoding: 'utf8' })).toString()
+				);
+				const root = _store.render.browser.root;
+				// 遍历文件夹，将每个浏览器的缓存路径改成相对路径
+				const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
+				while (folders.length) {
+					const folder = folders.shift();
+					if (Object.keys(folder?.children || {}).length) {
+						for (const key in folder?.children) {
+							if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
+								const element = folder?.children[key];
+								if (element.type === 'folder') {
+									folders.push(element);
+								} else if (element.type === 'browser') {
+									element.cachePath = '$CACHE_PATH';
+								}
+							}
+						}
+					}
+				}
+				await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
 				Message.success('导出成功！');
 			}
 		});
@@ -266,7 +292,10 @@ function reset() {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .title {
 	-webkit-app-region: drag;
 	width: 100%;
