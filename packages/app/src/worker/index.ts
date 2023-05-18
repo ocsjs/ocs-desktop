@@ -228,18 +228,14 @@ export async function launchScripts({
 }) {
 	return new Promise<void>((resolve, reject) => {
 		chromium
-			.launchPersistentContext('', {
+			.launchPersistentContext(userDataDir, {
 				viewport: null,
 				executablePath,
-				ignoreDefaultArgs: true,
 				ignoreHTTPSErrors: true,
 				args: [
 					'--window-position=0,0',
 					'--no-first-run',
-					`--user-data-dir=${userDataDir}`,
-					// '--enable-automation',
 					'--no-default-browser-check',
-					'--remote-debugging-pipe',
 					...args
 				],
 				headless
@@ -381,7 +377,7 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page) 
 	for (const url of urls) {
 		try {
 			await page.goto(url);
-		} catch {}
+		} catch { }
 	}
 
 	// 检测脚本是否安装/更新完毕
