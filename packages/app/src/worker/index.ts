@@ -187,7 +187,7 @@ export class ScriptWorker {
 /** 格式化浏览器拓展启动参数 */
 function formatExtensionArguments(extensionPaths: string[]) {
 	const paths = extensionPaths.map((p) => p.replace(/\\/g, '/')).join(',');
-	return [`--disable-extensions-except=${paths}`, `--load-extension=${paths}`];
+	return paths.length === 0 ? [] : [`--disable-extensions-except=${paths}`, `--load-extension=${paths}`];
 }
 
 function loggerPrefix() {
