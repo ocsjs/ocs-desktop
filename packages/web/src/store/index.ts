@@ -1,7 +1,7 @@
 import { reactive } from 'vue';
 import { remote } from '../utils/remote';
 import defaultsDeep from 'lodash/defaultsDeep';
-import { AppStore, UserScripts } from '@ocsjs/app';
+import { AppStore, UserScripts } from '@ocs-desktop/app';
 import { CommonUserScript } from '../types/user.script';
 import { FolderOptions } from '../fs/interface';
 import { Browser } from '../fs/browser';

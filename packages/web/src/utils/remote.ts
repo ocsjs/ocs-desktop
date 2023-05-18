@@ -1,13 +1,13 @@
 import { BrowserWindow, App, Dialog, WebContents, DesktopCapturer } from 'electron';
 import { notify } from './notify';
-import { RemoteMethods } from '@ocsjs/app';
+import { RemoteMethods } from '@ocs-desktop/app';
 import type fs from 'fs';
 import type os from 'os';
 import type path from 'path';
 import type crypto from 'crypto';
 import type Store from 'electron-store';
 import { electron } from './node';
-import type { OCSApi } from '@ocsjs/common';
+import type { OCSApi } from '@ocs-desktop/common';
 const { ipcRenderer } = electron;
 
 /**
