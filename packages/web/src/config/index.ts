@@ -106,7 +106,7 @@ export const config = reactive({
 			search: async (keyword: string, page: number, size: number) => {
 				const data = await remote.methods.call(
 					'get',
-					'https://scriptcat.org/api/v1/scripts?' +
+					'https://scriptcat.org/api/v2/scripts?' +
 						new URLSearchParams({
 							count: size.toString(),
 							page: page <= 0 ? '1' : page.toString(),
@@ -114,7 +114,7 @@ export const config = reactive({
 						})
 				);
 
-				let list = data.list as ScriptCatUserScript[];
+				let list = data.data.list as ScriptCatUserScript[];
 
 				list = list.sort((a, b) => {
 					return b.today_install - a.today_install;
