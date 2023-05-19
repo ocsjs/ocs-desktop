@@ -1,6 +1,6 @@
 {
 	"name": "@ocs-desktop/app",
-	"version": "2.1.3",
+	"version": "2.1.5",
 	"description": "desktop for userscript",
 	"main": "./lib/index.js",
 	"types": "./lib/types.d.ts",

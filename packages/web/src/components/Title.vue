@@ -204,8 +204,28 @@ function importData() {
 			if (canceled === false && filePaths.length) {
 				try {
 					const text = await remote.fs.call('readFileSync', filePaths[0], { encoding: 'utf8' });
-					JSON.parse(text.toString());
-					await remote.fs.call('copyFileSync', filePaths[0], store.paths['config-path']);
+					const _store: typeof store = JSON.parse(text.toString());
+
+					const root = _store.render.browser.root;
+					// 遍历文件夹，将每个浏览器的缓存路径解析为用户数据目录下的文件夹
+					const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
+					while (folders.length) {
+						const folder = folders.shift();
+						if (Object.keys(folder?.children || {}).length) {
+							for (const key in folder?.children) {
+								if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
+									const entity = folder?.children[key];
+									if (entity.type === 'folder') {
+										folders.push(entity);
+									} else if (entity.type === 'browser' && entity.cachePath === '$CACHE_PATH') {
+										entity.cachePath = await remote.path.call('join', store.paths.userDataDirsFolder, entity.uid);
+									}
+								}
+							}
+						}
+					}
+					// 导入 store render 数据
+					store.render = _store.render;
 
 					Modal.success({
 						title: '导入成功',
@@ -249,11 +269,11 @@ function exportData() {
 					if (Object.keys(folder?.children || {}).length) {
 						for (const key in folder?.children) {
 							if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
-								const element = folder?.children[key];
-								if (element.type === 'folder') {
-									folders.push(element);
-								} else if (element.type === 'browser') {
-									element.cachePath = '$CACHE_PATH';
+								const entity = folder?.children[key];
+								if (entity.type === 'folder') {
+									folders.push(entity);
+								} else if (entity.type === 'browser') {
+									entity.cachePath = '$CACHE_PATH';
 								}
 							}
 						}
