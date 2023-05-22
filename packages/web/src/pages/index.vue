@@ -91,7 +91,16 @@ import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';
 import { router, routes, CustomRouteType } from '../route';
 import { store } from '../store';
-import { about, changeTheme, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch, sleep } from '../utils';
+import {
+	about,
+	changeTheme,
+	clearBrowserCaches,
+	fetchRemoteNotify,
+	setAlwaysOnTop,
+	setAutoLaunch,
+	size,
+	sleep
+} from '../utils';
 import { notify } from '../utils/notify';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
@@ -180,6 +189,14 @@ onMounted(async () => {
 				close: false
 			}
 		);
+	});
+
+	/** 检测浏览器缓存大小，超过10GB则提示 */
+	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
+		console.log('当前浏览器总缓存大小', size(totalSize));
+		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
+			clearBrowserCaches(totalSize);
+		}
 	});
 
 	/** 监听主题变化 */

@@ -1,5 +1,5 @@
 {
-	"cSpell.words": ["ICVE", "userscript", "userscripts"],
+	"cSpell.words": ["ICVE", "ocsjs", "userscript", "userscripts"],
 	"eslint.validate": ["javascript", "javascriptreact", "vue"],
 	"editor.formatOnSave": true,
 	"editor.codeActionsOnSave": {

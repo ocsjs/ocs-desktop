@@ -242,3 +242,51 @@ export function setAutoLaunch() {
 export function setAlwaysOnTop() {
 	remote.win.call('setAlwaysOnTop', store.window.alwaysOnTop);
 }
+
+export function clearBrowserCaches(totalSize: number) {
+	Modal.confirm({
+		simple: false,
+		title: '清除浏览器缓存',
+		content: () => {
+			return h('div', [
+				h('p', { class: 'text-secondary' }, [
+					'提示：浏览器缓存主要存储一些Cookie，网页数据，如果占用非常大可以清除，不会影响浏览器正常使用。'
+				]),
+				h('p', ['当前浏览器缓存总大小：', size(totalSize)])
+			]);
+		},
+		okText: '清除缓存',
+		onOk() {
+			remote.fs
+				.call('readdirSync', store.paths.userDataDirsFolder, {} as any)
+				.then(async (dirs) => {
+					for (const dir of dirs) {
+						remote.fs.call('rmSync', await remote.path.call('join', store.paths.userDataDirsFolder, String(dir)), {
+							recursive: true,
+							force: true
+						});
+					}
+				})
+				.catch((err) => {
+					Message.error(err);
+				});
+		}
+	});
+}
+
+export function size(num: number) {
+	return (
+		(
+			[
+				['GB', Math.pow(1024, 3)],
+				['MB', Math.pow(1024, 2)],
+				['KB', Math.pow(1024, 1)],
+				['B', 1]
+			] as [string, number][]
+		)
+			.map((i) => [i[0], Math.floor(num / i[1])])
+			.find((i) => parseFloat(i[1].toString()) > 0)
+			// @ts-ignore
+			?.reduce((pre, cur) => cur + pre)
+	);
+}

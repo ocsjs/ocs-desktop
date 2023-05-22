@@ -1,8 +1,16 @@
 <template>
-	<span class="row flex-nowrap mb-1">
-		<span class="col-3 desc-label"> {{ label }} : </span>
+	<a-row class="row flex-nowrap mb-1">
+		<a-col
+			flex="200px"
+			class="desc-label"
+		>
+			{{ label }} :
+		</a-col>
 
-		<span class="col-9 d-inline-flex align-items-center">
+		<a-col
+			flex="auto"
+			class="d-inline-flex align-items-center"
+		>
 			<span
 				v-if="desc"
 				class="desc"
@@ -11,11 +19,14 @@
 				{{ String(desc) }}
 			</span>
 			<slot />
-		</span>
-	</span>
+		</a-col>
+	</a-row>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { toRefs } from 'vue';
 interface DescriptionProps {
 	label: string;
@@ -29,7 +40,10 @@ const props = withDefaults(defineProps<DescriptionProps>(), {
 const { label, desc, textClass } = toRefs(props);
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .desc {
 	word-wrap: break-word;
 	word-break: break-all;

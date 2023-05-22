@@ -1,6 +1,6 @@
 {
 	"name": "ocs-desktop",
-	"version": "2.1.3",
+	"version": "1.0.0",
 	"description": "desktop for userscript",
 	"files": [
 		"lib",
@@ -60,5 +60,5 @@
 		"commitizen": {
 			"path": "./node_modules/cz-conventional-changelog"
 		}
-	} 
+	}
 }

@@ -76,6 +76,27 @@
 				</Description>
 			</Card>
 
+			<Card title="其他设置">
+				<Description label="浏览器缓存大小预警">
+					<a-input-number
+						v-model="store.render.setting.browser.cachesSizeWarningPoint"
+						style="width: 200px"
+						size="small"
+					>
+						<template #append> GB </template>
+						<template #suffix>
+							<a-popover>
+								<template #content>
+									<div>当前浏览器缓存总大小超过此数字时则会弹出警告弹窗。</div>
+									<div>也可在左上角工具中找到 "清除浏览器缓存" 功能</div>
+								</template>
+								<Icon type="help_outline" />
+							</a-popover>
+						</template>
+					</a-input-number>
+				</Description>
+			</Card>
+
 			<Card title="路径设置">
 				<Path
 					label="浏览器缓存路径"
@@ -114,7 +135,10 @@
 	</div>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import Card from '../../components/Card.vue';
 import Description from '../../components/Description.vue';
 import Path from '../../components/Path.vue';
@@ -124,6 +148,7 @@ import BrowserPath from '../../components/setting/BrowserPath.vue';
 import OCSConfigs from '../../components/OCSConfigs.vue';
 import { reactive } from 'vue';
 import { changeTheme } from '../../utils';
+import Icon from '../../components/Icon.vue';
 
 const state = reactive({
 	/** 是否加载 */
@@ -142,7 +167,10 @@ async function reset() {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .setting {
 	margin: 0 auto;
 	min-height: 500px;

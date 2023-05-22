@@ -60,6 +60,10 @@ export type WebStore = {
 			/** 是否同步OCS配置 */
 			openSync: boolean;
 		};
+		browser: {
+			/** 浏览器缓存大小预警阈值（GB） */
+			cachesSizeWarningPoint: number;
+		};
 	};
 	state: {
 		/** 是否第一次打开 */
@@ -121,6 +125,9 @@ export const store: AppStore & { render: WebStore } = reactive(
 						currentProjectName: '',
 						store: {},
 						openSync: false
+					},
+					browser: {
+						cachesSizeWarningPoint: 10
 					}
 				},
 				state: {

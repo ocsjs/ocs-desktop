@@ -11,6 +11,7 @@ import { OCSApi, getValidBrowsers } from '@ocs-desktop/common';
 import si from 'systeminformation';
 import { store } from '../store';
 import { exportExcel } from '../utils/index';
+import { readdir, stat } from 'fs/promises';
 
 /**
  * 注册主进程远程通信事件
@@ -91,7 +92,8 @@ const methods = {
 	unzip: unzip,
 	getValidBrowsers: getValidBrowsers,
 	systemProcesses: () => si.processes(),
-	exportExcel: exportExcel
+	exportExcel: exportExcel,
+	statisticFolderSize: statisticFolderSize
 };
 
 /**
@@ -119,3 +121,20 @@ export type RemoteMethods = typeof methods;
 
 const _registerRemoteEvent = registerRemoteEvent;
 export { _registerRemoteEvent as registerRemoteEvent };
+
+async function statisticFolderSize(dir: string) {
+	const files = await readdir(dir, { withFileTypes: true });
+
+	const paths: Promise<number>[] = files.map(async (file) => {
+		const _path = path.join(dir, file.name);
+		if (file.isDirectory()) return await statisticFolderSize(_path);
+
+		if (file.isFile()) {
+			const { size } = await stat(_path);
+			return size;
+		}
+		return 0;
+	});
+
+	return (await Promise.all(paths)).flat().reduce((i, size) => i + size, 0);
+}
