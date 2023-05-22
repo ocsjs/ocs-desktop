@@ -6,14 +6,20 @@
 
 		<div class="mb-2">
 			<a-space>
-				<div>
-					<a-button
-						size="mini"
-						@click="addScriptFromFile"
-					>
-						+ 添加本地脚本
-					</a-button>
-				</div>
+				<a-button
+					size="mini"
+					type="outline"
+					@click="addScriptFromFile"
+				>
+					+ 添加本地脚本
+				</a-button>
+				<a-button
+					size="mini"
+					type="outline"
+					@click="addScriptFromURL"
+				>
+					+ 添加网络脚本
+				</a-button>
 				<a-button
 					size="mini"
 					@click="enableAll"
@@ -90,7 +96,7 @@
 
 							<a-tooltip content="来源网站">
 								<a-tag>
-									{{ getSearchEngine(script.url)?.name || '未知来源' }}
+									{{ getSearchEngine(script.url)?.name || getUserScriptSource(script.url) }}
 								</a-tag>
 							</a-tooltip>
 						</template>
@@ -195,15 +201,19 @@
 	</div>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
+<script
+	setup
+	lang="ts"
+>
+import { ref, h } from 'vue';
 import { config } from '../../config';
 import { store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
 import ScriptList from './ScriptList.vue';
 import Icon from '../../components/Icon.vue';
-import { addScriptFromFile } from '../../utils/user-scripts';
+import { addScriptFromFile, addScriptFromUrl } from '../../utils/user-scripts';
 import { electron } from '../../utils/node';
+import { Input, Modal } from '@arco-design/web-vue';
 
 const { shell } = electron;
 
@@ -272,9 +282,46 @@ function closeAll() {
 function getSearchEngine(url: string) {
 	return config.scriptSearchEngines.find((e) => new URL(e.homepage).host === new URL(url).host);
 }
+
+/**
+ * 获取脚本来源
+ */
+function getUserScriptSource(url: string) {
+	const host = new URL(url).host;
+	if (host.includes('ocsjs.com')) {
+		return '官方脚本';
+	} else if (host.includes('github.com')) {
+		return 'Github';
+	} else {
+		return '未知来源';
+	}
+}
+
+function addScriptFromURL() {
+	const url = ref('');
+	Modal.confirm({
+		title: '加载网络脚本',
+		simple: false,
+		content: () =>
+			h('div', [
+				h(Input, {
+					placeholder: '输入脚本链接（通常以 .user.js 结尾的链接）',
+					onChange(value) {
+						url.value = value;
+					}
+				})
+			]),
+		onOk() {
+			addScriptFromUrl(url.value);
+		}
+	});
+}
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .actions {
 	div + div {
 		margin-left: 4px;
