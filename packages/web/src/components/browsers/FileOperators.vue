@@ -67,7 +67,10 @@
 	</a-space>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { currentFolder } from '../../fs';
 import { Browser } from '../../fs/browser';
 import { Folder } from '../../fs/folder';
@@ -130,8 +133,6 @@ function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywrightScri
 		histories: [{ action: '创建', time: Date.now() }],
 		cachePath: inBrowser ? '' : folder.endsWith(spe) ? folder + id : folder + spe + id,
 		tags: [],
-		// 使用拷贝消除对象的响应式特性，防止每个浏览器配置响应式同步。
-		store: opts?.store ? JSON.parse(JSON.stringify(opts?.store)) : {},
 		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
 	});
 }
@@ -161,4 +162,7 @@ async function multipleCreate(
 }
 </script>
 
-<style scoped lang="less"></style>
+<style
+	scoped
+	lang="less"
+></style>

@@ -8,7 +8,7 @@
 		/>
 
 		<template
-			v-for="(script, index) of scripts"
+			v-for="(script, index) of scripts.filter((s) => s.name.includes(state.search))"
 			:key="index"
 		>
 			<div
@@ -58,7 +58,10 @@
 	</div>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { scripts as Scripts } from '@ocs-desktop/app/src/scripts/index';
 import { ref, reactive, computed } from 'vue';
 import { RawPlaywrightScript } from './index';
@@ -113,7 +116,10 @@ function isSelected(ps: RawPlaywrightScript) {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .ps {
 	border: 1px solid #e1e1e18c;
 	padding: 6px;

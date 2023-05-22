@@ -95,8 +95,11 @@
 	</div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive, toRefs, onDeactivated, computed } from 'vue';
+<script
+	setup
+	lang="ts"
+>
+import { ref, reactive, toRefs, onDeactivated, computed, watch, onMounted } from 'vue';
 import { RawPlaywrightScript } from '.';
 import { Modal, TableColumnData } from '@arco-design/web-vue';
 import uniqueId from 'lodash/uniqueId';
@@ -137,41 +140,19 @@ const state = reactive({
 	browserNameFields: arrayLikeConfigs.value.map((c) => c.key)
 });
 
-const columns = ref<TableColumnData[]>([
-	{
-		title: '',
-		dataIndex: 'index',
-		slotName: 'index',
-		width: 42,
-		bodyCellClass: 'ps-table-index'
-	},
-	{
-		title: '浏览器名',
-		dataIndex: 'browserName',
-		slotName: 'browserName',
-		width: 120
-	}
-]);
-
+const data = ref<any[]>(createData());
+const columns = ref<TableColumnData[]>();
 const tableRef = ref();
 
-const data = ref<any[]>(
-	new Array(1000).fill(1).map((item, index) => {
-		item = Object.create({});
-		item.index = index;
-		item.key = uniqueId();
-		return item;
-	})
-);
+watch(rawPlaywrightScript, () => {
+	data.value = createData();
+	initColumns();
+	state.browserNameFields = arrayLikeConfigs.value.map((c) => c.key);
+});
 
-for (const config of arrayLikeConfigs.value) {
-	columns.value.push({
-		title: config.label,
-		dataIndex: config.key,
-		slotName: 'data',
-		bodyCellClass: 'ps-body-cell'
-	});
-}
+onMounted(() => {
+	initColumns();
+});
 
 onDeactivated(() => {
 	state.browserNameFields = [];
@@ -185,6 +166,41 @@ onDeactivated(() => {
 		}
 	];
 });
+
+function initColumns() {
+	columns.value = [
+		{
+			title: '',
+			dataIndex: 'index',
+			slotName: 'index',
+			width: 42,
+			bodyCellClass: 'ps-table-index'
+		},
+		{
+			title: '浏览器名',
+			dataIndex: 'browserName',
+			slotName: 'browserName',
+			width: 120
+		}
+	];
+	for (const config of arrayLikeConfigs.value) {
+		columns.value.push({
+			title: config.label,
+			dataIndex: config.key,
+			slotName: 'data',
+			bodyCellClass: 'ps-body-cell'
+		});
+	}
+}
+
+function createData() {
+	return new Array(1000).fill(1).map((item, index) => {
+		item = Object.create({});
+		item.index = index;
+		item.key = uniqueId();
+		return item;
+	});
+}
 
 function onRecordInput(index: number) {
 	state.validDataIndex.add(index);
@@ -303,7 +319,10 @@ function importTemplateExcel() {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 :deep(.arco-table-cell) {
 	padding: 0px;
 }
