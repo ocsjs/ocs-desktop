@@ -10,6 +10,7 @@ export function slowType(page: Page, selector: string, text: string) {
 export async function breakVerifyCode(
 	page: Page,
 	imageElement: ElementHandle<any>,
+	inputElement: ElementHandle<any>,
 	options: { ocrApiUrl: string; ocrApiImageKey: string }
 ) {
 	const box = await imageElement.boundingBox();
@@ -24,7 +25,7 @@ export async function breakVerifyCode(
 		if (canOCR) {
 			/** 破解验证码 */
 			if (code) {
-				await page.fill('#vercode', code);
+				await inputElement.fill(code);
 			} else if (error) {
 				throw new Error(error);
 			}

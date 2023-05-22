@@ -19,18 +19,22 @@ export class ScriptWorker {
 	extensionPaths: string[] = [];
 	/** 执行的自动化脚本列表 */
 	playwrightScripts: PS[] = [];
+	/** 可关闭的浏览器拓展主页 */
+	closeableExtensionHomepages: string[] = [];
 	store?: AppStore;
 
 	init({
 		store,
 		uid,
 		cachePath,
-		playwrightScripts
+		playwrightScripts,
+		closeableExtensionHomepages
 	}: {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
 		playwrightScripts: PS[];
+		closeableExtensionHomepages: string[];
 	}) {
 		this.debug('正在初始化进程...');
 
@@ -44,6 +48,7 @@ export class ScriptWorker {
 
 		// 自动化脚本
 		this.playwrightScripts = playwrightScripts;
+		this.closeableExtensionHomepages = closeableExtensionHomepages;
 
 		// 初始化日志
 		this.logger = new LoggerCore(store.paths['logs-path'], false, 'script', path.basename(cachePath));
@@ -54,7 +59,7 @@ export class ScriptWorker {
 	async launch(
 		options: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 			userDataDir: string;
-			scripts: string[];
+			userscripts: string[];
 		}
 	) {
 		if (this.extensionPaths.length) {
@@ -69,9 +74,9 @@ export class ScriptWorker {
 		/** 添加拓展启动参数 */
 		options.args = formatExtensionArguments(this.extensionPaths);
 
-		/** 启动脚本 */
+		/** 启动浏览器 */
 		try {
-			await launchScripts({
+			await launchBrowser({
 				onLaunch: (browser) => {
 					this.browser = browser;
 
@@ -95,13 +100,13 @@ export class ScriptWorker {
 					// 浏览器启动完成
 					send('launched');
 				},
-				extensionPaths: this.extensionPaths,
+
 				playwrightScripts: this.playwrightScripts,
 				bookmarksPageUrl: this.store
 					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks`
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
-				browserUid: this.uid,
+				closeableExtensionHomepages: this.closeableExtensionHomepages,
 				...options
 			});
 		} catch (err) {
@@ -187,7 +192,7 @@ export class ScriptWorker {
 /** 格式化浏览器拓展启动参数 */
 function formatExtensionArguments(extensionPaths: string[]) {
 	const paths = extensionPaths.map((p) => p.replace(/\\/g, '/')).join(',');
-	return paths.length === 0 ? [] : [`--disable-extensions-except=${paths}`, `--load-extension=${paths}`];
+	return paths.length === 0 ? [] : [`--load-extension=${paths}`];
 }
 
 function loggerPrefix() {
@@ -197,33 +202,30 @@ function loggerPrefix() {
 /**
  * 运行脚本
  */
-export async function launchScripts({
+export async function launchBrowser({
 	executablePath,
 	headless,
 	args,
 	userDataDir,
-	scripts,
-	extensionPaths,
+	userscripts,
 	playwrightScripts,
+	closeableExtensionHomepages,
 	bookmarksPageUrl,
 	serverPort,
-	browserUid,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
 	userDataDir: string;
 	/** 自定义用户脚本URL */
-	scripts: string[];
-	/** 浏览器拓展路径 */
-	extensionPaths: any[];
+	userscripts: string[];
+	/** 可关闭的浏览器拓展主页 */
+	closeableExtensionHomepages: string[];
 	/** 自动化脚本 */
 	playwrightScripts: PS[];
 	/** 初始导航页地址 */
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
 	serverPort: number;
-	/** 浏览器UID */
-	browserUid: string;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
@@ -232,12 +234,8 @@ export async function launchScripts({
 				viewport: null,
 				executablePath,
 				ignoreHTTPSErrors: true,
-				args: [
-					'--window-position=0,0',
-					'--no-first-run',
-					'--no-default-browser-check',
-					...args
-				],
+				ignoreDefaultArgs: ['--disable-extensions'],
+				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args],
 				headless
 			})
 			.then(async (browser) => {
@@ -253,7 +251,10 @@ export async function launchScripts({
 				});
 
 				try {
-					const html = async (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => {
+					/**
+					 * 显示步骤提示
+					 */
+					const step = async (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => {
 						const { loading = true, warn = false } = opts || {};
 						await blankPage.evaluate(
 							(state) => {
@@ -270,92 +271,21 @@ export async function launchScripts({
 					};
 
 					const [blankPage] = browser.pages();
+					// 加载本地导航页
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');
+					// 安装用户脚本
+					const warn = await setupUserScripts({ browser, userscripts, step });
+					// 运行自动化脚本
+					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
+					// 关闭拓展加载时弹出的首页
+					await closeExtensionHomepage({ browser, closeableExtensionHomepages });
 
-					const setup = async () => {
-						const warn: string[] = [];
-						// 安装用户脚本
-						if (scripts.length) {
-							await html('【提示】正在安装用户脚本。。。');
-							const [page] = browser.pages();
-							// 载入本地脚本
-							try {
-								await initScripts(scripts, browser, page);
-							} catch (e) {
-								// @ts-ignore
-								console.error(e);
-								// await html('脚本载入失败，请手动更新，或者忽略。' + e.message);
-							}
-						} else {
-							warn.push('检测到您的软件中并未安装任何用户脚本，或者全部脚本处于不加载状态，可能会导致预期脚本不运行。');
-						}
+					await step(['初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
 
-						if (playwrightScripts.length) {
-							// 执行自动化脚本
-							for (const ps of playwrightScripts) {
-								await html(`【提示】正在执行自动化脚本 - ${ps.name} ...`);
-								const configs = transformScriptConfigToRaw(ps.configs);
-
-								for (const script of PlaywrightScripts) {
-									if (script.name === ps.name) {
-										script.on('script-data', console.log);
-										script.on('script-error', console.error);
-										try {
-											await script.run(await browser.newPage(), configs, {
-												ocrApiUrl: `http://localhost:${serverPort}/ocr`,
-												ocrApiImageKey: 'image',
-												detBackgroundKey: 'det_bg',
-												detTargetKey: 'det_target'
-											});
-										} catch (err) {
-											console.error(err);
-										}
-										break;
-									}
-								}
-							}
-						}
-
-						await html(['初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
-					};
-
-					if (extensionPaths.length === 0) {
-						await html('【警告】浏览器脚本管理拓展为空！将无法运行脚本，如想运行脚本，请在软件左侧浏览器拓展中安装。', {
-							loading: false,
-							warn: true
-						});
-
-						// 触发onLaunch事件
-						onLaunch?.(browser);
-						// 启动完成
-						resolve();
-					} else {
-						const extensionLoadListener = async (page: Page) => {
-							try {
-								clearTimeout(extensionLoadListenerInterval);
-								await page.close();
-								await setup();
-							} catch (err) {
-								reject(err);
-							}
-
-							// 触发onLaunch事件
-							onLaunch?.(browser);
-							// 启动完成
-							resolve();
-						};
-
-						// 等待拓展加载完成
-						browser.once('page', extensionLoadListener);
-
-						// 一分钟后，如果拓展还没加载完成，提示用户重新启动浏览器
-						const extensionLoadListenerInterval = setTimeout(() => {
-							browser.off('page', extensionLoadListener);
-							html('【警告】浏览器拓展加载超时，请尝试重启浏览器。', { loading: false, warn: true }).catch(reject);
-						}, 60 * 1000);
-
-						await html('【提示】正在等待浏览器拓展加载。。。');
-					}
+					// 触发onLaunch事件
+					onLaunch?.(browser);
+					// 启动完成
+					resolve();
 				} catch (err) {
 					reject(err);
 				}
@@ -377,7 +307,7 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page) 
 	for (const url of urls) {
 		try {
 			await page.goto(url);
-		} catch { }
+		} catch {}
 	}
 
 	// 检测脚本是否安装/更新完毕
@@ -387,6 +317,7 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page) 
 			if (installPage) {
 				// 置顶页面，防止点击安装失败
 				await installPage.bringToFront();
+				await sleep(500);
 				await installPage.evaluate(() => {
 					const btn = (document.querySelector('[class*="primary"]') ||
 						document.querySelector('[type*="button"]')) as HTMLElement;
@@ -433,4 +364,83 @@ function transformScriptConfigToRaw(configs: PS['configs']) {
 		}
 	}
 	return raw;
+}
+
+/**
+ * 安装用户脚本
+ */
+async function setupUserScripts(opts: {
+	browser: BrowserContext;
+	userscripts: string[];
+	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
+}) {
+	const { userscripts, browser, step } = opts;
+
+	const warn: string[] = [];
+	// 安装用户脚本
+	if (userscripts.length) {
+		await step('【提示】正在安装用户脚本。。。');
+		const [page] = browser.pages();
+		// 载入本地脚本
+		try {
+			await initScripts(userscripts, browser, page);
+		} catch (e) {
+			// @ts-ignore
+			console.error(e);
+			// await html('脚本载入失败，请手动更新，或者忽略。' + e.message);
+		}
+	} else {
+		warn.push('检测到您的软件中并未安装任何用户脚本，或者全部脚本处于不加载状态，可能会导致预期脚本不运行。');
+	}
+
+	return warn;
+}
+
+/**
+ * 运行自动化脚本
+ */
+async function runPlaywrightScripts(opts: {
+	browser: BrowserContext;
+	serverPort: number;
+	playwrightScripts: PS[];
+	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
+}) {
+	const { playwrightScripts, browser, serverPort, step } = opts;
+
+	if (playwrightScripts.length) {
+		// 执行自动化脚本
+		for (const ps of playwrightScripts) {
+			await step(`【提示】正在执行自动化脚本 - ${ps.name} ...`);
+			const configs = transformScriptConfigToRaw(ps.configs);
+
+			for (const script of PlaywrightScripts) {
+				if (script.name === ps.name) {
+					script.on('script-data', console.log);
+					script.on('script-error', console.error);
+					try {
+						await script.run(await browser.newPage(), configs, {
+							ocrApiUrl: `http://localhost:${serverPort}/ocr`,
+							ocrApiImageKey: 'image',
+							detBackgroundKey: 'det_bg',
+							detTargetKey: 'det_target'
+						});
+					} catch (err) {
+						console.error(err);
+					}
+					break;
+				}
+			}
+		}
+	}
+}
+
+/**
+ * 关闭浏览器拓展主页
+ */
+async function closeExtensionHomepage(opts: { browser: BrowserContext; closeableExtensionHomepages: string[] }) {
+	for (const page of opts.browser.pages()) {
+		if (opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage))) {
+			await page.close();
+		}
+	}
 }

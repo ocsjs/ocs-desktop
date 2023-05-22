@@ -185,5 +185,9 @@ export const config = reactive({
 				});
 			}
 		}
-	] as ScriptSearchEngine[]
+	] as ScriptSearchEngine[],
+	/**
+	 * 可关闭的浏览器拓展主页，用于拓展加载时自动关闭主页，节省浏览器内存
+	 */
+	closeableExtensionHomepages: ['docs.scripts.org', 'tampermonkey.net/index.php']
 });

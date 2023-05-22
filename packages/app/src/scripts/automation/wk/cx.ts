@@ -109,10 +109,11 @@ function login(
 		const tryLogin = async () => {
 			tryCount--;
 			const area = await page.$('#numVerCode');
-			if (area !== null) {
+			const codeInput = await page.$('#vercode');
+			if (area && codeInput) {
 				/** 破解验证码 */
 				if (opts?.ocrApiUrl && opts?.ocrApiImageKey && area) {
-					await breakVerifyCode(page, area, {
+					await breakVerifyCode(page, area, codeInput, {
 						ocrApiUrl: opts.ocrApiUrl,
 						ocrApiImageKey: opts.ocrApiImageKey
 					});
