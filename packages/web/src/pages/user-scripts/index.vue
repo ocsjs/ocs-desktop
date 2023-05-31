@@ -67,12 +67,12 @@
 											label="脚本主页"
 										>
 											<template v-if="script.info.url.startsWith('http')">
-												<a :href="script.info?.url || ''"> {{ script.info?.url || '' }} </a>
+												<a :href="script.info!.url "> {{ script.info!.url }} </a>
 											</template>
 											<template v-else>
 												<div
 													style="text-decoration: underline; cursor: pointer"
-													@click="shell.showItemInFolder(script.info.url)"
+													@click="shell.showItemInFolder(script.info!.url)"
 												>
 													{{ script.info?.url }}
 												</div>
@@ -201,7 +201,10 @@
 	</div>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { ref, h } from 'vue';
 import { config } from '../../config';
 import { store, StoreUserScript } from '../../store';
@@ -315,7 +318,10 @@ function addScriptFromURL() {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .actions {
 	div + div {
 		margin-left: 4px;

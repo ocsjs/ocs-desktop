@@ -8,9 +8,9 @@ import { store } from '../store';
 export function addScriptFromFile() {
 	remote.dialog
 		.call('showOpenDialog', {
-			title: '选择脚本文件(.user.js)',
+			title: '选择脚本文件，后缀必须为 (.user.js)',
 			buttonLabel: '添加脚本',
-			filters: [{ extensions: ['js', 'user.js'], name: '用户脚本' }]
+			filters: [{ extensions: ['user.js'], name: '用户脚本' }]
 		})
 		.then(async ({ canceled, filePaths }) => {
 			if (canceled === false && filePaths.length) {
