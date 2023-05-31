@@ -28,7 +28,7 @@ if [ "$isRelease" = "y" ]; then
     # 更新日志
     npm run changelog &&
     # 保存
-    git add package.json CHANGELOG.md &&
+    git add ./packages/app/package.json package.json CHANGELOG.md &&
     git commit -m "version release $version" &&
     git tag "$version" &&
     # 发布

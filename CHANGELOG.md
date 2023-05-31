@@ -1,3 +1,12 @@
+## [2.2.3](https://github.com/ocsjs/ocs-desktop/compare/2.2.2...2.2.3) (2023-05-31)
+
+
+### Bug Fixes
+
+* **web:** 修复加载本地脚本时应该指定为只有 .user.js 才能加载 ([8cc7114](https://github.com/ocsjs/ocs-desktop/commit/8cc71149b2e97084d35bacf3f40d2dd543fee20e))
+
+
+
 ## [2.2.2](https://github.com/ocsjs/ocs-desktop/compare/2.2.1...2.2.2) (2023-05-31)
 
 
