@@ -1,4 +1,8 @@
-## 2.2.1 (2023-05-31)
+## [2.2.2](https://github.com/ocsjs/ocs-desktop/compare/2.2.1...2.2.2) (2023-05-31)
+
+
+
+## [2.2.1](https://github.com/ocsjs/ocs-desktop/compare/911ede6cea9fc7f11d972d5cba0d75e24a46de1e...2.2.1) (2023-05-31)
 
 
 ### Bug Fixes
