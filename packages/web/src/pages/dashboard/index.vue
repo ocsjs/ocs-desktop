@@ -208,10 +208,7 @@
 	</div>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { onDeactivated, watch, reactive, computed, onActivated } from 'vue';
 import { Process, processes } from '../../utils/process';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
@@ -385,10 +382,7 @@ function openBrowser(uid: string) {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 .dashboard {
 	display: grid;
 	gap: 10px;

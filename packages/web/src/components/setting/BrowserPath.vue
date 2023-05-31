@@ -32,10 +32,7 @@
 	</Description>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { store } from '../../store';
 import { Message, Modal } from '@arco-design/web-vue';
 import { remote } from '../../utils/remote';
@@ -88,7 +85,4 @@ async function onDiy() {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
-></style>
+<style scoped lang="less"></style>

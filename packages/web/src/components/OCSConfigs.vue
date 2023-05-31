@@ -16,15 +16,12 @@
 	</div>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
 import { store as Store } from '../store/index';
 
-type Project = any
+type Project = any;
 
 const props = defineProps<{
 	store: object;
@@ -170,10 +167,7 @@ onDeactivated(() => {
 });
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 #ocs-browser-configs {
 	overflow: overlay;
 	height: calc(100% - 64px);

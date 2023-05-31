@@ -119,10 +119,7 @@
 	</a-row>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { reactive, computed } from 'vue';
 import { currentFolder, currentSearchedEntities } from '../../fs';
 import { Browser } from '../../fs/browser';
@@ -236,10 +233,7 @@ async function paste() {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 .entity {
 	padding: 4px 0px;
 }

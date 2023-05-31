@@ -67,10 +67,7 @@
 	</a-space>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { currentFolder } from '../../fs';
 import { Browser } from '../../fs/browser';
 import { Folder } from '../../fs/folder';
@@ -162,7 +159,4 @@ async function multipleCreate(
 }
 </script>
 
-<style
-	scoped
-	lang="less"
-></style>
+<style scoped lang="less"></style>

@@ -59,7 +59,8 @@
 		</a-col>
 	</a-row>
 </template>
-<script setup lang="ts">
+
+<script lang="ts" setup>
 import { nextTick, onMounted, ref, watch, useSlots } from 'vue';
 import { store } from '../store';
 import { FolderOptions, BrowserOptions, FolderType } from '../fs/interface';
@@ -113,10 +114,14 @@ function active() {
 	overflow: hidden;
 
 	// 禁止选择
-	-moz-user-select: none; /*火狐*/
-	-webkit-user-select: none; /*webkit浏览器*/
-	-ms-user-select: none; /*IE10*/
-	-khtml-user-select: none; /*早期浏览器*/
+	-moz-user-select: none;
+	/*火狐*/
+	-webkit-user-select: none;
+	/*webkit浏览器*/
+	-ms-user-select: none;
+	/*IE10*/
+	-khtml-user-select: none;
+	/*早期浏览器*/
 	user-select: none;
 }
 

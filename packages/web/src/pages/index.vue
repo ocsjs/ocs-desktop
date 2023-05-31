@@ -82,10 +82,7 @@
 	</a-config-provider>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';

@@ -95,10 +95,7 @@
 	</div>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { ref, reactive, toRefs, onDeactivated, computed, watch, onMounted } from 'vue';
 import { RawPlaywrightScript } from '.';
 import { Modal, TableColumnData } from '@arco-design/web-vue';
@@ -319,10 +316,7 @@ function importTemplateExcel() {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 :deep(.arco-table-cell) {
 	padding: 0px;
 }

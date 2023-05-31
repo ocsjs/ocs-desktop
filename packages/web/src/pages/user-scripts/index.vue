@@ -201,10 +201,7 @@
 	</div>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { ref, h } from 'vue';
 import { config } from '../../config';
 import { store, StoreUserScript } from '../../store';
@@ -318,10 +315,7 @@ function addScriptFromURL() {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 .actions {
 	div + div {
 		margin-left: 4px;

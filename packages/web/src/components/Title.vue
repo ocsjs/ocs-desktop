@@ -157,10 +157,7 @@
 	</div>
 </template>
 
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { fetchRemoteNotify, date, about, clearBrowserCaches } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
@@ -336,10 +333,7 @@ async function checkBrowserCaches() {
 }
 </script>
 
-<style
-	scoped
-	lang="less"
->
+<style scoped lang="less">
 .title {
 	-webkit-app-region: drag;
 	width: 100%;

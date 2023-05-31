@@ -97,10 +97,7 @@
 		</div>
 	</a-modal>
 </template>
-<script
-	setup
-	lang="ts"
->
+<script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { store } from '../store';
 import { Tag } from '../fs/interface';
@@ -178,12 +175,8 @@ const handleInputConfirm = () => {
 };
 </script>
 
-<style
-	scoped
-	lang="less"
->
-
-:deep(.zs-color-picker-panel){
+<style scoped lang="less">
+:deep(.zs-color-picker-panel) {
 	position: fixed;
 }
 
