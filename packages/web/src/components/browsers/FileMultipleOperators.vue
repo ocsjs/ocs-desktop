@@ -119,7 +119,10 @@
 	</a-row>
 </template>
 
-<script setup lang="ts">
+<script
+	setup
+	lang="ts"
+>
 import { reactive, computed } from 'vue';
 import { currentFolder, currentSearchedEntities } from '../../fs';
 import { Browser } from '../../fs/browser';
@@ -133,6 +136,7 @@ import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
 import EntityVue from '../Entity.vue';
 import Tags from '../Tags.vue';
+import { Process } from '../../utils/process';
 
 const state = reactive({
 	showChecked: false,
@@ -176,7 +180,11 @@ function cancelAllBrowserCheck() {
 
 async function launchAll() {
 	for (const browser of currentCheckedBrowsers.value) {
-		await Browser.from(browser.uid)?.launch();
+		const process = Process.from(browser.uid);
+		// 已经运行的不执行
+		if (process === undefined) {
+			await Browser.from(browser.uid)?.launch();
+		}
 	}
 }
 
@@ -228,7 +236,10 @@ async function paste() {
 }
 </script>
 
-<style scoped lang="less">
+<style
+	scoped
+	lang="less"
+>
 .entity {
 	padding: 4px 0px;
 }
