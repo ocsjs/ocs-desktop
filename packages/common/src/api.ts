@@ -1,17 +1,37 @@
 import axios from 'axios';
 
+/** 资源文件 */
+export interface ResourceFile {
+	/** 唯一ID */
+	id: string;
+	name: string;
+	url: string;
+	description?: string;
+	icon?: string;
+	homepage?: string;
+}
+
+/** 资源组 */
+export interface ResourceGroup {
+	/** 资源分组名，全英文，用于本地下载时文件夹分组 */
+	name: string;
+	/** 资源组描述 */
+	description: string;
+	/** 是否显示在应用中心页面 */
+	showInResourcePage: boolean;
+	/**  文件列表 */
+	files: ResourceFile[];
+}
+
+export interface ResourceLoaderOptions {
+	/** 本地资源下载根目录 */
+	resourceRootPath: string;
+}
+
 /** 通知信息 */
 export interface NotifyResource {
 	id: string;
 	content: string[];
-}
-
-/** 浏览器拓展信息 */
-export interface ExtensionResource {
-	name: string;
-	icon: string;
-	homepage: string;
-	url: string;
 }
 
 /** 版本更新信息 */
@@ -26,15 +46,17 @@ export interface BookmarkResource {
 	values: {
 		name: string;
 		url: string;
+		description?: string;
+		icon?: string;
 	}[];
 	group: string;
 }
 
 export interface Infos {
-	resource: {
-		userjs: string;
+	userjs: {
+		ocsjs: string;
 	};
-	extensions: ExtensionResource[];
+	resourceGroups: ResourceGroup[];
 	bookmark: BookmarkResource[];
 	notify: NotifyResource[];
 	versions: UpdateInformationResource[];
@@ -42,7 +64,7 @@ export interface Infos {
 
 export class OCSApi {
 	static async getInfos(): Promise<Infos> {
-		const { data } = await axios.get('https://cdn.ocsjs.com/infos.json?t=' + Date.now());
+		const { data } = await axios.get('https://cdn.ocsjs.com/api/ocs-app-infos.json?t=' + Date.now());
 		return data;
 	}
 }

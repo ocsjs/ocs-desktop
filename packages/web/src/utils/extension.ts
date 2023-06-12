@@ -2,7 +2,7 @@ import { Message, Modal } from '@arco-design/web-vue';
 import { remote } from './remote';
 import { resourceLoader } from './resources.loader';
 import { notify } from './notify';
-import { ResourceFile } from './apis';
+import { ResourceFile } from '@ocs-desktop/common/src/api';
 
 type Extension = ResourceFile & {
 	installed?: boolean;

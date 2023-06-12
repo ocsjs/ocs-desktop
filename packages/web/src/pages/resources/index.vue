@@ -124,7 +124,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { OCSApi, ResourceFile, ResourceGroup } from '../../utils/apis';
+import { OCSApi, ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
 import { store } from '../../store/index';

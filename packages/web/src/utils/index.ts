@@ -6,7 +6,7 @@ import { remote } from './remote';
 import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
-import { OCSApi } from './apis';
+import { OCSApi } from '@ocs-desktop/common/src/api';
 
 const { ipcRenderer } = electron;
 
