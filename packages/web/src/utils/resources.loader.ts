@@ -2,6 +2,12 @@ import { store } from '../store';
 import { ResourceFile, ResourceLoaderOptions } from './apis';
 import { remote } from './remote';
 
+export interface LocalResourceFile {
+	groupname: string;
+	filename: string;
+	path: string;
+}
+
 /**
  *
  * 资源加载器
@@ -15,8 +21,7 @@ export class ResourceLoader {
 
 	/** 返回本地绝对路径 */
 	async getPath(group_name: string, file: ResourceFile) {
-		const basename = await remote.path.call('basename', file.url);
-		return await remote.path.call('join', this.resourceRootPath, group_name, basename);
+		return await remote.path.call('join', this.resourceRootPath, group_name, file.id);
 	}
 
 	/** 判断是否存在 */
@@ -32,9 +37,7 @@ export class ResourceLoader {
 
 	/** 获取解压缩后的文件路径 */
 	async getUnzippedPath(group_name: string, file: ResourceFile) {
-		const path = await this.getPath(group_name, file);
-		const basename = await remote.path.call('basename', path);
-		return await remote.path.call('join', this.resourceRootPath, group_name, basename.replace(/\.(zip|rar|7z)$/, ''));
+		return await remote.path.call('join', this.resourceRootPath, group_name, file.id);
 	}
 
 	/** 判断压缩包是否存在 */
@@ -48,26 +51,40 @@ export class ResourceLoader {
 
 	/** 下载资源 */
 	async download(group_name: string, file: ResourceFile) {
-		const path = await this.getPath(group_name, file);
+		const downloadPath = await remote.path.call(
+			'join',
+			this.resourceRootPath,
+			group_name,
+			this.isZipFile(file) ? file.id + '.zip' : file.id
+		);
+
+		// 判断文件是否存在，如果存在则删除
+		if (await remote.fs.call('existsSync', downloadPath)) {
+			await remote.fs.call('unlinkSync', downloadPath);
+		}
 		// 下载
-		await remote.methods.call('download', 'download-file-' + file.name, file.url, path);
+		await remote.methods.call('download', 'download-file-' + file.id, file.url, downloadPath);
 	}
 
 	/** 解压资源 */
 	async unzip(group_name: string, file: ResourceFile) {
-		const path = await this.getPath(group_name, file);
-
-		// 获取压缩包文件名
-		const basename = await remote.path.call('basename', path);
-		const to = await remote.path.call(
+		const targetPath = await remote.path.call(
 			'join',
 			this.resourceRootPath,
 			group_name,
-			basename.replace(/\.(zip|rar|7z)$/, '')
+			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);
-		await remote.methods.call('unzip', path, to);
+
+		const to = await remote.path.call('join', this.resourceRootPath, group_name, file.id);
+		// 判断文件夹是否存在，如果存在则删除
+		if (await remote.fs.call('existsSync', to)) {
+			await remote.fs.call('rmSync', to, {
+				recursive: true
+			});
+		}
+		await remote.methods.call('unzip', targetPath, to);
 		// 删除压缩包
-		await remote.fs.call('unlinkSync', path);
+		await remote.fs.call('unlinkSync', targetPath);
 	}
 
 	/** 删除资源 */
@@ -82,6 +99,28 @@ export class ResourceLoader {
 			const path = await this.getPath(group_name, file);
 			await remote.fs.call('unlinkSync', path);
 		}
+	}
+
+	/**
+	 * 获取资源列表
+	 */
+	async list() {
+		const files: LocalResourceFile[] = [];
+		// @ts-ignore
+		const groupnames: string[] = await remote.fs.call('readdirSync', this.resourceRootPath);
+
+		for (const groupname of groupnames) {
+			const folder = await remote.path.call('join', this.resourceRootPath, groupname);
+			if (await remote.fs.call('existsSync', folder)) {
+				// @ts-ignore
+				const filenames: string[] = await remote.fs.call('readdirSync', folder);
+				for (const filename of filenames) {
+					const path = await remote.path.call('join', folder, filename);
+					files.push({ groupname, filename, path });
+				}
+			}
+		}
+		return files;
 	}
 }
 

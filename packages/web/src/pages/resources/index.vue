@@ -102,7 +102,9 @@
 										<span> 解压中... </span>
 									</template>
 									<template v-else>
+										<!-- 当有其他脚本管理器正在下载时，禁用其他脚本管理器软件的下载 -->
 										<a-button
+											:disabled="group.name === 'extensions' && downloadingExtensionsFiles.length !== 0"
 											size="medium"
 											type="outline"
 											@click="download(group.name, file)"
@@ -121,13 +123,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { OCSApi, ResourceFile, ResourceGroup } from '../../utils/apis';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
 import { store } from '../../store/index';
 import { Message } from '@arco-design/web-vue';
 import { electron } from '../../utils/node';
+import { remote } from '../../utils/remote';
 
 const { ipcRenderer } = electron;
 
@@ -136,22 +139,27 @@ type FileState = Record<string, { exists: boolean; downloading: boolean; unzippi
 const resourceGroups = ref<ResourceGroup[]>([]);
 const fileStatus = reactive<FileState>({});
 
-OCSApi.getInfos().then(async (result) => {
-	resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
+// 正在下载的脚本管理器文件
+const downloadingExtensionsFiles = ref<ResourceFile[]>([]);
 
-	// 加载状态
-	for (const group of result.resourceGroups) {
-		for (const file of group.files) {
-			fileStatus[file.url] = {
-				exists: resourceLoader.isZipFile(file)
-					? await resourceLoader.isZipFileExists(group.name, file)
-					: await resourceLoader.isExists(group.name, file),
-				downloading: false,
-				unzipping: false,
-				downloadRate: 0
-			};
+onMounted(() => {
+	OCSApi.getInfos().then(async (result) => {
+		resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
+
+		// 加载状态
+		for (const group of result.resourceGroups) {
+			for (const file of group.files) {
+				fileStatus[file.url] = {
+					exists: resourceLoader.isZipFile(file)
+						? await resourceLoader.isZipFileExists(group.name, file)
+						: await resourceLoader.isExists(group.name, file),
+					downloading: false,
+					unzipping: false,
+					downloadRate: 0
+				};
+			}
 		}
-	}
+	});
 });
 
 async function download(group_name: string, file: ResourceFile) {
@@ -162,33 +170,54 @@ async function download(group_name: string, file: ResourceFile) {
 			Message.warning('脚本管理器只能安装一个。如需切换请把另外的删除后再安装。');
 			return;
 		}
+
+		downloadingExtensionsFiles.value.push(file);
 	}
 
-	const listener = (e: any, channel: string, rate: number) => {
-		fileStatus[file.url].downloadRate = rate;
-	};
-
-	// 监听下载进度
-	ipcRenderer.on('download', listener);
 	try {
-		fileStatus[file.url].downloading = true;
-		await resourceLoader.download(group_name, file);
-		fileStatus[file.url].downloading = false;
-		fileStatus[file.url].downloadRate = 0;
+		const files = await resourceLoader.list();
 
-		if (resourceLoader.isZipFile(file)) {
-			fileStatus[file.url].unzipping = true;
-			await resourceLoader.unzip(group_name, file);
-			fileStatus[file.url].unzipping = false;
+		for (const localFile of files) {
+			// 如果存在前缀同名的文件，但是删除后不为空，说明是不同版本的文件，需要删除（历史遗留问题，之前的文件并没有id区分）
+			if (localFile.filename.startsWith(file.id) && localFile.filename.replace(file.id, '').trim() !== '') {
+				await remote.fs.call('rmSync', localFile.path, {
+					recursive: true
+				});
+			}
 		}
 
-		fileStatus[file.url].exists = true;
+		const listener = (e: any, channel: string, rate: number) => {
+			fileStatus[file.url].downloadRate = rate;
+		};
+
+		// 监听下载进度
+		ipcRenderer.on('download', listener);
+		try {
+			fileStatus[file.url].downloading = true;
+			await resourceLoader.download(group_name, file);
+			fileStatus[file.url].downloading = false;
+			fileStatus[file.url].downloadRate = 0;
+
+			if (resourceLoader.isZipFile(file)) {
+				fileStatus[file.url].unzipping = true;
+				Message.info(`正在解压：${file.name}`);
+				await resourceLoader.unzip(group_name, file);
+				fileStatus[file.url].unzipping = false;
+			}
+
+			fileStatus[file.url].exists = true;
+		} catch (err) {
+			// @ts-ignore
+			Message.error('下载错误 ' + err.message);
+		}
+		Message.success(`${file.name} 下载完成`);
+		ipcRenderer.removeListener('download', listener);
 	} catch (err) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
 	}
-	Message.success(`${file.name} 下载完成`);
-	ipcRenderer.removeListener('download', listener);
+
+	downloadingExtensionsFiles.value = downloadingExtensionsFiles.value.filter((f) => f.url !== file.url);
 }
 
 async function remove(group_name: string, file: ResourceFile) {

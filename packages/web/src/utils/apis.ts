@@ -2,6 +2,8 @@ import axios from 'axios';
 
 /** 资源文件 */
 export interface ResourceFile {
+	/** 唯一ID */
+	id: string;
 	name: string;
 	url: string;
 	description?: string;
