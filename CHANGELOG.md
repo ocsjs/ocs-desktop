@@ -1,3 +1,12 @@
+## [2.2.5](https://github.com/ocsjs/ocs-desktop/compare/2.2.4...2.2.5) (2023-06-12)
+
+
+### Bug Fixes
+
+* update apis ([03d09f2](https://github.com/ocsjs/ocs-desktop/commit/03d09f2f99e29fbf2d96aa648ced18a70d381da1))
+
+
+
 ## [2.2.4](https://github.com/ocsjs/ocs-desktop/compare/2.2.3...2.2.4) (2023-06-12)
 
 
