@@ -1,3 +1,12 @@
+## [2.2.4](https://github.com/ocsjs/ocs-desktop/compare/2.2.3...2.2.4) (2023-06-12)
+
+
+### Bug Fixes
+
+* **web:** 优化资源加载器，因为多个版本无法检测导致浏览器加载很多脚本管理器 ([d006b0c](https://github.com/ocsjs/ocs-desktop/commit/d006b0c0c059d2184fc16c94c646a7f287ed87cf))
+
+
+
 ## [2.2.3](https://github.com/ocsjs/ocs-desktop/compare/2.2.2...2.2.3) (2023-05-31)
 
 
