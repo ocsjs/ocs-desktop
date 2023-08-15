@@ -50,8 +50,8 @@ export const ZHSUnitLoginScript = new PlaywrightScript(
 					]);
 					// 单击第一个匹配的学校
 					await page.click('#schoolListCode li');
-					await page.type('#clCode', configs.id);
-					await page.type('#clPassword', configs.password);
+					await page.fill('#clCode', configs.id);
+					await page.fill('#clPassword', configs.password);
 					await page.waitForTimeout(3000);
 					await page.click('.wall-sub-btn');
 
@@ -105,8 +105,8 @@ export const ZHSPhoneLoginScript = new PlaywrightScript(
 			try {
 				if (await isNotLogin(page)) {
 					await page.click('#qSignin');
-					await page.type('#lUsername', configs.phone);
-					await page.type('#lPassword', configs.password);
+					await page.fill('#lUsername', configs.phone);
+					await page.fill('#lPassword', configs.password);
 					await page.waitForTimeout(3000);
 					await page.click('.wall-sub-btn');
 

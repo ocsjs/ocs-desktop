@@ -37,8 +37,8 @@ export const CXUnitLoginScript = new PlaywrightScript(
 					await page.waitForTimeout(2000);
 					/** 点击第一个结果 */
 					await page.click('.filter-list > ul > li');
-					await page.type('#uname', configs.id);
-					await page.type('#password', configs.password);
+					await page.fill('#uname', configs.id);
+					await page.fill('#password', configs.password);
 
 					await login(page, {
 						ocrApiUrl: options?.ocrApiUrl,
@@ -68,8 +68,8 @@ export const CXPhoneLoginScript = new PlaywrightScript(
 		async run(page, configs) {
 			try {
 				if (await isNotLogin(page)) {
-					await page.type('#phone', configs.phone);
-					await page.type('#pwd', configs.password);
+					await page.fill('#phone', configs.phone);
+					await page.fill('#pwd', configs.password);
 
 					await login(page);
 				}

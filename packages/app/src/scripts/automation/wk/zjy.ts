@@ -25,8 +25,8 @@ export const ZJYLoginScript = new PlaywrightScript(
 		) {
 			try {
 				if (await isNotLogin(page)) {
-					await page.type('input[name="userName"]', configs.username);
-					await page.type('input[name="userPassword"]', configs.username);
+					await page.fill('input[name="userName"]', configs.username);
+					await page.fill('input[name="userPassword"]', configs.username);
 
 					if (options?.ocrApiUrl && options?.ocrApiImageKey) {
 						let count = 5;
