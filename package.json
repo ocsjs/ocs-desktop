@@ -7,7 +7,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build:app": "gulp -f ./scripts/build-app.js",
+		"build": "gulp -f ./scripts/build-app.js",
 		"release": "sh ./scripts/release.sh",
 		"changelog": "conventional-changelog -p angular -i CHANGELOG.md --same-file -r 0",
 		"tsc": "pnpm lint && gulp -f ./scripts/tsc.js",
