@@ -1,3 +1,17 @@
+## [2.3.1](https://github.com/ocsjs/ocs-desktop/compare/2.2.5...2.3.1) (2023-08-17)
+
+
+### Bug Fixes
+
+* **app:** 优化软件自动登录脚本，使用 page.fill 代替 page.click 防止用户保存密码导致浏览器自动填充密码造成密码2次输入。 ([12c34ff](https://github.com/ocsjs/ocs-desktop/commit/12c34ffc98def627c52220f46b79e982ad8f67b2))
+
+
+### Features
+
+* 优化侧边栏样式，优化脚本列表样式，新增脚本版本切换功能，优化脚本详情信息显示 ([678a133](https://github.com/ocsjs/ocs-desktop/commit/678a1335179f51521eac29be71f47c2a6a6e73f8))
+
+
+
 ## [2.2.5](https://github.com/ocsjs/ocs-desktop/compare/2.2.4...2.2.5) (2023-06-12)
 
 

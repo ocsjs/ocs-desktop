@@ -61,7 +61,7 @@
 									name="infos"
 								></slot>
 
-								<a-tooltip content="最新版本">
+								<a-tooltip content="当前版本">
 									<a-tag color="red">
 										v<b>{{ script.info.version }}</b>
 									</a-tag>

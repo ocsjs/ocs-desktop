@@ -120,7 +120,7 @@ import { currentBrowser } from '../fs';
 import { electron, inBrowser } from '../utils/node';
 import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
-import Setup from '../components/setup.vue';
+import Setup from '../components/Setup.vue';
 
 const { ipcRenderer } = electron;
 const version = ref('');

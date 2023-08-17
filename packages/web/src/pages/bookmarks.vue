@@ -84,7 +84,7 @@
 import { onMounted, ref, reactive } from 'vue';
 import { getRemoteInfos } from '../utils';
 import { Card } from '@arco-design/web-vue';
-import { BookmarkResource } from '../utils/apis';
+import { BookmarkResource } from '../../../common/src/api';
 
 type BookMark = BookmarkResource;
 
