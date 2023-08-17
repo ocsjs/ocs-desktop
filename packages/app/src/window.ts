@@ -6,8 +6,8 @@ export function createWindow() {
 	const win = new BrowserWindow({
 		title: 'ocs',
 		icon: path.resolve('./public/favicon.ico'),
-		minHeight: 600,
-		minWidth: 1000,
+		minHeight: 800,
+		minWidth: 1200,
 		center: true,
 		hasShadow: true,
 		autoHideMenuBar: true,

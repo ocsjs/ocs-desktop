@@ -35,6 +35,7 @@ async function addLocalScript(uri: string, text: string) {
 					url: uri,
 					enable: true,
 					isLocalScript: true,
+					isInternetLinkScript: false,
 					info: {
 						id,
 						url: uri,
@@ -42,8 +43,8 @@ async function addLocalScript(uri: string, text: string) {
 						ratings: 0,
 						total_installs: 0,
 						daily_installs: 0,
-						createTime: 0,
-						updateTime: 0,
+						create_time: 0,
+						update_time: 0,
 						...metadata
 					}
 				});
@@ -56,7 +57,8 @@ async function addLocalScript(uri: string, text: string) {
 
 export async function addScriptFromUrl(url: string) {
 	if (store.render.scripts.find((s) => s.url === url)) {
-		return Message.warning('当前脚本已安装。');
+		Message.warning('当前脚本已安装。');
+		return false;
 	}
 
 	if (url.startsWith('http')) {
@@ -65,12 +67,13 @@ export async function addScriptFromUrl(url: string) {
 		if (metadata === undefined) {
 			Message.error('脚本格式不正确，请选择能够解析的用户脚本。');
 		} else {
-			const id = Math.round(Math.random() * 1000000);
+			const id = Math.round(Math.random() * 10000000000000);
 			store.render.scripts.push({
 				id: id,
 				url: url,
 				enable: true,
 				isLocalScript: false,
+				isInternetLinkScript: true,
 				info: {
 					id,
 					url: url,
@@ -78,15 +81,18 @@ export async function addScriptFromUrl(url: string) {
 					ratings: 0,
 					total_installs: 0,
 					daily_installs: 0,
-					createTime: 0,
-					updateTime: 0,
+					create_time: 0,
+					update_time: 0,
 					...metadata
 				}
 			});
 		}
 	} else {
 		Message.error('脚本链接无效，必须是以 http 开头的网络链接。');
+		return false;
 	}
+
+	return true;
 }
 
 function getMetadataFromScript(text: string) {

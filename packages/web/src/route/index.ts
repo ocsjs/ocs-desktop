@@ -11,7 +11,6 @@ export type CustomRouteType = RouteRecordRaw & {
 	component: any;
 	meta: {
 		icon: string;
-		filledIcon: string;
 		title: string;
 		hideInMenu: boolean;
 		tutorial: {

@@ -147,7 +147,7 @@ import { installExtensions } from '../utils/extension';
 import { addScriptFromUrl } from '../utils/user-scripts';
 import { ValidBrowser } from '@ocs-desktop/common/lib/src/interface';
 import { ResourceLoader } from '../utils/resources.loader';
-import { ResourceFile } from '../utils/apis';
+import { ResourceFile } from '@ocs-desktop/common/src/api';
 
 type Extension = ResourceFile & { installed?: boolean };
 

@@ -9,17 +9,20 @@
 			@mouseleave="selectedScript = 0"
 			@mouseover="selectedScript = script.id"
 		>
+			<!-- 如果有info则应该是网络搜索出来的脚本 -->
 			<div
 				v-if="script.info"
 				class="col-12"
 			>
 				<div class="user-script-name">
-					<a
-						target="_blank"
-						:href="script.info.url"
-					>
-						<span>{{ script.info.name }}</span>
-					</a>
+					<a-tooltip content="打开脚本源站">
+						<a
+							target="_blank"
+							:href="script.info.url"
+						>
+							<span>{{ script.info.name }}</span>
+						</a>
+					</a-tooltip>
 				</div>
 				<div
 					class="user-script-descriptions"
@@ -49,50 +52,61 @@
 					{{ script.info.description }}
 				</div>
 
-				<div class="user-script-infos">
-					<a-space size="mini">
+				<div class="row">
+					<div class="col-8">
+						<div class="user-script-infos">
+							<a-space size="mini">
+								<slot
+									:script="script"
+									name="infos"
+								></slot>
+
+								<a-tooltip content="最新版本">
+									<a-tag color="red">
+										v<b>{{ script.info.version }}</b>
+									</a-tag>
+								</a-tooltip>
+
+								<a-tooltip content="今日安装">
+									<a-tag color="blue">
+										⬇️<b>{{ script.info.daily_installs }}</b>
+									</a-tag>
+								</a-tooltip>
+
+								<a-tooltip content="总安装">
+									<a-tag color="green">
+										📦<b>{{ script.info.total_installs }}</b>
+									</a-tag>
+								</a-tooltip>
+
+								<a-tooltip content="评分">
+									<a-tag color="orange">
+										⭐<b>{{ script.info.ratings ? script.info.ratings.toFixed(1) : '无' }}</b>
+									</a-tag>
+								</a-tooltip>
+
+								<a-tag
+									v-if="script.info.create_time > 0"
+									title="创建时间"
+								>
+									{{ new Date(script.info.create_time).toLocaleDateString() }} 创建
+								</a-tag>
+								<a-tag
+									v-if="script.info.create_time > 0"
+									title="更新时间"
+								>
+									{{ getElapsedTime(script.info.create_time) }} 前更新
+								</a-tag>
+							</a-space>
+						</div>
+					</div>
+					<div class="col-4 user-script-actions">
 						<slot
+							name="actions"
 							:script="script"
-							name="infos"
-						></slot>
-
-						<a-tooltip content="今日安装">
-							<a-tag color="blue">
-								⬇️<b>{{ script.info.daily_installs }}</b>
-							</a-tag>
-						</a-tooltip>
-
-						<a-tooltip content="总安装">
-							<a-tag color="green">
-								📦<b>{{ script.info.total_installs }}</b>
-							</a-tag>
-						</a-tooltip>
-
-						<a-tooltip content="版本">
-							<a-tag color="red">
-								v<b>{{ script.info.version }}</b>
-							</a-tag>
-						</a-tooltip>
-
-						<a-tooltip content="评分">
-							<a-tag color="orange">
-								⭐<b>{{ script.info.ratings ? script.info.ratings.toFixed(1) : '无' }}</b>
-							</a-tag>
-						</a-tooltip>
-
-						<a-tag
-							v-if="script.info.createTime > 0"
-							title="创建时间"
-						>
-							{{ new Date(script.info.createTime).toLocaleDateString() }} 创建
-						</a-tag>
-						<a-tag
-							v-if="script.info.updateTime > 0"
-							title="更新时间"
-						>
-							{{ getElapsedTime(script.info.updateTime) }} 前更新
-						</a-tag>
-					</a-space>
+							:already-installed="isAlreadyInstalled(script)"
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -109,22 +123,15 @@
 					</a>
 				</div>
 			</div>
-
-			<div class="user-script-actions">
-				<slot
-					name="actions"
-					:script="script"
-					:already-installed="isAlreadyInstalled(script)"
-				/>
-			</div>
 		</div>
 	</template>
 </template>
 
 <script setup lang="ts">
 import { ref, toRefs } from 'vue';
-import Icon from '../../components/Icon.vue';
-import { store, StoreUserScript } from '../../store';
+import { StoreUserScript } from '../store';
+import { store } from '../store/index';
+import Icon from './Icon.vue';
 
 interface ScriptListProps {
 	scripts: StoreUserScript[];
@@ -243,8 +250,9 @@ function isAlreadyInstalled(sc: StoreUserScript) {
 }
 
 .user-script-actions {
-	position: relative;
-	transform: translateX(-100%);
+	display: flex;
+	justify-content: end;
+	align-items: center;
 }
 
 .ant-tag {

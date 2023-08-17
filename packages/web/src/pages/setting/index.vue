@@ -1,29 +1,6 @@
 <template>
 	<div class="w-100">
 		<div class="setting text-center p-2 col-12 col-md-10 col-lg-8">
-			<Card title="基本设置">
-				<Description label="开机自启">
-					<a-switch
-						v-model="store.window.autoLaunch"
-						size="small"
-					/>
-				</Description>
-
-				<Description label="窗口置顶">
-					<a-switch
-						v-model="store.window.alwaysOnTop"
-						size="small"
-					/>
-				</Description>
-				<Description label="夜间模式">
-					<a-switch
-						v-model="store.render.setting.theme.dark"
-						size="small"
-						@click="changeTheme"
-					/>
-				</Description>
-			</Card>
-
 			<Card title="通用设置">
 				<BrowserPath></BrowserPath>
 
@@ -76,8 +53,38 @@
 				</Description>
 			</Card>
 
+			<Card title="基本设置">
+				<Description label="开机自启">
+					<a-switch
+						v-model="store.window.autoLaunch"
+						size="small"
+					/>
+				</Description>
+
+				<Description label="窗口置顶">
+					<a-switch
+						v-model="store.window.alwaysOnTop"
+						size="small"
+					/>
+				</Description>
+				<Description label="夜间模式">
+					<a-switch
+						v-model="store.render.setting.theme.dark"
+						size="small"
+						@click="changeTheme"
+					/>
+				</Description>
+				<Description label="显示侧边栏文字">
+					<a-switch
+						v-model="store.render.setting.showSideBarText"
+						size="small"
+						@click="changeTheme"
+					/>
+				</Description>
+			</Card>
+
 			<Card title="其他设置">
-				<Description label="浏览器缓存大小预警">
+				<Description label="浏览器缓存预警阈值">
 					<a-input-number
 						v-model="store.render.setting.browser.cachesSizeWarningPoint"
 						style="width: 200px"

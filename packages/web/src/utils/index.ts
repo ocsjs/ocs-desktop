@@ -7,6 +7,7 @@ import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
 import { OCSApi } from '@ocs-desktop/common/src/api';
+import { SyncOutlined } from '@ant-design/icons-vue';
 
 const { ipcRenderer } = electron;
 
@@ -243,7 +244,25 @@ export function setAlwaysOnTop() {
 	remote.win.call('setAlwaysOnTop', store.window.alwaysOnTop);
 }
 
+export async function checkBrowserCaches() {
+	const modal = Modal.info({
+		simple: false,
+		title: '正在计算浏览器缓存...',
+		footer: false,
+		maskClosable: false,
+		content: () => {
+			return h('div', [h(SyncOutlined, { spin: true }), '正在计算浏览器缓存...']);
+		}
+	});
+	const totalSize = await remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder);
+	console.log('当前浏览器总缓存大小', size(totalSize));
+	modal.close();
+
+	clearBrowserCaches(totalSize);
+}
+
 export function clearBrowserCaches(totalSize: number) {
+	// 显示详情
 	Modal.confirm({
 		simple: false,
 		title: '清除浏览器缓存',

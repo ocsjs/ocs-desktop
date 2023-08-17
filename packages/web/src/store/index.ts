@@ -46,7 +46,8 @@ export type WebStore = {
 		launchOptions: {
 			executablePath: string;
 		};
-
+		/** 显示侧边栏文字 */
+		showSideBarText: boolean;
 		/** 当前的主题 */
 		theme: {
 			dark: boolean;
@@ -115,6 +116,7 @@ export const store: AppStore & { render: WebStore } = reactive(
 				},
 				setting: {
 					browserType: 'diy',
+					showSideBarText: false,
 					launchOptions: {
 						executablePath: ''
 					},

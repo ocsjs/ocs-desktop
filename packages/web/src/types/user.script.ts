@@ -1,3 +1,8 @@
+import { StoreUserScript } from '../store';
+
+export type ScriptSearchEngineType = 'greasyfork' | 'scriptcat';
+export type ScriptSourceType = 'unknown' | 'official' | ScriptSearchEngineType;
+
 export interface CommonUserScript {
 	id: number;
 	url: string;
@@ -15,8 +20,8 @@ export interface CommonUserScript {
 	ratings: number;
 	daily_installs: number;
 	total_installs: number;
-	createTime: number;
-	updateTime: number;
+	create_time: number;
+	update_time: number;
 }
 
 export interface GreasyForkUserScript {
@@ -66,3 +71,12 @@ export interface LocalUserScript {
 	filename: string;
 	createtime: number;
 }
+
+export interface ScriptVersion {
+	version: string;
+	url: string;
+	code_url: string;
+	create_time: number;
+}
+
+export type ScriptVersionProvider = (script: StoreUserScript) => Promise<ScriptVersion[]>;

@@ -24,7 +24,7 @@
 		<!-- 文件操作 -->
 		<FileMultipleOperators></FileMultipleOperators>
 
-		<template v-if="Object.keys(currentEntities).length === 0">
+		<template v-if="currentEntities.length === 0">
 			<div class="d-flex align-items-center mt-5">
 				<a-empty class="p-3">
 					<div>暂无浏览器，可点击上方的帮助查看使用教程哦~</div>
@@ -45,7 +45,7 @@
 			<FileHeader></FileHeader>
 			<!-- 显示浏览器以及文件夹列表 -->
 			<div class="entities">
-				<template v-for="child of currentSearchedEntities ? currentSearchedEntities : currentEntities">
+				<template v-for="child of currentSearchedEntities !== undefined ? currentSearchedEntities : currentEntities">
 					<Entity
 						v-if="child.type !== 'browser'"
 						:key="child.uid"

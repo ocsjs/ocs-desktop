@@ -7,17 +7,12 @@
 			placeholder="输入脚本名搜索"
 		/>
 
-		<template
-			v-for="(script, index) of scripts.filter((s) => s.name.includes(state.search))"
-			:key="index"
+		<CommonSelector
+			:multiple="props.multiple"
+			:list="scripts.filter((s) => s.name.includes(state.search)).map((s) => ({ key: s.name, ...s }))"
+			:on-select="confirm"
 		>
-			<div
-				class="ps"
-				:class="{
-					selected: isSelected(script)
-				}"
-				@click="select(script)"
-			>
+			<template #content="{ item: script }">
 				<b> {{ script.name }} </b>
 				<span
 					style="font-size: 12px"
@@ -35,33 +30,16 @@
 						</span>
 					</span>
 				</span>
-			</div>
-		</template>
-
-		<div class="mt-3 float-end">
-			<a-space>
-				<span
-					style="font-size: 12px"
-					class="text-secondary float-end"
-				>
-					共选中 {{ selectedScripts.length }} 个
-				</span>
-				<a-button
-					style="width: 100px"
-					type="primary"
-					@click="confirm"
-				>
-					确定
-				</a-button>
-			</a-space>
-		</div>
+			</template>
+		</CommonSelector>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { scripts as Scripts } from '@ocs-desktop/app/src/scripts/index';
-import { ref, reactive, computed } from 'vue';
+import { reactive, computed } from 'vue';
 import { RawPlaywrightScript } from './index';
+import CommonSelector from '../CommonSelector.vue';
 
 const state = reactive({
 	search: ''
@@ -84,32 +62,11 @@ const emits = defineEmits<{
 }>();
 
 const scripts = computed<RawPlaywrightScript[]>(() => Scripts.filter((s) => s.name.includes(state.search)));
-const selectedScripts = ref<string[]>(props.playwrightScripts.map((s) => s.name));
 
-function confirm() {
-	const playwrightScripts = selectedScripts.value
-		.map((s) => scripts.value.find((ps) => ps.name === s))
-		.filter(Boolean) as RawPlaywrightScript[];
+function confirm(selectedScripts: RawPlaywrightScript[]) {
 	// 使用拷贝消除响应式特性
-	emits('update:playwrightScripts', JSON.parse(JSON.stringify(playwrightScripts)));
+	emits('update:playwrightScripts', JSON.parse(JSON.stringify(selectedScripts)));
 	emits('confirm');
-}
-
-function select(ps: RawPlaywrightScript) {
-	if (props.multiple) {
-		const index = selectedScripts.value.findIndex((s) => s === ps.name);
-		if (index === -1) {
-			selectedScripts.value.push(ps.name);
-		} else {
-			selectedScripts.value.splice(index, 1);
-		}
-	} else {
-		selectedScripts.value = [ps.name];
-	}
-}
-
-function isSelected(ps: RawPlaywrightScript) {
-	return selectedScripts.value.find((s) => s === ps.name) !== undefined;
 }
 </script>
 

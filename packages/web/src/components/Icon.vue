@@ -20,8 +20,8 @@ import { Space } from '@arco-design/web-vue';
 import { h, toRefs, useSlots } from 'vue';
 const span = h('span');
 interface IconProps {
-	theme?: 'outlined' | 'filled' | 'rounded' | 'sharp' | 'two-tone';
 	type: string;
+	theme?: 'outlined' | 'filled' | 'rounded' | 'sharp' | 'two-tone';
 	title?: string;
 	active?: boolean;
 	color?: string;

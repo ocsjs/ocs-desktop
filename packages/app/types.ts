@@ -18,4 +18,6 @@ export interface UserScripts {
 	info: any;
 	/** 是否为本地脚本 */
 	isLocalScript: boolean;
+	/** 是否为网络链接加载的脚本 */
+	isInternetLinkScript: boolean;
 }

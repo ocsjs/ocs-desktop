@@ -6,12 +6,17 @@
 					<div class="col-12 p-0 m-0"><Title id="title" /></div>
 					<div class="col-12 p-0 m-0 overflow-auto d-flex">
 						<div
-							style="width: 48px"
+							:style="{ width: state.sideBarWidth + 'px' }"
 							class="h-100"
 						>
+							<!-- 侧边栏图标 -->
 							<div class="col-auto sider h-100">
 								<div
 									v-if="routes.find((r) => r.name === 'index')"
+									:style="{
+										width: state.sideBarWidth + 'px',
+										flex: `0 0 ${state.sideBarWidth}px`
+									}"
 									class="sider-items"
 								>
 									<template
@@ -20,28 +25,35 @@
 									>
 										<div
 											class="sider-item"
+											:class="{ active: item.name === currentRoute.name }"
 											@click="clickMenu(item)"
 										>
-											<a-tooltip
+											<component
+												:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
 												:content="item.meta.title"
 												position="right"
 											>
 												<Icon
 													class="icon"
 													:type="item.meta.icon"
-													:theme="item.name === currentRoute.name ? 'filled' : 'outlined'"
+													theme="outlined"
 												/>
-											</a-tooltip>
+											</component>
+
+											<div
+												v-if="store.render.setting.showSideBarText"
+												class="ms-2 sider-item-title"
+											>
+												{{ item.meta.title }}
+											</div>
 										</div>
 									</template>
 								</div>
 
-								<div class="text-secondary version mb-1">
-									{{ version }}
-								</div>
+								<div class="text-secondary version mb-1 ms-2">{{ version }}</div>
 							</div>
 						</div>
-						<div style="width: calc(100% - 48px)">
+						<div :style="{ width: `calc(100% - ${state.sideBarWidth}px)` }">
 							<router-view v-slot="{ Component }">
 								<keep-alive>
 									<component :is="Component" />
@@ -83,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch, reactive, computed } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';
 import { router, routes, CustomRouteType } from '../route';
@@ -95,7 +107,6 @@ import {
 	fetchRemoteNotify,
 	setAlwaysOnTop,
 	setAutoLaunch,
-	size,
 	sleep
 } from '../utils';
 import { notify } from '../utils/notify';
@@ -103,19 +114,23 @@ import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import { processes } from '../utils/process';
-import { Message, Modal } from '@arco-design/web-vue';
+import { Message, Modal, Tooltip } from '@arco-design/web-vue';
 import BrowserPanel from '../components/browsers/BrowserPanel.vue';
 import { currentBrowser } from '../fs';
 import { electron, inBrowser } from '../utils/node';
-import Setup from '../components/Setup.vue';
 import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
+import Setup from '../components/setup.vue';
 
 const { ipcRenderer } = electron;
 const version = ref('');
 
 // 当前路由
 const currentRoute = useRouter().currentRoute;
+
+const state = reactive({
+	sideBarWidth: computed(() => (store.render.setting.showSideBarText ? 142 : 48))
+});
 
 // 监听软件关闭
 onUnmounted(() => closeAllBrowser(false));
@@ -190,7 +205,6 @@ onMounted(async () => {
 
 	/** 检测浏览器缓存大小，超过10GB则提示 */
 	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
-		console.log('当前浏览器总缓存大小', size(totalSize));
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
 			clearBrowserCaches(totalSize);
 		}
@@ -303,19 +317,33 @@ function onResize() {
 .sider {
 	-webkit-app-region: no-drag;
 	user-select: none;
-	width: 48px;
-	flex: 0 0 48px;
-	padding: 4px;
+	padding: 4px 12px 4px 0px;
 	text-align: center;
 	display: flex;
-	justify-content: center;
+	justify-content: left;
 	border-right: 1px solid #f3f3f3;
 
 	.sider-items {
 		padding-top: 12px;
 
+		.sider-item {
+			padding: 8px;
+			display: flex;
+			cursor: pointer;
+			align-items: center;
+			border-left: 6px solid white;
+		}
+		.sider-item.active {
+			background-color: #f4f9ff;
+			border-left: 6px solid #1890ff;
+		}
+
+		.sider-item-title {
+			font-size: 13px;
+		}
+
 		.sider-item + .sider-item {
-			margin-top: 22px;
+			margin-top: 12px;
 		}
 
 		.icon {

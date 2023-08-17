@@ -1,6 +1,9 @@
 <template>
 	<div class="title ps-2">
-		<span>
+		<span
+			style="cursor: pointer; -webkit-app-region: no-drag"
+			@click="shell.openExternal('https://docs.ocsjs.com')"
+		>
 			<img
 				width="18"
 				class="me-3"
@@ -158,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { fetchRemoteNotify, date, about, clearBrowserCaches } from '../utils';
+import { fetchRemoteNotify, date, about, checkBrowserCaches } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal } from '@arco-design/web-vue';
@@ -169,7 +172,6 @@ import { Folder, root } from '../fs/folder';
 import { h } from 'vue';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
-import { SyncOutlined } from '@ant-design/icons-vue';
 
 const { shell } = electron;
 
@@ -314,22 +316,6 @@ function reset() {
 	store.version = undefined;
 	remote.app.call('relaunch');
 	remote.app.call('exit', 0);
-}
-
-async function checkBrowserCaches() {
-	const modal = Modal.info({
-		simple: false,
-		title: '正在计算浏览器缓存...',
-		footer: false,
-		maskClosable: false,
-		content: () => {
-			return h('div', [h(SyncOutlined, { spin: true }), '正在计算浏览器缓存...']);
-		}
-	});
-	const totalSize = await remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder);
-	modal.close();
-
-	clearBrowserCaches(totalSize);
 }
 </script>
 

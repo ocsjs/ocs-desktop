@@ -29,6 +29,10 @@ export class Folder<T extends FolderType = FolderType> extends Entity implements
 		}
 	}
 
+	listChildren(): (Browser | Folder)[] {
+		return Object.values(this.children);
+	}
+
 	/**
 	 *	获取文件夹
 	 */
