@@ -1,3 +1,7 @@
+# [2.4.0](https://github.com/ocsjs/ocs-desktop/compare/2.3.1...2.4.0) (2023-09-22)
+
+
+
 ## [2.3.1](https://github.com/ocsjs/ocs-desktop/compare/2.2.5...2.3.1) (2023-08-17)
 
 
