@@ -24,7 +24,7 @@ if [ "$isRelease" = "y" ]; then
     npm version "$version" --no-git-tag-version &&
     cd ../../ &&
     # 本地构建
-    npm run build:app &&
+    npm run build &&
     # 更新日志
     npm run changelog &&
     # 保存

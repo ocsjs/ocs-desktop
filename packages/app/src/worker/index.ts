@@ -2,7 +2,7 @@ import { Instance as Chalk } from 'chalk';
 import { LoggerCore } from '../logger.core';
 import path, { basename } from 'path';
 import fs from 'fs';
-import { chromium, BrowserContext, Page, LaunchOptions } from 'playwright-core';
+import { chromium, BrowserContext, Page, LaunchOptions, Response } from 'playwright-core';
 import { AppStore } from '../../types';
 import { scripts as PlaywrightScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
@@ -107,6 +107,7 @@ export class ScriptWorker {
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
 				closeableExtensionHomepages: this.closeableExtensionHomepages,
+				actionsKey: this.store?.server.actions_key || '',
 				...options
 			});
 		} catch (err) {
@@ -212,6 +213,7 @@ export async function launchBrowser({
 	closeableExtensionHomepages,
 	bookmarksPageUrl,
 	serverPort,
+	actionsKey,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -226,6 +228,7 @@ export async function launchBrowser({
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
 	serverPort: number;
+	actionsKey: string;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
@@ -239,6 +242,8 @@ export async function launchBrowser({
 				headless
 			})
 			.then(async (browser) => {
+				browserNetworkRoute(actionsKey, browser);
+
 				browser.once('close', () => {
 					send('browser-closed');
 					// 浏览器关闭跟随退出
@@ -443,4 +448,87 @@ async function closeExtensionHomepage(opts: { browser: BrowserContext; closeable
 			await page.close();
 		}
 	}
+}
+
+function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
+	const responses: Map<string, string> = new Map();
+
+	browser.route(/ocs-script-actions/, async (route) => {
+		const req = route.request();
+
+		if ((await req.headerValue('actions-key')) === actions_key) {
+			const url = req.url();
+			const search = new URLSearchParams(url.split('?')[1]);
+			const targetPageUrl = search.get('page') || '';
+			const page = browser?.pages().find((p) => p.url().includes(targetPageUrl));
+			if (!page) {
+				return;
+			}
+			try {
+				const action = search.get('action') || '';
+				if (action === 'mouse-move') {
+					const x = search.get('x');
+					const y = search.get('y');
+					if (x && y) {
+						await page.mouse.move(Number(x), Number(y));
+						return await route.fulfill({ status: 200, body: 'OK' });
+					}
+				} else if (action === 'mouse-click') {
+					const x = search.get('x');
+					const y = search.get('y');
+					const count = search.get('count');
+					const selector = search.get('selector');
+					if (x && y && count) {
+						await page.mouse.click(Number(x), Number(y), { clickCount: Number(count) });
+						return await route.fulfill({ status: 200, body: 'OK' });
+					} else if (selector) {
+						await page.click(selector);
+						return await route.fulfill({ status: 200, body: 'OK' });
+					}
+				} else if (action === 'read-text') {
+					const x = search.get('x');
+					const y = search.get('y');
+					const selector = search.get('selector');
+
+					if (x && y) {
+						const el = await page.evaluateHandle(({ x, y }) => document.elementFromPoint(Number(x), Number(y)), {
+							x,
+							y
+						});
+
+						return (await el.asElement()?.textContent()) || '';
+					} else if (selector) {
+						const text = await page.$(selector);
+						return await route.fulfill({ status: 200, body: (await text?.textContent()) || '' });
+					}
+				} else if (action === 'listen-request') {
+					const url = search.get('url');
+					if (url) {
+						const listener = async (res: Response) => {
+							if (new RegExp(url).test(res.url()) || res.url().includes(url)) {
+								console.log(url, res.url());
+								responses.set(url, await res.body().then((b) => b.toString()));
+								browser.off('response', listener);
+							}
+						};
+						browser.on('response', listener);
+						return await route.fulfill({ status: 200, body: 'OK' });
+					}
+				} else if (action === 'get-listened-request') {
+					const url = search.get('url');
+					if (url) {
+						const res = responses.get(url) || '';
+						responses.delete(url);
+						return await route.fulfill({ status: 200, body: res });
+					}
+				}
+			} catch (e) {
+				console.error(e);
+			}
+
+			await route.fulfill({ body: 'ERROR' });
+		} else {
+			await route.abort();
+		}
+	});
 }

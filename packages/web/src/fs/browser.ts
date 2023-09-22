@@ -144,6 +144,14 @@ export class Browser extends Entity implements BrowserOptions {
 		this.name = name;
 		this.renaming = false;
 	}
+
+	async cleanCache() {
+		try {
+			await remote.fs.call('rmSync', this.cachePath, { recursive: true, force: true });
+		} catch (err) {
+			console.log(err);
+		}
+	}
 }
 
 function formatExtensionArguments(extensionPaths: string[]) {

@@ -29,7 +29,8 @@ export const appStore = {
 	},
 	/** 本地服务器数据 */
 	server: {
-		port: 15319
+		port: 15319,
+		actions_key: ''
 	},
 	/** 渲染进程数据 */
 	render: {} as { [x: string]: any }

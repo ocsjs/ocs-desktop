@@ -68,11 +68,7 @@ async function onDiy() {
 				});
 
 				for (const browser of browsers) {
-					try {
-						await remote.fs.call('rmSync', browser.cachePath, { recursive: true, force: true });
-					} catch (err) {
-						console.log(err);
-					}
+					await browser.cleanCache();
 				}
 
 				setTimeout(() => {

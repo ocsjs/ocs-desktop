@@ -5,6 +5,7 @@ import axios from 'axios';
 import { store } from '../store';
 import { getProjectPath } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
+import { randomUUID } from 'crypto';
 
 const logger = Logger('server');
 
@@ -16,6 +17,11 @@ interface Folder {
 
 export async function startupServer() {
 	const app = express();
+
+	store.set('server', {
+		port: 15319,
+		actions_key: randomUUID().replace(/-/g, '')
+	});
 
 	app.use((req, res, next) => {
 		res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'unknown');
@@ -47,6 +53,15 @@ export async function startupServer() {
 	app.get('/browser', (req, res) => {
 		// 如果开启了同步配置，就返回，否则返回空对象
 		res.json(store?.store?.render?.setting?.ocs?.openSync ? store?.store?.render?.setting?.ocs?.store : {});
+	});
+
+	/** 脚本操作 */
+	app.get('/ocs-script-actions', (req, res) => {
+		res.json({ allow: true });
+	});
+
+	app.get('/get-actions-key', (req, res) => {
+		res.send(store.store.server.actions_key);
 	});
 
 	/** 请求转发 */
@@ -97,11 +112,10 @@ export async function startupServer() {
 	// 静态资源
 	app.use(express.static(path.join(getProjectPath(), './public')));
 
-	const server = app.listen(15319, () => {
+	const server = app.listen(store.store.server.port, () => {
 		const address = server.address();
 		if (address && typeof address === 'object') {
 			// 存储本次服务的端口
-			store.set('server.port', 15319);
 			logger.info(`OCS服务启动成功 => ${address.port}`);
 		}
 	});
