@@ -464,6 +464,7 @@ function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
 			if (!page) {
 				return;
 			}
+
 			try {
 				const action = search.get('action') || '';
 				if (action === 'mouse-move') {
@@ -520,6 +521,13 @@ function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
 						const res = responses.get(url) || '';
 						responses.delete(url);
 						return await route.fulfill({ status: 200, body: res });
+					}
+				} else if (action === 'set-viewport') {
+					const width = search.get('width');
+					const height = search.get('height');
+					if (width && height) {
+						await page.setViewportSize({ width: Number(width), height: Number(height) });
+						return await route.fulfill({ status: 200, body: 'OK' });
 					}
 				}
 			} catch (e) {
