@@ -1,3 +1,12 @@
+## [2.4.1](https://github.com/ocsjs/ocs-desktop/compare/2.4.0...2.4.1) (2023-09-24)
+
+
+### Features
+
+* **app:** 添加设置窗口大小功能，配合脚本使用 ([1b8c207](https://github.com/ocsjs/ocs-desktop/commit/1b8c207b57229aa55779afd39e1f7b6f6fc79f61))
+
+
+
 # [2.4.0](https://github.com/ocsjs/ocs-desktop/compare/2.3.1...2.4.0) (2023-09-22)
 
 
