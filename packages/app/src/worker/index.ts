@@ -526,12 +526,22 @@ function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
 					const width = search.get('width');
 					const height = search.get('height');
 					if (width && height) {
-						await page.setViewportSize({ width: Number(width), height: Number(height) });
+						if (width === 'null' && height === 'null') {
+							const url = page.url();
+							await page.close();
+							const newPage = await browser.newPage();
+							await newPage.goto(url);
+						} else {
+							await page.setViewportSize({
+								width: Number(width),
+								height: Number(height)
+							});
+						}
 						return await route.fulfill({ status: 200, body: 'OK' });
 					}
 				}
 			} catch (e) {
-				console.error(e);
+				console.log(e);
 			}
 
 			await route.fulfill({ body: 'ERROR' });
