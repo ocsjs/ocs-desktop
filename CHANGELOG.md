@@ -1,3 +1,12 @@
+## [2.4.2](https://github.com/ocsjs/ocs-desktop/compare/2.4.1...2.4.2) (2023-10-15)
+
+
+### Bug Fixes
+
+* **app:** 优化窗口大小调整功能 ([8e9860d](https://github.com/ocsjs/ocs-desktop/commit/8e9860dc81ae3cc4783d90f530fbce127b957fd8))
+
+
+
 ## [2.4.1](https://github.com/ocsjs/ocs-desktop/compare/2.4.0...2.4.1) (2023-09-24)
 
 
