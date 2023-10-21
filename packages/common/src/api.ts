@@ -9,6 +9,11 @@ export interface ResourceFile {
 	description?: string;
 	icon?: string;
 	homepage?: string;
+	platforms?: {
+		// eslint-disable-next-line no-undef
+		platform: NodeJS.Platform;
+		url: string;
+	}[];
 }
 
 /** 资源组 */

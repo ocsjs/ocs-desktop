@@ -62,8 +62,13 @@ export class ResourceLoader {
 		if (await remote.fs.call('existsSync', downloadPath)) {
 			await remote.fs.call('unlinkSync', downloadPath);
 		}
+		const platform = await remote.methods.call('getPlatform');
+		const url = platform === 'win32' ? file.url : file.platforms?.find((p) => p.platform === platform)?.url || '';
+		if (!url) {
+			throw new Error('资源下载失败，路径为空');
+		}
 		// 下载
-		await remote.methods.call('download', 'download-file-' + file.id, file.url, downloadPath);
+		await remote.methods.call('download', 'download-file-' + file.id, url, downloadPath);
 	}
 
 	/** 解压资源 */
@@ -108,15 +113,19 @@ export class ResourceLoader {
 		const files: LocalResourceFile[] = [];
 		// @ts-ignore
 		const groupnames: string[] = await remote.fs.call('readdirSync', this.resourceRootPath);
-
-		for (const groupname of groupnames) {
+		// TODO 检测是否是文件夹，如果不是则忽略
+		for (const groupname of groupnames.filter((g) => g !== '.DS_Store')) {
 			const folder = await remote.path.call('join', this.resourceRootPath, groupname);
 			if (await remote.fs.call('existsSync', folder)) {
-				// @ts-ignore
-				const filenames: string[] = await remote.fs.call('readdirSync', folder);
-				for (const filename of filenames) {
-					const path = await remote.path.call('join', folder, filename);
-					files.push({ groupname, filename, path });
+				try {
+					// @ts-ignore
+					const filenames: string[] = await remote.fs.call('readdirSync', folder);
+					for (const filename of filenames) {
+						const path = await remote.path.call('join', folder, filename);
+						files.push({ groupname, filename, path });
+					}
+				} catch (e) {
+					console.error(e);
 				}
 			}
 		}

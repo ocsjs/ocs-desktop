@@ -23,7 +23,7 @@ export function ocr(base64: string) {
 		const img = path.join(img_cache, uuid + '.png');
 		writeFile(img, base64, 'base64', () => {
 			// 要使用 "" 去包裹路径，防止出现空格
-			const cmd = [`"${path.join(getOcrFolder(), './ocr.exe')}"`, '--ocr', `"${img}"`].join(' ');
+			const cmd = [`".${path.join(getOcrFolder(), getOCRFileName())}"`, '--ocr', `"${img}"`].join(' ');
 			logger.log('cmd', cmd);
 
 			child_process.exec(cmd, (err, stdout, stderr) => {
@@ -65,7 +65,7 @@ export function det(det_target_base64: string, det_bg_base64: string) {
 		writeFileSync(img2, det_bg_base64, 'base64');
 
 		const cmd = [
-			`"${path.join(getOcrFolder(), './ocr.exe')}"`,
+			`"${path.join(getOcrFolder(), getOCRFileName())}"`,
 			'--det-target',
 			`"${img1}"`,
 			'--det-bg',
@@ -91,5 +91,9 @@ export function det(det_target_base64: string, det_bg_base64: string) {
 
 /** 判断是否能够进行验证码识别 */
 export function canOCR() {
-	return existsSync(path.join(getOcrFolder(), './ocr.exe'));
+	return existsSync(path.join(getOcrFolder(), getOCRFileName()));
+}
+
+function getOCRFileName() {
+	return process.platform === 'win32' ? './ocr.exe' : './ocr';
 }

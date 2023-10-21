@@ -5,6 +5,8 @@ package-lock.json
 
 **/*.zip
 
+**/*/.DS_Store
+
 # tsc
 
 lib/

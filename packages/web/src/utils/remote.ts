@@ -27,11 +27,12 @@ function registerRemote<T>(eventName: string) {
 	}
 
 	function send(channel: string, args: any[]): Promise<any> {
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
 			ipcRenderer.once(args[0], (e: any, ...respondArgs) => {
 				if (respondArgs[0].error) {
 					console.log({ respondArgs, channel, args });
 					notify('remote 模块错误', respondArgs[0].error, 'remote', { copy: true, type: 'error' });
+					reject(String(respondArgs[0].error));
 				} else {
 					resolve(respondArgs[0].data);
 				}
