@@ -129,7 +129,7 @@ const version = ref('');
 const currentRoute = useRouter().currentRoute;
 
 const state = reactive({
-	sideBarWidth: computed(() => (store.render.setting.showSideBarText ? 142 : 48))
+	sideBarWidth: computed(() => (store.render.setting.showSideBarText ? 142 : 56))
 });
 
 // 监听软件关闭
@@ -317,7 +317,7 @@ function onResize() {
 .sider {
 	-webkit-app-region: no-drag;
 	user-select: none;
-	padding: 4px 12px 4px 0px;
+	padding: 4px 24px 4px 0px;
 	text-align: center;
 	display: flex;
 	justify-content: left;

@@ -1,6 +1,7 @@
 <template>
 	<div
 		ref="tableRef"
+		class="ps-table"
 		:style="{ height: store.render.state.height - 160 + 'px', overflow: 'overlay' }"
 	>
 		<div class="ps-3 pe-3">

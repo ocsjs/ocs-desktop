@@ -157,6 +157,7 @@ body[arco-theme='dark'] {
 	.title {
 		color: @night-color;
 		background-color: @night-bg-color;
+		border-bottom: 1px solid @night-border-color;
 	}
 
 	#title {
@@ -221,6 +222,42 @@ body[arco-theme='dark'] {
 	.entity-properties {
 		background-color: @night-bg-color-secondary;
 		color: @night-color-secondary;
+	}
+
+	// 侧边栏
+	.sider-item.active {
+		background-color: @night-bg-color-secondary;
+	}
+
+	.sider {
+		border-right: 1px solid @night-border-color;
+
+		.sider-item {
+			border-left: 6px solid @night-bg-color;
+		}
+		.sider-item.active {
+			background-color: @night-bg-color-secondary;
+			border-left: 6px solid @night-color-primary;
+		}
+	}
+
+	// 批量创建表格
+	.ps-table {
+		.ps-body-cell {
+			border: 1px solid @night-border-color;
+
+			.arco-input-wrapper {
+				background: @night-bg-color-secondary;
+			}
+		}
+
+		.arco-table-tr {
+			.ps-table-index {
+				background-color: @night-bg-color-secondary;
+
+				color: @night-color-secondary;
+			}
+		}
 	}
 }
 
