@@ -44,6 +44,7 @@ export class ScriptWorker {
 		// 拓展文件夹路径
 		this.extensionPaths = fs
 			.readdirSync(store.paths.extensionsFolder)
+			.filter((f) => f !== '.DS_Store')
 			.map((file) => path.join(store.paths.extensionsFolder, file));
 
 		// 自动化脚本

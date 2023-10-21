@@ -93,7 +93,8 @@ const methods = {
 	getValidBrowsers: getValidBrowsers,
 	systemProcesses: () => si.processes(),
 	exportExcel: exportExcel,
-	statisticFolderSize: statisticFolderSize
+	statisticFolderSize: statisticFolderSize,
+	getPlatform: () => process.platform
 };
 
 /**

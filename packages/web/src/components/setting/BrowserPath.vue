@@ -49,6 +49,7 @@ const launchOptions = store.render.setting.launchOptions;
  */
 async function onDiy() {
 	if (launchOptions.executablePath) {
+		launchOptions.executablePath = launchOptions.executablePath.trim();
 		const exists = await remote.fs.call('existsSync', launchOptions.executablePath);
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');

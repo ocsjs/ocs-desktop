@@ -8,6 +8,8 @@ export function createWindow() {
 		icon: path.resolve('./public/favicon.ico'),
 		minHeight: 800,
 		minWidth: 1200,
+		width: 1200,
+		height: 800,
 		center: true,
 		hasShadow: true,
 		autoHideMenuBar: true,

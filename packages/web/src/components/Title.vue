@@ -1,6 +1,7 @@
 <template>
 	<div class="title ps-2">
 		<span
+			class="logo"
 			style="cursor: pointer; -webkit-app-region: no-drag"
 			@click="shell.openExternal('https://docs.ocsjs.com')"
 		>
@@ -12,7 +13,6 @@
 		</span>
 		<a-dropdown
 			class="tittle-dropdown"
-			position="bl"
 			trigger="hover"
 			:popup-max-height="false"
 		>
@@ -44,7 +44,6 @@
 		</a-dropdown>
 		<a-dropdown
 			class="tittle-dropdown"
-			position="bl"
 			trigger="hover"
 			:popup-max-height="false"
 		>
@@ -133,7 +132,7 @@
 
 		<a-dropdown
 			class="tittle-dropdown"
-			position="bl"
+			position="bottom"
 			trigger="hover"
 			:popup-max-height="false"
 		>
@@ -344,6 +343,10 @@ function reset() {
 			background-color: #f0f0f0;
 		}
 	}
+
+	> span {
+		display: flex;
+	}
 }
 :deep(.ant-dropdown-menu-item) {
 	font-size: 12px;
@@ -359,7 +362,9 @@ function reset() {
 	padding: 8px 12px 0px 12px !important;
 }
 
-.logo {
-	width: 18px;
+body.platform-darwin {
+	.title {
+		justify-content: center;
+	}
 }
 </style>

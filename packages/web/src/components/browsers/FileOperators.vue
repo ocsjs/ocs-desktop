@@ -82,6 +82,7 @@ import { RawPlaywrightScript } from '../playwright-scripts';
 import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSelector.vue';
 import PlaywrightScriptTable from '../playwright-scripts/PlaywrightScriptTable.vue';
 import { remote } from '../../utils/remote';
+import { Message } from '@arco-design/web-vue';
 
 const state = reactive({
 	showPlaywrightScriptSelector: false,
@@ -114,6 +115,10 @@ function newFolder() {
 	currentFolder.value.children[id] = folder;
 }
 function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywrightScript[]; store?: object }) {
+	if (!store?.render?.setting?.launchOptions?.executablePath) {
+		Message.error('检测到浏览器路径未填写，请在左侧软件设置中设置，然后重新创建浏览器！');
+		return;
+	}
 	// 关闭搜索模式
 	resetSearch();
 	const id = Entity.uuid();

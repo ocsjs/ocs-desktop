@@ -71,7 +71,7 @@ export class Browser extends Entity implements BrowserOptions {
 			'--window-position=0,0',
 			'--no-first-run',
 			'--no-default-browser-check',
-			`--user-data-dir=${this.cachePath}`
+			`--user-data-dir="${this.cachePath}"`
 		]
 			.concat(formatExtensionArguments(extensionPaths))
 			.join(' ')} http://localhost:${store.server.port || 15319}/index.html#/bookmarks`;
@@ -155,6 +155,9 @@ export class Browser extends Entity implements BrowserOptions {
 }
 
 function formatExtensionArguments(extensionPaths: string[]) {
-	const paths = extensionPaths.map((p) => p.replace(/\\/g, '/')).join(',');
-	return [`--disable-extensions-except=${paths}`, `--load-extension=${paths}`];
+	const paths = extensionPaths
+		.filter((f) => f.includes('.DS_Store') === false)
+		.map((p) => p.replace(/\\/g, '/'))
+		.join(',');
+	return [`--load-extension="${paths}"`];
 }

@@ -218,21 +218,25 @@ export async function about() {
 	});
 }
 
-export function changeTheme() {
-	if (store.render.setting.theme.dark) {
-		// 设置为暗黑主题
-		document.body.setAttribute('arco-theme', 'dark');
-		remote.win.call('setTitleBarOverlay', {
-			color: '#2C2C2C',
-			symbolColor: 'white'
-		});
-	} else {
-		// 恢复亮色主题
-		document.body.removeAttribute('arco-theme');
-		remote.win.call('setTitleBarOverlay', {
-			color: '#fff',
-			symbolColor: 'black'
-		});
+export async function changeTheme() {
+	const platform = await remote.methods.call('getPlatform');
+	document.body.classList.add('platform-' + platform);
+	if (platform !== 'darwin') {
+		if (store.render.setting.theme.dark) {
+			// 设置为暗黑主题
+			document.body.setAttribute('arco-theme', 'dark');
+			remote.win.call('setTitleBarOverlay', {
+				color: '#2C2C2C',
+				symbolColor: 'white'
+			});
+		} else {
+			// 恢复亮色主题
+			document.body.removeAttribute('arco-theme');
+			remote.win.call('setTitleBarOverlay', {
+				color: '#fff',
+				symbolColor: 'black'
+			});
+		}
 	}
 }
 

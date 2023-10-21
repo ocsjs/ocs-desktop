@@ -77,6 +77,7 @@
 						<a-col
 							v-if="fileStatus[file.url]"
 							flex="64px"
+							class="d-flex justify-content-center"
 						>
 							<a-space>
 								<template v-if="fileStatus[file.url].exists || fileStatus[file.url].downloadRate === 100">
