@@ -63,7 +63,11 @@ export class ResourceLoader {
 			await remote.fs.call('unlinkSync', downloadPath);
 		}
 		const platform = await remote.methods.call('getPlatform');
-		const url = platform === 'win32' ? file.url : file.platforms?.find((p) => p.platform === platform)?.url || '';
+		const url =
+			platform === 'win32'
+				? file.url
+				: // 优先安装对应平台的资源。如果没有对应平台的资源，则使用默认资源
+				  file.platforms?.find((p) => p.platform === platform)?.url || file.url;
 		if (!url) {
 			throw new Error('资源下载失败，路径为空');
 		}

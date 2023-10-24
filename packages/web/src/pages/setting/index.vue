@@ -5,22 +5,25 @@
 				<BrowserPath></BrowserPath>
 
 				<Description label="OCS配置">
-					<a-switch v-model="store.render.setting.ocs.openSync">
-						<template #checked> 同步到全部浏览器中 </template>
-						<template #unchecked> 同步到全部浏览器中 </template>
-					</a-switch>
+					<a-tooltip content="同步：不需要在浏览器里面设置OCS配置， 直接在软件设置就能同步到所有浏览器中">
+						<a-switch v-model="store.render.setting.ocs.openSync">
+							<template #checked> 同步到全部浏览器中 </template>
+							<template #unchecked> 同步到全部浏览器中 </template>
+						</a-switch>
 
-					<a-divider
-						class="mt-2 mb-2"
-						direction="vertical"
-					/>
+						<a-divider
+							class="mt-2 mb-2"
+							direction="vertical"
+						/>
 
-					<a-button
-						v-if="state.loading === false && state.err === ''"
-						@click="state.show = true"
-					>
-						点击配置
-					</a-button>
+						<a-button
+							v-if="state.loading === false && state.err === ''"
+							@click="state.show = true"
+						>
+							点击配置
+						</a-button>
+					</a-tooltip>
+
 					<a-modal
 						v-model:visible="state.show"
 						:footer="false"
