@@ -279,12 +279,12 @@ export async function launchBrowser({
 					const [blankPage] = browser.pages();
 					// 加载本地导航页
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');
+					// 关闭拓展加载时弹出的首页
+					await waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 					// 安装用户脚本
 					const warn = await setupUserScripts({ browser, userscripts, step });
 					// 运行自动化脚本
 					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
-					// 关闭拓展加载时弹出的首页
-					await closeExtensionHomepage({ browser, closeableExtensionHomepages });
 
 					await step(['初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
 
@@ -443,12 +443,33 @@ async function runPlaywrightScripts(opts: {
 /**
  * 关闭浏览器拓展主页
  */
-async function closeExtensionHomepage(opts: { browser: BrowserContext; closeableExtensionHomepages: string[] }) {
-	for (const page of opts.browser.pages()) {
-		if (opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage))) {
-			await page.close();
-		}
-	}
+async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; closeableExtensionHomepages: string[] }) {
+	return new Promise<any>((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			clearInterval(interval);
+			reject(new Error('浏览器拓展加载超时，请尝试重启浏览器，或者查看网络情况。'));
+		}, 60 * 1000);
+		const interval = setInterval(() => {
+			const includes = [];
+			for (const page of opts.browser.pages()) {
+				if (opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage))) {
+					includes.push(page);
+				}
+			}
+			if (includes.length) {
+				clearInterval(interval);
+				clearTimeout(timeout);
+				Promise.all(
+					opts.browser
+						.pages()
+						.filter((page) => opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage)))
+						.map((page) => page.close())
+				)
+					.then(resolve)
+					.catch(reject);
+			}
+		});
+	});
 }
 
 function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
