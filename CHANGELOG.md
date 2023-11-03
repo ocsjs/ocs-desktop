@@ -1,3 +1,22 @@
+## [2.4.7](https://github.com/ocsjs/ocs-desktop/compare/2.4.2...2.4.7) (2023-11-03)
+
+
+### Bug Fixes
+
+* 优化夜间模式的颜色 ([2166616](https://github.com/ocsjs/ocs-desktop/commit/21666167490d6a0f7be021eef3f7899c5b8c0bbf))
+* **app:** 优化网络卡顿时无法安装脚本的BUG ([77adbf9](https://github.com/ocsjs/ocs-desktop/commit/77adbf950cbfc8f461d6a990049659f850e07a86))
+* **web:** 修复mac资源下载BUG，优化夜间样式 ([a8aa70d](https://github.com/ocsjs/ocs-desktop/commit/a8aa70d459edf1e2a0e6dc76dc12fb702edb9c76))
+
+
+### Features
+
+* 新增OCS桌面版 MAC 版本适配 ([da2e91a](https://github.com/ocsjs/ocs-desktop/commit/da2e91ab76dbf5884e8e3aaf87f27e23e871168b))
+* **all:** 添加软件浏览器缓存路径修改功能 ([739c05a](https://github.com/ocsjs/ocs-desktop/commit/739c05a098034a7105845d53be88ea8c75bbe7c0))
+* **script:** 新增OCS 桌面版 MAC 版本的 OCR 适配 ([1b5f72a](https://github.com/ocsjs/ocs-desktop/commit/1b5f72a909d355cf51d162fcbdf04c4cd15cfa83))
+* **web:** 在批量启动方法中新增顺序启动和延时启动功能 ([e6da600](https://github.com/ocsjs/ocs-desktop/commit/e6da600dd03158c83637b55fe942bc967eada705))
+
+
+
 ## [2.4.2](https://github.com/ocsjs/ocs-desktop/compare/2.4.1...2.4.2) (2023-10-15)
 
 
