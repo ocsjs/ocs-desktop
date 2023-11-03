@@ -7,10 +7,28 @@
 				</template>
 
 				<a-button
+					v-if="!state.selectedAll"
 					size="mini"
-					@click="selectAllBrowserOfCurrentFolder"
+					@click="
+						() => {
+							state.selectedAll = true;
+							selectAllBrowserOfCurrentFolder();
+						}
+					"
 				>
 					全选
+				</a-button>
+				<a-button
+					v-if="state.selectedAll || currentCheckedBrowsers.length"
+					size="mini"
+					@click="
+						() => {
+							state.selectedAll = false;
+							cancelAllBrowserCheck();
+						}
+					"
+				>
+					取消
 				</a-button>
 
 				<template v-if="currentCheckedBrowsers.length">
@@ -52,13 +70,6 @@
 							<a-doption @click="deleteAll"> 批量删除 </a-doption>
 						</template>
 					</a-dropdown>
-
-					<a-button
-						size="mini"
-						@click="cancelAllBrowserCheck"
-					>
-						取消
-					</a-button>
 				</template>
 			</a-space>
 		</a-col>
@@ -120,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue';
+import { reactive, computed, h, ref } from 'vue';
 import { currentFolder, currentSearchedEntities } from '../../fs';
 import { Browser } from '../../fs/browser';
 import { root } from '../../fs/folder';
@@ -133,12 +144,14 @@ import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
 import EntityVue from '../Entity.vue';
 import Tags from '../Tags.vue';
+import { Col, InputNumber, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
 
 const state = reactive({
 	showChecked: false,
 	selectBrowsers: [] as Browser[],
-	pasteType: 'copy' as 'copy' | 'cut'
+	pasteType: 'copy' as 'copy' | 'cut',
+	selectedAll: false
 });
 
 /** 当前文件夹的浏览器 */
@@ -176,13 +189,71 @@ function cancelAllBrowserCheck() {
 }
 
 async function launchAll() {
-	for (const browser of currentCheckedBrowsers.value) {
-		const process = Process.from(browser.uid);
-		// 已经运行的不执行
-		if (process === undefined) {
-			await Browser.from(browser.uid)?.launch();
-		}
-	}
+	const type = ref('顺序启动');
+	const time = ref(3);
+	Modal.confirm({
+		title: '批量启动',
+		simple: false,
+		okText: '开始批量启动',
+		cancelText: '取消',
+		content: () =>
+			h('div', [
+				h(Row, { gutter: [24, 24] }, [
+					h(Col, [
+						h(Row, [
+							h(Col, { flex: '140px', style: { lineHeight: '32px' } }, '启动类型：'),
+							h(Col, { flex: 'auto' }, [
+								h(Select, {
+									modelValue: type.value,
+									options: ['顺序启动', '延时启动'],
+									onChange: (value) => {
+										type.value = value.toString();
+									}
+								})
+							])
+						])
+					]),
+					type.value === '延时启动'
+						? h(Col, [
+								h(Row, [
+									h(Col, { flex: '140px', style: { lineHeight: '32px' } }, '延时启动间隔(秒)：'),
+									h(Col, { flex: 'auto' }, [
+										h(Tooltip, { content: '每隔一段时间启动浏览器' }, [
+											h(InputNumber, {
+												modelValue: time.value,
+												placeholder: '请输入延时时间(秒)'
+											})
+										])
+									])
+								])
+						  ])
+						: undefined
+				])
+			]),
+		async onOk() {
+			const browsers = currentCheckedBrowsers.value
+				.map((e) => {
+					if (Process.from(e.uid) === undefined) {
+						return e;
+					} else {
+						return undefined;
+					}
+				})
+				.filter((e) => e !== undefined) as Browser[];
+
+			if (type.value === '延时启动') {
+				for (const browser of browsers) {
+					browser.launch();
+					await new Promise((resolve) => setTimeout(resolve, time.value * 1000));
+				}
+			} else {
+				for (const browser of browsers) {
+					await browser.launch();
+				}
+			}
+		},
+		maskClosable: false
+	});
 }
 
 async function closeAll() {
