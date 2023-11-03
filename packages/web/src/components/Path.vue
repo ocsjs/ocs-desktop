@@ -34,6 +34,10 @@ const props = withDefaults(defineProps<PathProps>(), {
 	setting: false
 });
 
+const emits = defineEmits<{
+	(e: 'onPathChange', oldPath: string, newPath: string): void;
+}>();
+
 const { label, name, setting } = toRefs(props);
 const { shell } = electron;
 
@@ -50,8 +54,10 @@ async function change(name: keyof typeof store.paths) {
 			defaultPath: realPath.value
 		});
 		if (res) {
+			const original = store.paths[name];
 			realPath.value = res[0];
-			store[name] = res[0];
+			store.paths[name] = res[0];
+			emits('onPathChange', original, res[0]);
 		}
 	}
 }

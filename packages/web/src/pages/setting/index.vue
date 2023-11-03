@@ -50,7 +50,7 @@
 						v-show="state.loading === false && state.err !== ''"
 						style="color: red"
 					>
-						解析错误！
+						解析错误！，请尝试重启软件
 					</div>
 					<div v-show="state.loading === true && state.err === ''"><icon-loading /> 正在获取最新OCS配置</div>
 				</Description>
@@ -111,6 +111,8 @@
 				<Path
 					label="浏览器缓存路径"
 					name="userDataDirsFolder"
+					:setting="true"
+					@on-path-change="onUserDataDirsFolderChange"
 				/>
 				<Path
 					label="文件下载路径"
@@ -156,6 +158,9 @@ import OCSConfigs from '../../components/OCSConfigs.vue';
 import { reactive } from 'vue';
 import { changeTheme } from '../../utils';
 import Icon from '../../components/Icon.vue';
+import { forceClearBrowserCache } from '../../utils/browser';
+import { Folder } from '../../fs/folder';
+import { Browser } from '../../fs/browser';
 
 const state = reactive({
 	/** 是否加载 */
@@ -171,6 +176,17 @@ async function reset() {
 	store.version = undefined;
 	remote.app.call('relaunch');
 	remote.app.call('exit', 0);
+}
+async function onUserDataDirsFolderChange(previous: string, current: string) {
+	// 更改全部浏览器缓存路径
+	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
+	if (browsers.length > 0) {
+		for (const browser of browsers) {
+			browser.cachePath = await remote.path.call('join', current, browser.uid);
+		}
+	}
+
+	forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
 }
 </script>
 

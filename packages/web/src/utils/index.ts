@@ -7,7 +7,6 @@ import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
 import { OCSApi } from '@ocs-desktop/common/src/api';
-import { SyncOutlined } from '@ant-design/icons-vue';
 
 const { ipcRenderer } = electron;
 
@@ -246,55 +245,6 @@ export function setAutoLaunch() {
 
 export function setAlwaysOnTop() {
 	remote.win.call('setAlwaysOnTop', store.window.alwaysOnTop);
-}
-
-export async function checkBrowserCaches() {
-	const modal = Modal.info({
-		simple: false,
-		title: '正在计算浏览器缓存...',
-		footer: false,
-		maskClosable: false,
-		content: () => {
-			return h('div', [h(SyncOutlined, { spin: true }), '正在计算浏览器缓存...']);
-		}
-	});
-	const totalSize = await remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder);
-	console.log('当前浏览器总缓存大小', size(totalSize));
-	modal.close();
-
-	clearBrowserCaches(totalSize);
-}
-
-export function clearBrowserCaches(totalSize: number) {
-	// 显示详情
-	Modal.confirm({
-		simple: false,
-		title: '清除浏览器缓存',
-		content: () => {
-			return h('div', [
-				h('p', { class: 'text-secondary' }, [
-					'提示：浏览器缓存主要存储一些Cookie，网页数据，如果占用非常大可以清除，不会影响浏览器正常使用。'
-				]),
-				h('p', ['当前浏览器缓存总大小：', size(totalSize)])
-			]);
-		},
-		okText: '清除缓存',
-		onOk() {
-			remote.fs
-				.call('readdirSync', store.paths.userDataDirsFolder, {} as any)
-				.then(async (dirs) => {
-					for (const dir of dirs) {
-						remote.fs.call('rmSync', await remote.path.call('join', store.paths.userDataDirsFolder, String(dir)), {
-							recursive: true,
-							force: true
-						});
-					}
-				})
-				.catch((err) => {
-					Message.error(err);
-				});
-		}
-	});
 }
 
 export function size(num: number) {

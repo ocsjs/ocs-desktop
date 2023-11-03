@@ -34,14 +34,12 @@
 
 <script setup lang="ts">
 import { store } from '../../store';
-import { Message, Modal } from '@arco-design/web-vue';
+import { Message } from '@arco-design/web-vue';
 import { remote } from '../../utils/remote';
 import Description from '../Description.vue';
 import Icon from '../Icon.vue';
-import { Folder } from '../../fs/folder';
-import { h } from 'vue';
-import { SyncOutlined } from '@ant-design/icons-vue';
-import { Browser } from '../../fs/browser';
+import { forceClearBrowserCache } from '../../utils/browser';
+
 const launchOptions = store.render.setting.launchOptions;
 
 /**
@@ -54,29 +52,10 @@ async function onDiy() {
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');
 		} else {
-			const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
-			if (browsers.length > 0) {
-				const modal = Modal.warning({
-					title: '提示',
-					content: () =>
-						h('div', [
-							h(SyncOutlined, { spin: true }),
-							' 检测到您更换浏览器路径，正在删除全部浏览器缓存，否则无法运行...'
-						]),
-					maskClosable: false,
-					closable: false,
-					footer: false
-				});
-
-				for (const browser of browsers) {
-					await browser.cleanCache();
-				}
-
-				setTimeout(() => {
-					modal.close();
-					Message.success('配置浏览器路径成功');
-				}, 3000);
-			}
+			forceClearBrowserCache(
+				'检测到您更换浏览器路径，正在删除全部浏览器缓存，否则无法运行...',
+				store.paths.userDataDirsFolder
+			);
 		}
 	}
 }

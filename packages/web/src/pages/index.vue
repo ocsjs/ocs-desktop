@@ -100,15 +100,8 @@ import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';
 import { router, routes, CustomRouteType } from '../route';
 import { store } from '../store';
-import {
-	about,
-	changeTheme,
-	clearBrowserCaches,
-	fetchRemoteNotify,
-	setAlwaysOnTop,
-	setAutoLaunch,
-	sleep
-} from '../utils';
+import { about, changeTheme, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch, sleep } from '../utils';
+import { showClearBrowserCachesModal } from '../utils/browser';
 import { notify } from '../utils/notify';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
@@ -206,7 +199,7 @@ onMounted(async () => {
 	/** 检测浏览器缓存大小，超过10GB则提示 */
 	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
-			clearBrowserCaches(totalSize);
+			showClearBrowserCachesModal(totalSize);
 		}
 	});
 

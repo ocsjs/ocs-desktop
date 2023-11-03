@@ -4,7 +4,7 @@ import Store from 'electron-store';
 
 // IO操作只能在 app.getPath('userData') 下进行，否则会有权限问题。
 
-export const appStore = {
+export const OriginalAppStore = {
 	name: app.getName(),
 	version: app.getVersion(),
 	/** 路径数据 */
@@ -15,7 +15,7 @@ export const appStore = {
 		'logs-path': app.getPath('logs'),
 		'config-path': path.resolve(app.getPath('userData'), './config.json'),
 		/** 浏览器用户数据文件夹 */
-		userDataDirsFolder: path.resolve(app.getPath('userData'), './userDataDirs'),
+		userDataDirsFolder: '',
 		/** 浏览器下载文件夹 */
 		downloadFolder: path.resolve(app.getPath('userData'), './downloads'),
 		/** 加载拓展路径 */
@@ -41,4 +41,4 @@ export const appStore = {
  * - 可以使用 store.store 访问
  * - 设置数据请使用 store.set('key', value)
  */
-export const store = new Store<typeof appStore>();
+export const store = new Store<typeof OriginalAppStore>();

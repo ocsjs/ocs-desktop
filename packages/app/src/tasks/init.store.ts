@@ -2,10 +2,11 @@
 
 import { app } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
-import { appStore, store } from '../store';
+import { OriginalAppStore, store } from '../store';
 import { valid, coerce, clean, gt, SemVer } from 'semver';
 import defaultsDeep from 'lodash/defaultsDeep';
 import { Logger } from '../logger';
+import path from 'path';
 
 const logger = Logger('store-init');
 
@@ -24,19 +25,28 @@ export function initStore() {
 		const originVersion = parseVersion(version);
 		// 是否需要更新设置
 		if (gt(appVersion, originVersion)) {
-			store.store = defaultsDeep(store.store, appStore);
+			store.store = defaultsDeep(store.store, OriginalAppStore);
 		}
 	} else {
 		const render = store.store.render ? JSON.parse(JSON.stringify(store.store.render)) : {};
-		appStore.render = render;
+		OriginalAppStore.render = render;
 		// 初始化设置
-		store.store = appStore;
+		store.store = OriginalAppStore;
 
 		logger.log('store', store.store);
 	}
 
+	/**
+	 * 如果浏览器缓存为空，则初始化，如果不为空那就是用户自己设置了
+	 */
+	if (!store.store.paths.userDataDirsFolder) {
+		OriginalAppStore.paths.userDataDirsFolder = path.resolve(app.getPath('userData'), './userDataDirs');
+	} else {
+		OriginalAppStore.paths.userDataDirsFolder = store.store.paths.userDataDirsFolder;
+	}
+
 	// 强制更新路径
-	store.set('paths', appStore.paths);
+	store.set('paths', OriginalAppStore.paths);
 
 	if (!existsSync(store.store.paths.userDataDirsFolder)) {
 		mkdirSync(store.store.paths.userDataDirsFolder, { recursive: true });

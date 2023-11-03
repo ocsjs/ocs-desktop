@@ -160,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { fetchRemoteNotify, date, about, checkBrowserCaches } from '../utils';
+import { fetchRemoteNotify, date, about } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal } from '@arco-design/web-vue';
@@ -171,6 +171,7 @@ import { Folder, root } from '../fs/folder';
 import { h } from 'vue';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
+import { checkBrowserCaches } from '../utils/browser';
 
 const { shell } = electron;
 

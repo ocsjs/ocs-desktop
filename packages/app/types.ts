@@ -1,8 +1,8 @@
-import { appStore } from './src/store';
+import { OriginalAppStore } from './src/store';
 import { ScriptWorker } from './src/worker';
 
 export { RemoteMethods } from './src/tasks/remote.register';
-export type AppStore = typeof appStore;
+export type AppStore = typeof OriginalAppStore;
 
 export { ScriptWorker };
 
