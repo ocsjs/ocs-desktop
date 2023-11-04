@@ -191,7 +191,9 @@ async function verify(page: Page, opts: { ocrApiUrl: string; detTargetKey: strin
 						throw new Error('滑块验证识别失败，请尝试手动登录。');
 					}
 				} else {
-					throw new Error('未检测到图片验证码识别模块, 请手动输入验证码。');
+					throw new Error(
+						'未检测到图片验证码识别模块, 请手动输入验证码，或在软件左侧应用中心安装识别模块后重启浏览器。'
+					);
 				}
 			}
 		}
