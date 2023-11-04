@@ -50,7 +50,10 @@
 		"ant-design-vue",
 		"typescript"
 	],
-	"author": "enncy",
+	"author": {
+		"name": "enncy",
+		"email": "enncyemail@qq.com"
+	},
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/ocsjs/ocs-desktop/issues"
