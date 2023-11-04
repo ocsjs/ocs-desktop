@@ -9,28 +9,30 @@
 	"asar": false,
 	"copyright": "Copyright © 2021 ${author}",
 	"nsis": {
-		"oneClick": true
+		"oneClick": false,
+		"perMachine": true,
+		"allowToChangeInstallationDirectory": true
 	},
-	"extraFiles": [
-		{
-			"from": "./bin/ocr.zip",
-			"to": "./bin/ocr.zip"
-		}
-	],
-
 	"win": {
 		"icon": "public/favicon.png",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
-		"target": [
-			{
-				"target": "nsis",
-				"arch": ["x64"]
-			}
-		]
+		"target": [{ "target": "nsis", "arch": ["x64", "ia32"] }]
 	},
 	"mac": {
 		"icon": "public/favicon.icns",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
-		"target": "default"
+		"target": [
+			{ "target": "zip", "arch": ["x64", "arm64"] },
+			{ "target": "dmg", "arch": ["x64", "arm64"] }
+		]
+	},
+	"linux": {
+		"icon": "public/favicon.png",
+		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
+		"target": [
+			{ "target": "AppImage", "arch": ["x64", "arm64"] },
+			{ "target": "deb", "arch": ["x64", "arm64"] },
+			{ "target": "rpm", "arch": ["x64", "arm64"] }
+		]
 	}
 }

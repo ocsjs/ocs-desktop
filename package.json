@@ -10,6 +10,7 @@
 		"build": "npm run tsc && gulp -f ./scripts/build-app.js",
 		"release": "sh ./scripts/release.sh",
 		"changelog": "conventional-changelog -p angular -i CHANGELOG.md --same-file -r 0",
+		"changelog:current": "conventional-changelog -p angular -o CHANGELOG_CURRENT.md -r 1",
 		"tsc": "pnpm lint && gulp -f ./scripts/tsc.js",
 		"lint": "pnpm format && eslint  ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
 		"format": "prettier -c ./.prettierrc.json  **/*.ts  **/*.js **/*.vue **/*.css  --write",
