@@ -7,8 +7,8 @@
 	"scripts": {
 		"dev": "tsc &&  chcp 65001 && electron .",
 		"dev:mac": "tsc && electron .",
-		"pack": "tsc && electron-builder --config ./electron.builder.json --dir",
-		"dist": "tsc && electron-builder --config ./electron.builder.json",
+		"pack": "tsc && electron-builder --config ./electron.builder.json --dir --publish never",
+		"dist": "tsc && electron-builder --config ./electron.builder.json --publish never",
 		"proxy": "HTTPS_PROXY=127.0.0.1:7890"
 	},
 	"devDependencies": {
@@ -50,7 +50,10 @@
 		"ant-design-vue",
 		"typescript"
 	],
-	"author": "enncy",
+	"author": {
+		"name": "enncy",
+		"email": "enncyemail@qq.com"
+	},
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/ocsjs/ocs-desktop/issues"
