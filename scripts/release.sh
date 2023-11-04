@@ -19,9 +19,9 @@ if [ "$isRelease" = "y" ]; then
     # 代码检查
     npm run lint &&
     # 更新版本
-    npm version "$version" --no-git-tag-version &&
+    npm version "$version" --no-git-tag-version --allow-same-version &&
     cd ./packages/app &&
-    npm version "$version" --no-git-tag-version &&
+    npm version "$version" --no-git-tag-version --allow-same-version &&
     cd ../../ &&
     # 本地构建
     npm run build &&
