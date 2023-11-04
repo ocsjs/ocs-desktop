@@ -8,7 +8,7 @@
 
 ### Features
 
-* 添加Github Action 自动打包功能 ([c2632df](https://github.com/ocsjs/ocs-desktop/commit/c2632df5ba976d52d66fed51932dff84de105db8))
+* 添加Github Action 自动打包功能 ([bd1d74c](https://github.com/ocsjs/ocs-desktop/commit/bd1d74c8abc7f3e8e9d7332a95024d8653f3c555))
 
 
 
