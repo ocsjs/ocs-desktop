@@ -31,8 +31,6 @@ if [ "$isRelease" = "y" ]; then
     git add ./packages/app/package.json package.json CHANGELOG.md &&
     git commit -m "version release $version" &&
     git tag "$version" &&
-    # 发布
-    npm publish &&
     # 提交
     git push origin main --tags
     echo "$version 发布成功"
