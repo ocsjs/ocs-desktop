@@ -287,7 +287,7 @@ async function deleteAll() {
 				for (const browser of currentCheckedBrowsers.value) {
 					if (canRun()) {
 						await Browser.from(browser.uid)?.remove();
-						await new Promise((resolve) => setTimeout(resolve, 1000));
+						await new Promise((resolve) => setTimeout(resolve, 200));
 					}
 				}
 			});
