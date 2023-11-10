@@ -39,15 +39,6 @@ export const config = reactive({
 					}
 				},
 				{
-					name: 'dashboard',
-					path: 'dashboard',
-					component: shallowRef(dashboard),
-					meta: {
-						icon: 'image',
-						title: '监控列表'
-					}
-				},
-				{
 					name: 'user-scripts',
 					path: 'user-scripts',
 					component: shallowRef(userScripts),
@@ -63,6 +54,15 @@ export const config = reactive({
 					meta: {
 						icon: 'widgets',
 						title: '应用中心'
+					}
+				},
+				{
+					name: 'dashboard',
+					path: 'dashboard',
+					component: shallowRef(dashboard),
+					meta: {
+						icon: 'image',
+						title: '监控列表'
 					}
 				},
 				{
@@ -209,9 +209,5 @@ export const config = reactive({
 				}));
 			}
 		}
-	] as ScriptSearchEngine[],
-	/**
-	 * 可关闭的浏览器拓展主页，用于拓展加载时自动关闭主页，节省浏览器内存
-	 */
-	closeableExtensionHomepages: ['docs.scriptcat.org', 'tampermonkey.net/index.php']
+	] as ScriptSearchEngine[]
 });

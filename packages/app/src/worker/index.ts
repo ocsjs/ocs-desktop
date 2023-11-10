@@ -20,21 +20,18 @@ export class ScriptWorker {
 	/** 执行的自动化脚本列表 */
 	playwrightScripts: PS[] = [];
 	/** 可关闭的浏览器拓展主页 */
-	closeableExtensionHomepages: string[] = [];
 	store?: AppStore;
 
 	init({
 		store,
 		uid,
 		cachePath,
-		playwrightScripts,
-		closeableExtensionHomepages
+		playwrightScripts
 	}: {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
 		playwrightScripts: PS[];
-		closeableExtensionHomepages: string[];
 	}) {
 		this.debug('正在初始化进程...');
 
@@ -49,7 +46,6 @@ export class ScriptWorker {
 
 		// 自动化脚本
 		this.playwrightScripts = playwrightScripts;
-		this.closeableExtensionHomepages = closeableExtensionHomepages;
 
 		// 初始化日志
 		this.logger = new LoggerCore(store.paths['logs-path'], false, 'script', path.basename(cachePath));
@@ -107,7 +103,7 @@ export class ScriptWorker {
 					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks`
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
-				closeableExtensionHomepages: this.closeableExtensionHomepages,
+				closeableExtensionHomepages: ['docs.scriptcat.org', 'tampermonkey.net/index.php'],
 				actionsKey: this.store?.server.actions_key || '',
 				...options
 			});
@@ -449,26 +445,27 @@ async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; cl
 			clearInterval(interval);
 			reject(new Error('浏览器拓展加载超时，请尝试重启浏览器，或者查看网络情况。'));
 		}, 60 * 1000);
-		const interval = setInterval(() => {
-			const includes = [];
+		const interval = setInterval(async () => {
+			const includes: Page[] = [];
 			for (const page of opts.browser.pages()) {
-				if (opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage))) {
+				// 当拓展主页无法访问时，会跳转到chrome-error://chromewebdata/，此时获取的url为chrome-error://chromewebdata/，而不是拓展主页的url，但是title是拓展主页的host
+				const title = page.url() === 'chrome-error://chromewebdata/' ? await page.title() : '';
+				if (
+					opts.closeableExtensionHomepages.some((homepage) =>
+						page.url() === 'chrome-error://chromewebdata/' ? homepage.includes(title) : page.url().includes(homepage)
+					)
+				) {
 					includes.push(page);
 				}
 			}
 			if (includes.length) {
 				clearInterval(interval);
 				clearTimeout(timeout);
-				Promise.all(
-					opts.browser
-						.pages()
-						.filter((page) => opts.closeableExtensionHomepages.some((homepage) => page.url().includes(homepage)))
-						.map((page) => page.close())
-				)
+				Promise.all(includes.map(async (page) => page.close()))
 					.then(resolve)
 					.catch(reject);
 			}
-		});
+		}, 1000);
 	});
 }
 

@@ -9,7 +9,6 @@ import { Message } from '@arco-design/web-vue';
 import EventEmitter from 'events';
 import { child_process } from './node';
 import { notify } from './notify';
-import { config } from '../config';
 
 export type RemoteScriptWorker = <W extends keyof ScriptWorker = keyof ScriptWorker>(
 	event: W,
@@ -113,8 +112,7 @@ export class Process extends EventEmitter {
 			store,
 			cachePath: this.browser.cachePath,
 			uid: this.uid,
-			playwrightScripts: this.browser.playwrightScripts,
-			closeableExtensionHomepages: config.closeableExtensionHomepages
+			playwrightScripts: this.browser.playwrightScripts
 		});
 	}
 
