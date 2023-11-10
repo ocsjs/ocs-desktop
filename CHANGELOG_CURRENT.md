@@ -1,17 +1,17 @@
-# [2.5.0](https://github.com/ocsjs/ocs-desktop/compare/2.4.7...2.5.0) (2023-11-04)
+## [2.5.2](https://github.com/ocsjs/ocs-desktop/compare/2.5.0...2.5.2) (2023-11-10)
 
 
 ### Bug Fixes
 
-* 只打包 ubuntu 系统的软件 ([6f06ab6](https://github.com/ocsjs/ocs-desktop/commit/6f06ab6f385476159bc09c346786fa6edb3a00fa))
-* **app:** 添加验证码识别模块安装提示 ([d5dc301](https://github.com/ocsjs/ocs-desktop/commit/d5dc301b777b54bdd4d03feab2629ae7a7deea4b))
+* 修复当拓展页面无法加载时不自动安装脚本的BUG ([9766c4a](https://github.com/ocsjs/ocs-desktop/commit/9766c4a9af04e4515955f37ec64c2c6e68b0703b))
+* 修改默认侧边栏文字为展开状态，并优化样式 ([34106a8](https://github.com/ocsjs/ocs-desktop/commit/34106a841e84f4d8227148d0c5649800ecd42146))
+* **web:** 修改删除间隔为200毫秒 ([5110ebf](https://github.com/ocsjs/ocs-desktop/commit/5110ebfe757ae4b3bd89ef75e8f7d94d1146b1fb))
+* **web:** 优化错误处理 ([97e782b](https://github.com/ocsjs/ocs-desktop/commit/97e782b5dc725a8e988a4a3d66659efd31a93ce8))
 
 
 ### Features
 
-* 添加Github Action 自动打包功能 ([932b6a1](https://github.com/ocsjs/ocs-desktop/commit/932b6a1b19c64c64b8affed09e862c0d01c22ed8))
-* 添加Github Action 自动打包功能 ([bd1d74c](https://github.com/ocsjs/ocs-desktop/commit/bd1d74c8abc7f3e8e9d7332a95024d8653f3c555))
-* 添加Github Action 自动打包功能 ([c2632df](https://github.com/ocsjs/ocs-desktop/commit/c2632df5ba976d52d66fed51932dff84de105db8))
+* **web:** 优化批量操作，使得批量操作途中可以进行暂停 ([8fbee99](https://github.com/ocsjs/ocs-desktop/commit/8fbee99f4bc94f8a689e86799252713a88f058fc))
 
 
 
