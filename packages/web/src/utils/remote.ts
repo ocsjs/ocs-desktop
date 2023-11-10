@@ -20,7 +20,9 @@ function registerRemote<T>(eventName: string) {
 		const res = ipcRenderer.sendSync(channel, ...args);
 		if (res?.error) {
 			console.log(res);
-
+			if (errorFilter(res.error)) {
+				return;
+			}
 			notify('remote 模块错误', res.error, 'remote', { copy: true, type: 'error' });
 		}
 		return res;
@@ -31,7 +33,9 @@ function registerRemote<T>(eventName: string) {
 			ipcRenderer.once(args[0], (e: any, ...respondArgs) => {
 				if (respondArgs[0].error) {
 					console.log({ respondArgs, channel, args });
-					notify('remote 模块错误', respondArgs[0].error, 'remote', { copy: true, type: 'error' });
+					if (!errorFilter(respondArgs[0].error)) {
+						notify('remote 模块错误', respondArgs[0].error, 'remote', { copy: true, type: 'error' });
+					}
 					reject(String(respondArgs[0].error));
 				} else {
 					resolve(respondArgs[0].data);
@@ -95,3 +99,10 @@ export const remote = {
 	// 截屏录像
 	desktopCapturer: registerRemote<DesktopCapturer>('desktopCapturer')
 };
+
+function errorFilter(str: string) {
+	//  operation not permitted, stat xxxxx CrashpadMetrics.pma ， 这个是 playwright 问题，暂时无需处理
+	if (String(str).includes('CrashpadMetrics')) {
+		return true;
+	}
+}
