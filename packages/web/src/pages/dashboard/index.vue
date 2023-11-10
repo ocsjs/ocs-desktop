@@ -60,10 +60,15 @@
 		</div>
 
 		<template v-if="processes.length === 0">
-			<a-empty
-				class="pt-5"
-				description="没有运行中的浏览器"
-			></a-empty>
+			<div
+				class="d-flex"
+				style="height: 50vh"
+			>
+				<a-empty
+					class="m-auto"
+					description="没有运行中的浏览器"
+				></a-empty>
+			</div>
 		</template>
 		<template v-else-if="state.show === false">
 			<a-empty

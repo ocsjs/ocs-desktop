@@ -25,8 +25,11 @@
 		<FileMultipleOperators></FileMultipleOperators>
 
 		<template v-if="currentEntities.length === 0">
-			<div class="d-flex align-items-center mt-5">
-				<a-empty class="p-3">
+			<div
+				class="d-flex"
+				style="height: 50vh"
+			>
+				<a-empty class="p-3 m-auto">
 					<div>
 						暂无浏览器，<a-button
 							type="text"

@@ -55,8 +55,15 @@
 					</a-space>
 				</div>
 
-				<div v-if="store.render.scripts.length === 0">
-					<a-empty description="暂无数据, 请在上方“搜索脚本”中选择喜欢的脚本进行添加哦~" />
+				<div
+					v-if="store.render.scripts.length === 0"
+					style="height: 50vh"
+					class="d-flex"
+				>
+					<a-empty
+						class="m-auto"
+						description="暂无数据, 请在上方“搜索脚本”中选择喜欢的脚本进行添加哦~"
+					/>
 				</div>
 				<div
 					v-else
