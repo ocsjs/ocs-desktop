@@ -39,7 +39,6 @@
 				<a-doption @click="relaunch"> 重启软件 </a-doption>
 				<a-doption @click="openLog"> 日志目录 </a-doption>
 				<a-doption @click="openDevTools"> 开发者工具 </a-doption>
-				<a-doption @click="reset"> 重置软件设置 </a-doption>
 			</template>
 		</a-dropdown>
 		<a-dropdown
@@ -308,14 +307,6 @@ function openDevTools() {
 	};
 
 	remote.webContents.call('openDevTools');
-}
-
-/** 重置设置 */
-function reset() {
-	// @ts-ignore
-	store.version = undefined;
-	remote.app.call('relaunch');
-	remote.app.call('exit', 0);
 }
 </script>
 

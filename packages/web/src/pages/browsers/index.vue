@@ -27,7 +27,14 @@
 		<template v-if="currentEntities.length === 0">
 			<div class="d-flex align-items-center mt-5">
 				<a-empty class="p-3">
-					<div>暂无浏览器，可点击上方的帮助查看使用教程哦~</div>
+					<div>
+						暂无浏览器，<a-button
+							type="text"
+							size="mini"
+							@click="about"
+							>点击查看使用教程</a-button
+						>
+					</div>
 				</a-empty>
 			</div>
 		</template>
@@ -149,6 +156,7 @@ import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
 import { currentEntities, currentSearchedEntities } from '../../fs';
 import FileHeader from '../../components/browsers/FileHeader.vue';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
+import { about } from '../../utils';
 </script>
 
 <style scoped lang="less">
