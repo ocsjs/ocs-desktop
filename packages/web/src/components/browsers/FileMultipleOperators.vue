@@ -144,8 +144,9 @@ import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
 import EntityVue from '../Entity.vue';
 import Tags from '../Tags.vue';
-import { Col, InputNumber, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
+import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
+import { SyncOutlined } from '@ant-design/icons-vue';
 
 const state = reactive({
 	showChecked: false,
@@ -230,42 +231,68 @@ async function launchAll() {
 						: undefined
 				])
 			]),
-		async onOk() {
-			const browsers = currentCheckedBrowsers.value
-				.map((e) => {
-					if (Process.from(e.uid) === undefined) {
-						return e;
-					} else {
-						return undefined;
-					}
-				})
-				.filter((e) => e !== undefined) as Browser[];
+		onOk() {
+			multipleOperationRegister('批量启动', async (canRun) => {
+				const browsers = currentCheckedBrowsers.value
+					.map((e) => {
+						if (Process.from(e.uid) === undefined) {
+							return e;
+						} else {
+							return undefined;
+						}
+					})
+					.filter((e) => e !== undefined) as Browser[];
 
-			if (type.value === '延时启动') {
-				for (const browser of browsers) {
-					browser.launch();
-					await new Promise((resolve) => setTimeout(resolve, time.value * 1000));
+				if (type.value === '延时启动') {
+					for (const browser of browsers) {
+						if (canRun()) {
+							browser.launch();
+							await new Promise((resolve) => setTimeout(resolve, time.value * 1000));
+						}
+					}
+				} else {
+					for (const browser of browsers) {
+						if (canRun()) {
+							await browser.launch();
+						}
+					}
 				}
-			} else {
-				for (const browser of browsers) {
-					await browser.launch();
-				}
-			}
+			});
 		},
 		maskClosable: false
 	});
 }
 
 async function closeAll() {
-	for (const browser of currentCheckedBrowsers.value) {
-		await Browser.from(browser.uid)?.close();
+	if (currentCheckedBrowsers.value.every((b) => Process.from(b.uid) === undefined)) {
+		Message.warning('没有浏览器正在运行');
+		return;
 	}
+	multipleOperationRegister('批量关闭', async (canRun) => {
+		for (const browser of currentCheckedBrowsers.value) {
+			if (canRun()) {
+				await browser.close();
+			}
+		}
+	});
 }
 
 async function deleteAll() {
-	for (const browser of currentCheckedBrowsers.value) {
-		await Browser.from(browser.uid)?.remove();
-	}
+	Modal.warning({
+		title: '警告',
+		simple: true,
+		content: '是否要删除所选的浏览器？删除后将无法找回。',
+		onOk() {
+			multipleOperationRegister('批量删除', async (canRun) => {
+				for (const browser of currentCheckedBrowsers.value) {
+					if (canRun()) {
+						await Browser.from(browser.uid)?.remove();
+						await new Promise((resolve) => setTimeout(resolve, 1000));
+					}
+				}
+			});
+		}
+	});
 }
 
 function copy() {
@@ -301,6 +328,31 @@ async function paste() {
 	}
 
 	cancelAllBrowserCheck();
+}
+
+/**
+ * 批量化操作的控制窗口
+ */
+async function multipleOperationRegister(name: string, runner: (canRun: () => boolean) => Promise<any>) {
+	let canRun = true;
+	const modal = Modal.info({
+		title: '批量化操作',
+		content: () => h('div', [h(SyncOutlined, { spin: true }), ' - 正在执行批量化操作中： ' + name]),
+		maskClosable: false,
+		closable: false,
+		simple: false,
+		okText: '暂停操作',
+		okButtonProps: {
+			type: 'secondary'
+		},
+		onOk() {
+			canRun = false;
+			modal.close();
+		}
+	});
+	await runner(() => canRun);
+	canRun = false;
+	modal.close();
 }
 </script>
 
