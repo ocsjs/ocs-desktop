@@ -116,7 +116,7 @@ export const store: AppStore & { render: WebStore } = reactive(
 				},
 				setting: {
 					browserType: 'diy',
-					showSideBarText: false,
+					showSideBarText: true,
 					launchOptions: {
 						executablePath: ''
 					},

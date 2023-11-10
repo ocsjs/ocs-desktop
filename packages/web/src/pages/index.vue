@@ -30,6 +30,7 @@
 										>
 											<component
 												:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
+												style="height: 28px"
 												:content="item.meta.title"
 												position="right"
 											>
@@ -42,7 +43,7 @@
 
 											<div
 												v-if="store.render.setting.showSideBarText"
-												class="ms-2 sider-item-title"
+												class="ms-2 sider-item-title text-secondary"
 											>
 												{{ item.meta.title }}
 											</div>
