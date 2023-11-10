@@ -203,8 +203,8 @@ export async function about() {
 	Modal.info({
 		title: '软件使用教程',
 		closable: true,
-		simple: true,
-		maskClosable: true,
+		simple: false,
+		maskClosable: false,
 		footer: false,
 		width: 800,
 		content: () =>
