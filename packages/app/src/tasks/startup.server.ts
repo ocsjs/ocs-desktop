@@ -20,7 +20,7 @@ export async function startupServer() {
 
 	store.set('server', {
 		port: 15319,
-		actions_key: randomUUID().replace(/-/g, '')
+		authToken: randomUUID().replace(/-/g, '')
 	});
 
 	app.use((req, res, next) => {
@@ -61,7 +61,7 @@ export async function startupServer() {
 	});
 
 	app.get('/get-actions-key', (req, res) => {
-		res.send(store.store.server.actions_key);
+		res.send(store.store.server.authToken);
 	});
 
 	/** 请求转发 */

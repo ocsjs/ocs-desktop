@@ -2,10 +2,12 @@ import { Instance as Chalk } from 'chalk';
 import { LoggerCore } from '../logger.core';
 import path, { basename } from 'path';
 import fs from 'fs';
-import { chromium, BrowserContext, Page, LaunchOptions, Response } from 'playwright-core';
+import { chromium, BrowserContext, Page, LaunchOptions, Response, Request } from 'playwright-core';
 import { AppStore } from '../../types';
 import { scripts as PlaywrightScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
+import _get from 'lodash/get';
+
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
 type PS = { name: string; configs: Record<string, Config> };
@@ -104,7 +106,7 @@ export class ScriptWorker {
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
 				closeableExtensionHomepages: ['docs.scriptcat.org', 'tampermonkey.net/index.php'],
-				actionsKey: this.store?.server.actions_key || '',
+				authToken: this.store?.server.authToken || '',
 				...options
 			});
 		} catch (err) {
@@ -210,7 +212,7 @@ export async function launchBrowser({
 	closeableExtensionHomepages,
 	bookmarksPageUrl,
 	serverPort,
-	actionsKey,
+	authToken,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -225,7 +227,7 @@ export async function launchBrowser({
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
 	serverPort: number;
-	actionsKey: string;
+	authToken: string;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
@@ -239,7 +241,7 @@ export async function launchBrowser({
 				headless
 			})
 			.then(async (browser) => {
-				browserNetworkRoute(actionsKey, browser);
+				browserNetworkRoute(authToken, browser);
 
 				browser.once('close', () => {
 					send('browser-closed');
@@ -469,103 +471,67 @@ async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; cl
 	});
 }
 
-function browserNetworkRoute(actions_key: string, browser: BrowserContext) {
-	const responses: Map<string, string> = new Map();
-
+function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 	browser.route(/ocs-script-actions/, async (route) => {
 		const req = route.request();
+		if (req.method().toLocaleUpperCase() !== 'POST') {
+			return await route.abort();
+		}
+		const headerValue = await req.headerValue('auth-token');
 
-		if ((await req.headerValue('actions-key')) === actions_key) {
-			const url = req.url();
-			const search = new URLSearchParams(url.split('?')[1]);
-			const targetPageUrl = search.get('page') || '';
+		if (headerValue !== authToken) {
+			return await route.abort();
+		}
+
+		const { page: targetPageUrl, property, args }: { page: string; property: string; args: any[] } = req.postDataJSON();
+
+		try {
 			const page = browser?.pages().find((p) => p.url().includes(targetPageUrl));
 			if (!page) {
-				return;
+				return await route.abort();
 			}
 
-			try {
-				const action = search.get('action') || '';
-				if (action === 'mouse-move') {
-					const x = search.get('x');
-					const y = search.get('y');
-					if (x && y) {
-						await page.mouse.move(Number(x), Number(y));
-						return await route.fulfill({ status: 200, body: 'OK' });
-					}
-				} else if (action === 'mouse-click') {
-					const x = search.get('x');
-					const y = search.get('y');
-					const count = search.get('count');
-					const selector = search.get('selector');
-					if (x && y && count) {
-						await page.mouse.click(Number(x), Number(y), { clickCount: Number(count) });
-						return await route.fulfill({ status: 200, body: 'OK' });
-					} else if (selector) {
-						await page.click(selector);
-						return await route.fulfill({ status: 200, body: 'OK' });
-					}
-				} else if (action === 'read-text') {
-					const x = search.get('x');
-					const y = search.get('y');
-					const selector = search.get('selector');
+			const targetFunction: Function = _get(page, property);
+			if (typeof targetFunction !== 'function') {
+				return await route.abort();
+			}
 
-					if (x && y) {
-						const el = await page.evaluateHandle(({ x, y }) => document.elementFromPoint(Number(x), Number(y)), {
-							x,
-							y
-						});
-
-						return (await el.asElement()?.textContent()) || '';
-					} else if (selector) {
-						const text = await page.$(selector);
-						return await route.fulfill({ status: 200, body: (await text?.textContent()) || '' });
-					}
-				} else if (action === 'listen-request') {
-					const url = search.get('url');
-					if (url) {
-						const listener = async (res: Response) => {
-							if (new RegExp(url).test(res.url()) || res.url().includes(url)) {
-								console.log(url, res.url());
-								responses.set(url, await res.body().then((b) => b.toString()));
-								browser.off('response', listener);
-							}
-						};
-						browser.on('response', listener);
-						return await route.fulfill({ status: 200, body: 'OK' });
-					}
-				} else if (action === 'get-listened-request') {
-					const url = search.get('url');
-					if (url) {
-						const res = responses.get(url) || '';
-						responses.delete(url);
-						return await route.fulfill({ status: 200, body: res });
-					}
-				} else if (action === 'set-viewport') {
-					const width = search.get('width');
-					const height = search.get('height');
-					if (width && height) {
-						if (width === 'null' && height === 'null') {
-							const url = page.url();
-							await page.close();
-							const newPage = await browser.newPage();
-							await newPage.goto(url);
-						} else {
-							await page.setViewportSize({
-								width: Number(width),
-								height: Number(height)
-							});
-						}
-						return await route.fulfill({ status: 200, body: 'OK' });
-					}
+			const res = await targetFunction.apply(
+				property.split('.').length > 1 ? _get(page, property.split('.')[0]) : page,
+				args
+			);
+			if (typeof res === 'object') {
+				if (property === 'waitForResponse') {
+					const response: Response = res;
+					await route.fulfill({
+						status: 200,
+						body: JSON.stringify({
+							url: response.url(),
+							status: response.status(),
+							headers: response.headers(),
+							body: await response.body().then((b) => b.toString())
+						})
+					});
+				} else if (property === 'waitForRequest') {
+					const request: Request = res;
+					await route.fulfill({
+						status: 200,
+						body: JSON.stringify({
+							url: request.url(),
+							method: request.method(),
+							headers: request.headers(),
+							postData: request.postData()
+						})
+					});
+				} else {
+					await route.fulfill({ status: 200, body: JSON.stringify(res) });
 				}
-			} catch (e) {
-				console.log(e);
+			} else {
+				await route.fulfill({ status: 200, body: res ?? 'OK' });
 			}
-
-			await route.fulfill({ body: 'ERROR' });
-		} else {
+		} catch (err) {
 			await route.abort();
+			console.error('软件辅助执行失败：', { targetPageUrl, property, args });
 		}
 	});
 }
