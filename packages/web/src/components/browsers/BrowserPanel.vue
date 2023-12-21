@@ -180,25 +180,53 @@
 							</Icon>
 						</a-button>
 
-						<a-timeline>
-							<template
-								v-for="(history, index) of instance.histories"
-								:key="index"
-							>
-								<a-timeline-item>
-									<p
-										class="text-secondary"
-										style="font-size: 12px"
-									>
-										{{ datetime(history.time) }}
-									</p>
-									<p>
-										<span>{{ history.action }}</span>
-										<span v-if="history.content">: {{ history.content }} </span>
-									</p>
-								</a-timeline-item>
+						<a-table
+							size="small"
+							:data="instance.histories.sort((a, b) => b.time - a.time)"
+							:pagination="{
+								pageSizeOptions: [10, 20, 50, 100],
+								showPageSize: true,
+								size: 'mini'
+							}"
+							:columns="[
+								{
+									title: '操作',
+									dataIndex: 'action',
+									width: 100
+								},
+								{
+									title: '备注',
+									dataIndex: 'content',
+									slotName: 'content'
+								},
+								{
+									dataIndex: 'time',
+									title: '时间',
+									slotName: 'time',
+									width: 160
+								}
+							]"
+						>
+							<template #time="{ record }">
+								{{ datetime(record.time) }}
 							</template>
-						</a-timeline>
+							<template #content="{ record }">
+								<a-tooltip :content="record.content || '无备注'">
+									<div
+										style="
+											text-overflow: ellipsis;
+											overflow: hidden;
+											width: 200px;
+											display: -webkit-box;
+											-webkit-line-clamp: 3;
+											-webkit-box-orient: vertical;
+										"
+									>
+										{{ record.content || '-' }}
+									</div>
+								</a-tooltip>
+							</template>
+						</a-table>
 					</template>
 
 					<a-empty v-else />
@@ -234,7 +262,6 @@ import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSele
 import PlaywrightScripts from '../playwright-scripts/PlaywrightScriptList.vue';
 import XTerm from '../XTerm.vue';
 import BrowserOperators from './BrowserOperators.vue';
-
 const props = defineProps<{
 	browser: BrowserOptions;
 }>();
@@ -307,12 +334,6 @@ onMounted(() => {
 
 <style scoped lang="less">
 .histories {
-	max-height: 500px;
-	height: 500px;
-	overflow: overlay;
-	p {
-		margin-bottom: 0px;
-	}
 }
 
 .profile {
