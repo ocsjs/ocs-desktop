@@ -58,9 +58,8 @@ export function showClearBrowserCachesModal(totalSize: number) {
 
 export function clearAllBrowserCaches(userDataDirsFolder: string) {
 	return new Promise<void>((resolve, reject) => {
-		remote.fs
-			.call('readdirSync', userDataDirsFolder, {} as any)
-			.then(async (dirs) => {
+		remote.fs.call('readdirSync', userDataDirsFolder, {} as any).then(async (dirs) => {
+			try {
 				const paths = [];
 				console.log('dirs', dirs);
 				for (const dir of dirs) {
@@ -74,14 +73,17 @@ export function clearAllBrowserCaches(userDataDirsFolder: string) {
 						});
 					})
 				);
+			} catch (err) {
+				console.error(err);
+				if (String(err).includes('CrashpadMetrics.pma') === false) {
+					Message.error(String(err));
+					reject(err);
+				}
+			}
 
-				Message.success('清除浏览器缓存完成');
-				resolve();
-			})
-			.catch((err) => {
-				Message.error(err);
-				reject(err);
-			});
+			Message.success('清除浏览器缓存完成');
+			resolve();
+		});
 	});
 }
 
