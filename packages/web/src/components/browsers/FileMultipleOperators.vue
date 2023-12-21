@@ -1,7 +1,10 @@
 <template>
 	<a-row class="col-12 p-1 ps-2 pe-2">
 		<a-col flex="auto">
-			<a-space :size="0">
+			<a-space
+				v-if="currentSources.length"
+				:size="0"
+			>
 				<template #split>
 					<a-divider direction="vertical" />
 				</template>

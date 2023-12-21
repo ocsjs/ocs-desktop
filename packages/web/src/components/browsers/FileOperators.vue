@@ -5,15 +5,7 @@
 				<Icon type="more_horiz"> 更多 </Icon>
 			</a-button>
 			<template #content>
-				<a-dsubmenu
-					trigger="hover"
-					value="option-1"
-				>
-					批量创建
-					<template #content>
-						<a-doption @click="state.showPlaywrightScriptSelector = true"> 自动化脚本浏览器 </a-doption>
-					</template>
-				</a-dsubmenu>
+				<a-doption @click="state.showPlaywrightScriptSelector = true"> 批量创建-自动化脚本浏览器 </a-doption>
 			</template>
 		</a-dropdown>
 
