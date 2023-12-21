@@ -25,7 +25,10 @@
 						</div>
 					</template>
 
-					<Icon type="help_outline" />
+					<Icon
+						type="help_outline"
+						style="cursor: pointer"
+					/>
 				</a-popover>
 			</template>
 		</a-input>

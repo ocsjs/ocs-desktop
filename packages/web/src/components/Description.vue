@@ -1,5 +1,5 @@
 <template>
-	<a-row class="row flex-nowrap mb-1">
+	<a-row class="row flex-nowrap mb-2">
 		<a-col
 			flex="200px"
 			class="desc-label"

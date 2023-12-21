@@ -1,27 +1,33 @@
 <template>
 	<div class="w-100">
-		<div class="setting text-center p-2 col-12 col-md-10 col-lg-8">
+		<div class="setting text-center p-2 col-12 col-lg-10">
 			<Card title="通用设置">
 				<BrowserPath></BrowserPath>
 
 				<Description label="OCS配置">
+					<div
+						v-show="state.loading === false && state.err !== ''"
+						style="color: red"
+					>
+						解析错误！，请尝试重启软件
+					</div>
+					<div v-show="state.loading === true && state.err === ''"><icon-loading /> 正在获取最新OCS配置</div>
+
 					<a-tooltip content="同步：不需要在浏览器里面设置OCS配置， 直接在软件设置就能同步到所有浏览器中">
-						<a-switch v-model="store.render.setting.ocs.openSync">
-							<template #checked> 同步到全部浏览器中 </template>
-							<template #unchecked> 同步到全部浏览器中 </template>
-						</a-switch>
-
-						<a-divider
-							class="mt-2 mb-2"
-							direction="vertical"
-						/>
-
 						<a-button
 							v-if="state.loading === false && state.err === ''"
 							@click="state.show = true"
 						>
 							点击配置
 						</a-button>
+						<a-divider
+							class="mt-2 mb-2"
+							direction="vertical"
+						/>
+						<a-switch v-model="store.render.setting.ocs.openSync">
+							<template #checked> 同步到全部浏览器中 </template>
+							<template #unchecked> 同步到全部浏览器中 </template>
+						</a-switch>
 					</a-tooltip>
 
 					<a-modal
@@ -45,14 +51,6 @@
 							></OCSConfigs>
 						</div>
 					</a-modal>
-
-					<div
-						v-show="state.loading === false && state.err !== ''"
-						style="color: red"
-					>
-						解析错误！，请尝试重启软件
-					</div>
-					<div v-show="state.loading === true && state.err === ''"><icon-loading /> 正在获取最新OCS配置</div>
 				</Description>
 			</Card>
 
