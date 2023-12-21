@@ -10,14 +10,14 @@
 		<a-col
 			v-if="isShow('name')"
 			class="entity-property"
-			flex="300px"
+			flex="250px"
 		>
 			浏览器名
 		</a-col>
 		<template v-if="isShow('extra')">
 			<a-col
 				class="entity-property"
-				flex="250px"
+				flex="1"
 			>
 				<a-divider
 					class="ms-0 m-1"
@@ -27,7 +27,7 @@
 			</a-col>
 			<a-col
 				class="entity-property"
-				flex="200px"
+				flex="1"
 			>
 				<a-divider
 					class="ms-0 m-1"
@@ -41,7 +41,7 @@
 		<a-col
 			v-if="isShow('actions')"
 			class="entity-property text-end pe-3"
-			flex="auto"
+			flex="200px"
 		>
 			操作
 		</a-col>

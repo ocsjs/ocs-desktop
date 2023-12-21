@@ -72,7 +72,7 @@ const slots = useSlots();
 const props = withDefaults(
 	defineProps<{
 		entity: BrowserOptions | FolderOptions<FolderType, Browser | Folder>;
-		widths?: { name: number | 'auto'; actions: number | 'auto' };
+		widths?: { name?: number | 'auto'; actions?: number | 'auto' };
 	}>(),
 	{
 		widths: () => ({ name: 300, actions: 'auto' })

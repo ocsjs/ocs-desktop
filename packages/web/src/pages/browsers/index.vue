@@ -87,6 +87,7 @@
 						:key="child.uid"
 						class="entity"
 						:entity="child"
+						:widths="{ name: 250, actions: 200 }"
 					>
 						<template #prefix>
 							<!-- 单选框 -->
@@ -101,7 +102,7 @@
 						<template #extra>
 							<!-- 备注 -->
 							<a-col
-								flex="250px"
+								flex="1"
 								class="text-secondary notes"
 							>
 								<a-tooltip
@@ -120,7 +121,7 @@
 							</a-col>
 
 							<!-- 标签 -->
-							<a-col flex="180px">
+							<a-col flex="1">
 								<Tags
 									:tags="child.tags"
 									:read-only="true"

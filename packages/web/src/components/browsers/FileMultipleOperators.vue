@@ -83,7 +83,7 @@
 		<a-drawer
 			v-model:visible="state.showChecked"
 			:title="`已选中 ${currentCheckedBrowsers.length} 个文件`"
-			:width="740"
+			:width="state.windowWidth * 0.5"
 			:footer="false"
 		>
 			<div>
@@ -92,7 +92,10 @@
 					v-for="browser of currentCheckedBrowsers"
 					:key="browser.uid"
 				>
-					<EntityVue :entity="browser">
+					<EntityVue
+						:entity="browser"
+						:widths="{ name: 250 }"
+					>
 						<template #prefix>
 							<!-- 单选框 -->
 							<a-col
@@ -106,7 +109,7 @@
 						<template #extra>
 							<!-- 备注 -->
 							<a-col
-								flex="250px"
+								flex="1"
 								class="text-secondary notes"
 							>
 								<a-tooltip
@@ -118,7 +121,7 @@
 							</a-col>
 
 							<!-- 标签 -->
-							<a-col flex="250px">
+							<a-col flex="1">
 								<Tags
 									:tags="browser.tags"
 									:read-only="true"
@@ -155,7 +158,12 @@ const state = reactive({
 	showChecked: false,
 	selectBrowsers: [] as Browser[],
 	pasteType: 'copy' as 'copy' | 'cut',
-	selectedAll: false
+	selectedAll: false,
+	windowWidth: window.innerWidth
+});
+
+window.addEventListener('resize', () => {
+	state.windowWidth = window.innerWidth;
 });
 
 /** 当前文件夹的浏览器 */
