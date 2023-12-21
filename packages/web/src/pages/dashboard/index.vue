@@ -14,18 +14,24 @@
 				</template>
 
 				<a-tooltip
-					content="显示每个浏览器的图像，如果太多浏览器可能会造成电脑卡顿"
+					:content="
+						launchedProcesses.length === 0
+							? '暂无运行浏览器，无法开始监控'
+							: '显示每个浏览器的图像，如果太多浏览器可能会造成电脑卡顿'
+					"
 					position="bl"
 				>
-					<a-button
-						size="mini"
-						type="outline"
-						:disabled="launchedProcesses.length === 0 || state.loading"
-						@click="state.show = !state.show"
-					>
-						<template v-if="state.loading"> 加载中... </template>
-						<template v-else> {{ state.show ? '暂停' : '开始' }}监控 </template>
-					</a-button>
+					<div>
+						<a-button
+							size="mini"
+							type="outline"
+							:disabled="launchedProcesses.length === 0 || state.loading"
+							@click="state.show = !state.show"
+						>
+							<template v-if="state.loading"> 加载中... </template>
+							<template v-else> {{ state.show ? '暂停' : '开始' }}监控 </template>
+						</a-button>
+					</div>
 				</a-tooltip>
 
 				<a-switch v-model="store.render.dashboard.details.tags">
@@ -58,12 +64,12 @@
 				<a-select
 					v-model="store.render.dashboard.video.frameRate"
 					size="mini"
-					style="width: 220px"
+					style="width: 180px"
 					:options="[
-						{ label: '节能', value: 0.1 },
-						{ label: '流畅', value: 1 },
-						{ label: '高帧（CPU占比高）', value: 10 },
-						{ label: '最高（CPU占比高）', value: 99 }
+						{ label: '节能', value: 1 },
+						{ label: '流畅', value: 4 },
+						{ label: '高帧（消耗CPU）', value: 20 },
+						{ label: '最高（很耗CPU）', value: 100 }
 					]"
 				>
 					<template #prefix> 帧率 </template>
@@ -226,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { onDeactivated, watch, reactive, computed, onActivated } from 'vue';
+import { onDeactivated, watch, reactive, computed, onActivated, onMounted } from 'vue';
 import { Process, processes } from '../../utils/process';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
 import { store } from '../../store';
@@ -273,7 +279,7 @@ watch(
 	() => store.render.dashboard.video.frameRate,
 	() => {
 		Modal.info({
-			content: '修改帧率后请 重新开启监控/重启软件 才可生效。'
+			content: '修改帧率后请 重启软件 才可生效。'
 		});
 	}
 );
@@ -300,6 +306,15 @@ onDeactivated(() => {
 	for (const process of launchedProcesses.value) {
 		process.video?.pause();
 	}
+});
+
+onMounted(() => {
+	// 持续挂载视频，防止丢失
+	setInterval(() => {
+		for (const process of processes) {
+			mountVideo(process);
+		}
+	}, 3000);
 });
 
 /**
@@ -331,43 +346,83 @@ async function refreshVideo() {
 		)
 	);
 
-	// 抓取屏幕
-	const sources: DesktopCapturerSource[] = await remote.desktopCapturer.call('getSources', { types: ['window'] });
-
-	console.log('sources', sources);
-
+	const processStatus: Map<string, boolean> = new Map();
 	for (const process of processes) {
-		const res = await getBrowserVideo(process.uid, sources);
-		if (res) {
-			process.stream = res.stream;
+		processStatus.set(process.uid, false);
+	}
 
-			process.stream?.getTracks().forEach((track) => {
-				track.applyConstraints({
-					/** 尽量减低帧率不占用高内存 */
-					frameRate: store.render.dashboard.video.frameRate ?? 1,
-					/** 横纵比 */
-					aspectRatio:
-						store.render.dashboard.video.aspectRatio === 0 ? undefined : store.render.dashboard.video.aspectRatio
-				});
-			});
-			process.video = res.video;
-		}
-		// 挂载视频
-		const slot = document.querySelector(`#video-${process.uid}`);
-		if (slot && process.video) {
-			slot.replaceChildren(process.video);
+	let retryCount = 20;
+
+	async function loop() {
+		retryCount--;
+		console.log('looping', retryCount);
+
+		// 抓取屏幕
+		const sources: DesktopCapturerSource[] = await remote.desktopCapturer.call('getSources', { types: ['window'] });
+
+		// 未完成的进程抓取屏幕
+		await Promise.all(
+			processes
+				.filter((p) => processStatus.get(p.uid) === false)
+				.map((process) => {
+					return new Promise<void>((resolve, reject) => {
+						getBrowserVideo(process.uid, sources)
+							.then((res) => {
+								if (!res) {
+									return resolve();
+								}
+
+								process.stream = res.stream;
+
+								process.stream?.getTracks().forEach((track) => {
+									track.applyConstraints({
+										/** 尽量减低帧率不占用高内存 */
+										frameRate: store.render.dashboard.video.frameRate ?? 1,
+										/** 横纵比 */
+										aspectRatio:
+											store.render.dashboard.video.aspectRatio === 0
+												? undefined
+												: store.render.dashboard.video.aspectRatio
+									});
+								});
+								process.video = res.video;
+
+								// 挂载视频
+								mountVideo(process);
+
+								processStatus.set(process.uid, true);
+
+								resolve();
+							})
+							.catch((err) => {
+								console.error(err);
+								resolve();
+							});
+					});
+				})
+		);
+
+		// 已完成的进程关闭 webrtc 对接页面
+		await Promise.all(
+			processes
+				.filter((p) => processStatus.get(p.uid) === true)
+				.map(
+					(process) =>
+						new Promise<void>((resolve) => {
+							process.once('webrtc-page-closed', resolve);
+							process.worker?.('closeWebRTCPage');
+						})
+				)
+		);
+
+		// 如果还有未完成的进程，则等待 3s 后再次执行
+		if (processes.filter((p) => processStatus.get(p.uid) === false).length !== 0 && retryCount > 0) {
+			await new Promise((resolve) => setTimeout(resolve, 3000));
+			await loop();
 		}
 	}
 
-	await Promise.all(
-		processes.map(
-			(process) =>
-				new Promise<void>((resolve) => {
-					process.once('webrtc-page-closed', resolve);
-					process.worker?.('closeWebRTCPage');
-				})
-		)
-	);
+	await loop();
 
 	state.loading = false;
 }
@@ -400,6 +455,14 @@ async function getBrowserVideo(uid: string, sources: DesktopCapturerSource[]) {
 				console.log(e);
 			}
 		}
+	}
+}
+//   挂载视频
+function mountVideo(process: Process) {
+	const slot = document.querySelector(`#video-${process.uid}`);
+	// 如果 slot.children.length === 0 说明没有挂载视频
+	if (slot && slot.children.length === 0 && process.video) {
+		slot.replaceChildren(process.video);
 	}
 }
 

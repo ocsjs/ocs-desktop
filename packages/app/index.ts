@@ -8,11 +8,10 @@ import { task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
+import { store } from './src/store';
 
 app.setName('ocs');
 
-// 设置 webrtc 的影像帧率比例，最高100，太高会造成卡顿，默认50
-app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
 // 防止软件崩溃以及兼容
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu');
@@ -42,6 +41,12 @@ function bootstrap() {
 			}),
 			task('初始化自动启动', () => autoLaunch()),
 			task('启动渲染进程', async () => {
+				// 设置 webrtc 的影像帧率比例，最高100，太高会造成卡顿，参数默认50
+				app.commandLine.appendSwitch(
+					'webrtc-max-cpu-consumption-percentage',
+					(store?.store?.render?.dashboard?.video?.frameRate ?? 1).toString()
+				);
+
 				await app.whenReady();
 				const window = createWindow();
 

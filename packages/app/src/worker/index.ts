@@ -150,9 +150,10 @@ export class ScriptWorker {
 					document.body.innerHTML = `正在获取图像中，请勿操作。`;
 				}, this.uid)
 				.catch(console.error);
+
 			setTimeout(() => {
 				send('webrtc-page-loaded');
-			}, 3000);
+			}, 100);
 		}
 	}
 
