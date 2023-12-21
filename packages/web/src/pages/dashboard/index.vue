@@ -55,7 +55,19 @@
 					<template #prefix> 横纵比 </template>
 				</a-select>
 
-				<div></div>
+				<a-select
+					v-model="store.render.dashboard.video.frameRate"
+					size="mini"
+					style="width: 220px"
+					:options="[
+						{ label: '节能', value: 0.1 },
+						{ label: '流畅', value: 1 },
+						{ label: '高帧（CPU占比高）', value: 10 },
+						{ label: '最高（CPU占比高）', value: 99 }
+					]"
+				>
+					<template #prefix> 帧率 </template>
+				</a-select>
 			</a-space>
 		</div>
 
@@ -222,7 +234,7 @@ import { store } from '../../store';
 import Tags from '../../components/Tags.vue';
 import { DesktopCapturerSource } from 'electron';
 import { remote } from '../../utils/remote';
-import { SelectOptionData } from '@arco-design/web-vue';
+import { Modal, SelectOptionData } from '@arco-design/web-vue';
 import EntityOperator from '../../components/EntityOperator.vue';
 
 const state = reactive({
@@ -254,6 +266,15 @@ watch(
 				refreshVideo();
 			}
 		}
+	}
+);
+
+watch(
+	() => store.render.dashboard.video.frameRate,
+	() => {
+		Modal.info({
+			content: '修改帧率后请 重新开启监控/重启软件 才可生效。'
+		});
 	}
 );
 
@@ -323,7 +344,7 @@ async function refreshVideo() {
 			process.stream?.getTracks().forEach((track) => {
 				track.applyConstraints({
 					/** 尽量减低帧率不占用高内存 */
-					frameRate: 1,
+					frameRate: store.render.dashboard.video.frameRate ?? 1,
 					/** 横纵比 */
 					aspectRatio:
 						store.render.dashboard.video.aspectRatio === 0 ? undefined : store.render.dashboard.video.aspectRatio

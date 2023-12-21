@@ -38,6 +38,8 @@ export type WebStore = {
 		video: {
 			/** 横纵比 */
 			aspectRatio?: number;
+			/** 帧率 */
+			frameRate?: number;
 		};
 	};
 	setting: {
@@ -111,7 +113,8 @@ export const store: AppStore & { render: WebStore } = reactive(
 					},
 					num: 4,
 					video: {
-						aspectRatio: 0
+						aspectRatio: 0,
+						frameRate: 0.1
 					}
 				},
 				setting: {

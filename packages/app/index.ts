@@ -12,7 +12,7 @@ import { startupServer } from './src/tasks/startup.server';
 app.setName('ocs');
 
 // 设置 webrtc 的影像帧率比例，最高100，太高会造成卡顿，默认50
-app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '1');
+app.commandLine.appendSwitch('webrtc-max-cpu-consumption-percentage', '100');
 // 防止软件崩溃以及兼容
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-gpu');
