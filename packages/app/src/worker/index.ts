@@ -12,6 +12,8 @@ const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level:
 
 type PS = { name: string; configs: Record<string, Config> };
 
+type BrowserInfo = { name: string; notes: string; tags: { color: string; name: string }[] };
+
 /** 脚本工作线程 */
 export class ScriptWorker {
 	uid: string = '';
@@ -23,17 +25,21 @@ export class ScriptWorker {
 	playwrightScripts: PS[] = [];
 	/** 可关闭的浏览器拓展主页 */
 	store?: AppStore;
+	/** 浏览器中软件设置的名字 */
+	browserInfo?: BrowserInfo;
 
 	init({
 		store,
 		uid,
 		cachePath,
-		playwrightScripts
+		playwrightScripts,
+		browserInfo
 	}: {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
 		playwrightScripts: PS[];
+		browserInfo: BrowserInfo;
 	}) {
 		this.debug('正在初始化进程...');
 
@@ -51,6 +57,9 @@ export class ScriptWorker {
 
 		// 初始化日志
 		this.logger = new LoggerCore(store.paths['logs-path'], false, 'script', path.basename(cachePath));
+
+		// 浏览器中软件设置的名字
+		this.browserInfo = browserInfo;
 
 		this.debug('初始化成功');
 	}
@@ -107,6 +116,8 @@ export class ScriptWorker {
 				serverPort: this.store?.server.port || 15319,
 				closeableExtensionHomepages: ['docs.scriptcat.org', 'tampermonkey.net/index.php'],
 				authToken: this.store?.server.authToken || '',
+				browserInfo: this.browserInfo,
+				uid: this.uid,
 				...options
 			});
 		} catch (err) {
@@ -214,6 +225,8 @@ export async function launchBrowser({
 	bookmarksPageUrl,
 	serverPort,
 	authToken,
+	browserInfo,
+	uid,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -228,7 +241,11 @@ export async function launchBrowser({
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
 	serverPort: number;
+	/** 软件辅助权限认证 */
 	authToken: string;
+	/** 浏览器信息 */
+	browserInfo?: BrowserInfo;
+	uid: string;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
@@ -276,8 +293,22 @@ export async function launchBrowser({
 					};
 
 					const [blankPage] = browser.pages();
+
+					// 加载浏览器数据
+					blankPage.on('load', async () => {
+						if (bookmarksPageUrl && blankPage.url().includes(bookmarksPageUrl)) {
+							await blankPage.evaluate((info) => {
+								const slot = document.querySelector('#data-slot');
+								if (slot) {
+									slot.textContent = JSON.stringify(info);
+								}
+							}, Object.assign(browserInfo || {}, { uid: uid }));
+						}
+					});
+
 					// 加载本地导航页
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');
+
 					// 关闭拓展加载时弹出的首页
 					await waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 					// 安装用户脚本
@@ -285,7 +316,7 @@ export async function launchBrowser({
 					// 运行自动化脚本
 					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
 
-					await step(['初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
+					await step(['浏览器初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
 
 					// 触发onLaunch事件
 					onLaunch?.(browser);
@@ -384,7 +415,7 @@ async function setupUserScripts(opts: {
 	const warn: string[] = [];
 	// 安装用户脚本
 	if (userscripts.length) {
-		await step('【提示】正在安装用户脚本。。。');
+		await step('正在安装用户脚本。。。');
 		const [page] = browser.pages();
 		// 载入本地脚本
 		try {
@@ -415,7 +446,7 @@ async function runPlaywrightScripts(opts: {
 	if (playwrightScripts.length) {
 		// 执行自动化脚本
 		for (const ps of playwrightScripts) {
-			await step(`【提示】正在执行自动化脚本 - ${ps.name} ...`);
+			await step(`正在执行自动化脚本 - ${ps.name} ...`);
 			const configs = transformScriptConfigToRaw(ps.configs);
 
 			for (const script of PlaywrightScripts) {

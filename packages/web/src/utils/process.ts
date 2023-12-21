@@ -112,7 +112,12 @@ export class Process extends EventEmitter {
 			store,
 			cachePath: this.browser.cachePath,
 			uid: this.uid,
-			playwrightScripts: this.browser.playwrightScripts
+			playwrightScripts: this.browser.playwrightScripts,
+			browserInfo: {
+				name: this.browser.name,
+				notes: this.browser.notes,
+				tags: this.browser.tags
+			}
 		});
 	}
 

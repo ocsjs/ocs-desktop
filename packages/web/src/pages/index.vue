@@ -129,6 +129,9 @@ const state = reactive({
 // 监听软件关闭
 onUnmounted(() => closeAllBrowser(false));
 ipcRenderer.on('close', () => closeAllBrowser(true));
+ipcRenderer.on('show-browser-in-app', (e, uid) => {
+	store.render.browser.currentBrowserUid = uid;
+});
 
 onMounted(async () => {
 	/** 设置窗口边框 */

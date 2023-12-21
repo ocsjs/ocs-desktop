@@ -15,17 +15,38 @@
 				</div>
 			</template>
 
-			<h1>OCS 导航页</h1>
+			<div
+				id="data-slot"
+				style="display: none"
+			></div>
+
+			<div class="bookmarks-blockquote browser-info text-secondary mb-3 mt-3">
+				<div style="display: flex; align-items: center">
+					当前浏览器：
+					<a-space size="large">
+						<span id="browser-name">...</span>
+						<a-button
+							size="mini"
+							type="outline"
+							@click="openInApp"
+						>
+							在软件中显示
+						</a-button>
+					</a-space>
+				</div>
+				<div>标签：<span id="browser-tags">...</span></div>
+				<div>备注：<span id="browser-notes">...</span></div>
+			</div>
+
 			<div id="notes">
-				<div
-					class="bookmarks-blockquote text-secondary mb-3"
-					style="font-size: 14px"
-				>
+				<div class="bookmarks-blockquote text-secondary mb-3">
 					<div>进入浏览器并等待初始化后，即可使用安装的浏览器脚本管理拓展，进行脚本的运行。</div>
 					<div>
 						如果您使用的是 “OCS 网课助手”，请打开以下任意一个网课平台即可，会出现脚本悬浮窗，并有对应的使用教程。
 					</div>
 				</div>
+
+				<hr />
 
 				<div
 					class="bookmarks-blockquote text-secondary mb-3"
@@ -35,10 +56,13 @@
 						v-for="(tip, index) of state.tips"
 						:key="index"
 					>
-						{{ tip }}
+						当前状态：{{ tip }}
 					</div>
 				</div>
 			</div>
+
+			<h1>OCS 导航页</h1>
+
 			<template
 				v-for="item of bookmarks"
 				:key="item?.group"
@@ -104,6 +128,8 @@ window.setBookmarkLoadingState = (_state) => {
 onMounted(async () => {
 	const infos = await getRemoteInfos();
 
+	document.title = 'OCS - 导航页';
+
 	// 用 fori 是为了保证每个网站的位置固定
 
 	for (let i = 0; i < infos.bookmark.length; i++) {
@@ -116,8 +142,38 @@ onMounted(async () => {
 			bookmarks.value[i].values[j] = site;
 		});
 	}
+
+	setTimeout(() => {
+		const nameEl = document.querySelector('#browser-name');
+		const tagsEl = document.querySelector('#browser-tags');
+		const notesEl = document.querySelector('#browser-notes');
+		console.log(document.querySelector('#data-slot')?.textContent);
+		const { name, tags, notes } = JSON.parse(document.querySelector('#data-slot')?.textContent || '{}');
+
+		if (nameEl && tagsEl && notesEl) {
+			nameEl.innerHTML = name || '未知名称';
+			tagsEl.innerHTML = tags.map(
+				(t) => `<span style="background-color: ${t.color};" class="browser-tag">${t.name}</span>`
+			);
+			notesEl.innerHTML = notes || '未知';
+		}
+	}, 500);
 });
+
+function openInApp() {
+	const { uid } = JSON.parse(document.querySelector('#data-slot')?.textContent || '{}');
+	fetch('http://localhost:15319/api/bookmark/show-browser-in-app?uid=' + uid);
+}
 </script>
+
+<style>
+.bookmarks .browser-tag {
+	border-radius: 4px;
+	color: white;
+	padding: 2px 4px;
+	font-size: 13px;
+}
+</style>
 
 <style scoped lang="less">
 .bookmarks-blockquote {
@@ -126,6 +182,10 @@ onMounted(async () => {
 
 	&.warn {
 		border-left: 6px solid #e4cc61;
+	}
+
+	&.browser-info {
+		border-left: 6px solid #b3b3b3;
 	}
 }
 .bookmarks {
@@ -146,7 +206,7 @@ onMounted(async () => {
 
 .bookmark-card-body {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, 120px);
+	grid-template-columns: repeat(auto-fill, 160px);
 
 	.bookmark {
 		text-align: center;

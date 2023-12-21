@@ -6,14 +6,8 @@ import { store } from '../store';
 import { getProjectPath } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID } from 'crypto';
-
+import { BrowserWindow } from 'electron';
 const logger = Logger('server');
-
-interface Folder {
-	uid: string;
-	children: Record<string, Folder>;
-	store: any;
-}
 
 export async function startupServer() {
 	const app = express();
@@ -106,6 +100,18 @@ export async function startupServer() {
 			}
 		} else {
 			res.json({ canOCR: false });
+		}
+	});
+
+	app.get('/api/bookmark/show-browser-in-app', (req, res) => {
+		const win = BrowserWindow.getAllWindows()[0];
+		if (win) {
+			// 置顶应用
+			const onTop = win.isAlwaysOnTop();
+			win.setAlwaysOnTop(true);
+			win.setAlwaysOnTop(onTop);
+			// 显示浏览器文件
+			win.webContents.send('show-browser-in-app', req.query.uid);
 		}
 	});
 
