@@ -1,10 +1,11 @@
 import { SyncOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
 import { Button, Message, Modal } from '@arco-design/web-vue';
-import { size } from '.';
+import { size, sleep } from '.';
 import { remote } from './remote';
 import { store } from '../store';
 import { electron } from '../utils/node';
+import { processes } from './process';
 const { shell } = electron;
 
 export async function checkBrowserCaches() {
@@ -105,4 +106,44 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 
 	modal.close();
 	Message.success('配置浏览器路径成功');
+}
+
+export async function closeAllBrowser(quit: boolean) {
+	if (processes.length) {
+		Modal.warning({
+			content: '还有浏览器正在运行，您确定关闭软件吗？',
+			title: '警告',
+			maskClosable: true,
+			closable: true,
+			alignCenter: true,
+			hideCancel: false,
+			onOk: async () => {
+				const m = Modal.info({ content: '正在关闭所有浏览器...', closable: false, maskClosable: false, footer: false });
+
+				const close = () => {
+					if (quit) {
+						remote.app.call('exit');
+					}
+					m.close();
+				};
+
+				// 最久5秒后关闭
+				const timeout = setTimeout(close, 5000);
+				try {
+					for (const process of processes) {
+						await process.close();
+						await sleep(100);
+					}
+				} catch (err) {
+					Message.error(String(err));
+				}
+				clearTimeout(timeout);
+				close();
+			}
+		});
+	} else {
+		if (quit) {
+			remote.app.call('exit');
+		}
+	}
 }

@@ -1,4 +1,4 @@
-import { app, dialog } from 'electron';
+import { BrowserWindow, app, dialog } from 'electron';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import axios from 'axios';
@@ -104,4 +104,17 @@ export function exportExcel(excel: { sheetName: string; list: any[] }[], filenam
 				xlsx.writeFile(book, filePath);
 			}
 		});
+}
+
+export function moveWindowToTop() {
+	const win = BrowserWindow.getAllWindows()[0];
+	// 置顶应用
+	const onTop = win.isAlwaysOnTop();
+	win.setAlwaysOnTop(true);
+	win.setAlwaysOnTop(onTop);
+	return win;
+}
+
+export function getCurrentWebContents() {
+	return BrowserWindow.getAllWindows()[0].webContents;
 }

@@ -3,10 +3,9 @@ import { Logger } from '../logger';
 import path from 'path';
 import axios from 'axios';
 import { store } from '../store';
-import { getProjectPath } from '../utils';
+import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID } from 'crypto';
-import { BrowserWindow } from 'electron';
 const logger = Logger('server');
 
 export async function startupServer() {
@@ -104,15 +103,9 @@ export async function startupServer() {
 	});
 
 	app.get('/api/bookmark/show-browser-in-app', (req, res) => {
-		const win = BrowserWindow.getAllWindows()[0];
-		if (win) {
-			// 置顶应用
-			const onTop = win.isAlwaysOnTop();
-			win.setAlwaysOnTop(true);
-			win.setAlwaysOnTop(onTop);
-			// 显示浏览器文件
-			win.webContents.send('show-browser-in-app', req.query.uid);
-		}
+		moveWindowToTop();
+		// 显示浏览器文件
+		getCurrentWebContents().send('show-browser-in-app', req.query.uid);
 	});
 
 	// 静态资源

@@ -2,7 +2,7 @@ import { ipcMain, app, dialog, BrowserWindow, desktopCapturer } from 'electron';
 import { Logger } from '../logger';
 import { autoLaunch } from './auto.launch';
 import axios, { AxiosRequestConfig } from 'axios';
-import { downloadFile, unzip, zip } from '../utils';
+import { downloadFile, moveWindowToTop, unzip, zip } from '../utils';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -12,6 +12,7 @@ import si from 'systeminformation';
 import { store } from '../store';
 import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
+import { updateApp } from './updater';
 
 /**
  * 注册主进程远程通信事件
@@ -94,7 +95,9 @@ const methods = {
 	systemProcesses: () => si.processes(),
 	exportExcel: exportExcel,
 	statisticFolderSize: statisticFolderSize,
-	getPlatform: () => process.platform
+	getPlatform: () => process.platform,
+	updateApp: updateApp,
+	moveWindowToTop: moveWindowToTop
 };
 
 /**

@@ -101,22 +101,21 @@ import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';
 import { router, routes, CustomRouteType } from '../route';
 import { store } from '../store';
-import { about, changeTheme, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch, sleep } from '../utils';
-import { showClearBrowserCachesModal } from '../utils/browser';
-import { notify } from '../utils/notify';
+import { about, changeTheme, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch } from '../utils';
+import { closeAllBrowser, showClearBrowserCachesModal } from '../utils/browser';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
-import { processes } from '../utils/process';
-import { Message, Modal, Tooltip } from '@arco-design/web-vue';
+
+import { Modal, Tooltip } from '@arco-design/web-vue';
 import BrowserPanel from '../components/browsers/BrowserPanel.vue';
 import { currentBrowser } from '../fs';
-import { electron, inBrowser } from '../utils/node';
+import { inBrowser } from '../utils/node';
 import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
 import Setup from '../components/Setup.vue';
+import { activeIpcRenderListener } from '../utils/ipc';
 
-const { ipcRenderer } = electron;
 const version = ref('');
 
 // 当前路由
@@ -128,12 +127,14 @@ const state = reactive({
 
 // 监听软件关闭
 onUnmounted(() => closeAllBrowser(false));
-ipcRenderer.on('close', () => closeAllBrowser(true));
-ipcRenderer.on('show-browser-in-app', (e, uid) => {
-	store.render.browser.currentBrowserUid = uid;
-});
 
 onMounted(async () => {
+	/**
+	 * 开启 Ipc 通道监听
+	 */
+
+	activeIpcRenderListener();
+
 	/** 设置窗口边框 */
 	remote.os.call('platform').then(async (platform) => {
 		if (platform === 'win32') {
@@ -186,20 +187,6 @@ onMounted(async () => {
 	/** 获取最新远程通知 */
 	fetchRemoteNotify(false);
 
-	/** 如果正在更新的话，获取更新进度 */
-	ipcRenderer.on('update-download', (e, rate, totalLength, chunkLength) => {
-		notify(
-			'OCS更新程序',
-			`更新中: ${(chunkLength / 1024 / 1024).toFixed(2)}MB/${(totalLength / 1024 / 1024).toFixed(2)}MB`,
-			'updater',
-			{
-				type: 'info',
-				duration: 0,
-				close: false
-			}
-		);
-	});
-
 	/** 检测浏览器缓存大小，超过10GB则提示 */
 	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
@@ -241,52 +228,6 @@ onMounted(async () => {
 	};
 });
 
-onUnmounted(() => {
-	// 删除监听器
-	ipcRenderer.removeAllListeners('download');
-});
-
-async function closeAllBrowser(quit: boolean) {
-	if (processes.length) {
-		await remote.win.call('moveTop');
-		Modal.warning({
-			content: '还有浏览器正在运行，您确定关闭软件吗？',
-			title: '警告',
-			maskClosable: true,
-			closable: true,
-			alignCenter: true,
-			hideCancel: false,
-			onOk: async () => {
-				const m = Modal.info({ content: '正在关闭所有浏览器...', closable: false, maskClosable: false, footer: false });
-
-				const close = () => {
-					if (quit) {
-						remote.app.call('exit');
-					}
-					m.close();
-				};
-
-				// 最久5秒后关闭
-				const timeout = setTimeout(close, 5000);
-				try {
-					for (const process of processes) {
-						await process.close();
-						await sleep(100);
-					}
-				} catch (err) {
-					Message.error(err);
-				}
-				clearTimeout(timeout);
-				close();
-			}
-		});
-	} else {
-		if (quit) {
-			remote.app.call('exit');
-		}
-	}
-}
-
 function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 	router.push(route.path);
 	remote.win.call('setTitle', `OCS - ${route.meta.title}`);
@@ -302,7 +243,6 @@ function onResize() {
 <style lang="less">
 @import '@/assets/css/bootstrap.min.css';
 @import '@/assets/css/common.css';
-
 .main {
 	display: grid;
 	grid-template-rows: 32px calc(100vh - 32px);

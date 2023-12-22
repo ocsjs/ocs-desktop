@@ -71,12 +71,17 @@ function bootstrap() {
 					window.webContents.openDevTools();
 				}
 
+				window.webContents.once('did-finish-load', () => {
+					setTimeout(() => {
+						// 因为需要对渲染进程发送信息，所以要在显示完成后开始监听
+						if (app.isPackaged) {
+							task('软件更新', () => updater());
+						}
+					}, 1000);
+				});
+
 				// 加载完成显示，解决一系列的显示/黑屏问题
 				window.show();
-
-				if (app.isPackaged) {
-					task('软件更新', () => updater(window));
-				}
 			})
 		])
 	);
