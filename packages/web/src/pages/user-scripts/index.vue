@@ -149,7 +149,13 @@
 								arrow-class="bg-black"
 							>
 								<template #title>
-									<div style="color: white">{{ script.enable ? '关闭脚本自动加载' : '开启脚本自动加载' }}</div>
+									<div style="color: white">
+										{{
+											script.enable
+												? '关闭脚本自动加载，如果想禁止脚本运行，请在浏览器拓展中禁止。'
+												: '开启脚本自动加载'
+										}}
+									</div>
 								</template>
 								<template #content>
 									<div
