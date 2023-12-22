@@ -332,9 +332,6 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-.histories {
-}
-
 .profile {
 	height: 100%;
 	:deep(.arco-descriptions-item-label) {

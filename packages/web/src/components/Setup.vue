@@ -182,10 +182,21 @@ onMounted(async () => {
 
 		state.downloadPath = await remote.path.call('join', store.paths.downloadFolder);
 
-		// 检测有效的浏览器路径
 		state.resource.browsers = await remote.methods.call('getValidBrowsers');
-		if (state.resource.browsers.length) {
-			state.browser = state.resource.browsers[0].name;
+
+		if (store.render.setting.launchOptions.executablePath) {
+			// 检测有效的浏览器路径
+			const name = '软件中已设置的浏览器';
+			state.resource.browsers.unshift({
+				name: name,
+				path: store.render.setting.launchOptions.executablePath
+			});
+			state.browser = name;
+		} else {
+			// 检测有效的浏览器路径
+			if (state.resource.browsers.length) {
+				state.browser = state.resource.browsers[0].name;
+			}
 		}
 
 		// 获取最新的拓展和用户脚本信息
@@ -226,17 +237,21 @@ async function setup() {
 	const extension = state.resource.extensions.find((e) => e.name === state.selectedExtension);
 	const userScript = state.resource.userScripts.find((e) => e.name === state.selectedUserScript);
 
-	if (browser && extension && userScript) {
-		try {
+	try {
+		if (browser) {
 			store.render.setting.launchOptions.executablePath = browser.path;
-			await downloadScript(userScript);
-			await downloadExtension(extension);
-			state.finish = true;
-		} catch (err) {
-			Message.error('安装失败，请稍后重试，或者手动设置 : ' + err);
 		}
-	} else {
-		Message.error('参数错误');
+		if (userScript) {
+			await downloadScript(userScript);
+		}
+		if (extension) {
+			await downloadExtension(extension);
+		}
+		state.finish = true;
+
+		Message.success('初始化完成');
+	} catch (err) {
+		Message.error('安装失败，请稍后重试，或者手动设置 : ' + err);
 	}
 
 	store.render.state.setup = false;
