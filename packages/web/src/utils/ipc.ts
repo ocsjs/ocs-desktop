@@ -31,9 +31,9 @@ export function activeIpcRenderListener() {
 	});
 
 	// 检测到新版本
-	ipcRenderer.on('detect-new-app-version', (e, newVersion: UpdateInformationResource) => {
-		console.log(newVersion);
-		if (!newVersion) {
+	ipcRenderer.on('detect-new-app-version', (e, new_version: UpdateInformationResource) => {
+		console.log('detect-new-app-version', new_version);
+		if (!new_version) {
 			return;
 		}
 
@@ -43,38 +43,38 @@ export function activeIpcRenderListener() {
 			cancelText: '下次一定',
 			maskClosable: false,
 			width: 500,
-			onOk() {
-				remote.methods.call('updateApp', newVersion);
+			async onOk() {
+				await remote.methods.call('updateApp', new_version);
 			},
 			content: () =>
 				h('div', [
-					h('div', '新版本 : ✨' + newVersion.tag),
+					h('div', '新版本 : ✨' + new_version.tag),
 					h('div', '版本更新内容如下: '),
 					h('div', [
-						...(newVersion.description.feat?.length
+						...(new_version.description.feat?.length
 							? [
 									h('div', '新增：'),
 									h(
 										'ul',
-										newVersion.description.feat.map((feature) => h('li', feature))
+										new_version.description.feat.map((feature) => h('li', feature))
 									)
 							  ]
 							: []),
-						...(newVersion.description.fix?.length
+						...(new_version.description.fix?.length
 							? [
 									h('div', '修复：'),
 									h(
 										'ul',
-										newVersion.description.fix.map((feature) => h('li', feature))
+										new_version.description.fix.map((feature) => h('li', feature))
 									)
 							  ]
 							: []),
-						...(newVersion.description.other?.length
+						...(new_version.description.other?.length
 							? [
 									h('div', '其他：'),
 									h(
 										'ul',
-										newVersion.description.other.map((feature) => h('li', feature))
+										new_version.description.other.map((feature) => h('li', feature))
 									)
 							  ]
 							: [])
