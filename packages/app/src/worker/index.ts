@@ -552,7 +552,7 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 							url: response.url(),
 							status: response.status(),
 							headers: response.headers(),
-							body: await response.body()
+							body: await response.body().then((res) => res.toString('utf8'))
 						})
 					});
 				} else if (property === 'waitForRequest') {
