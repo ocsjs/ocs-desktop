@@ -507,12 +507,12 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 	browser.route(/ocs-script-actions/, async (route) => {
 		const req = route.request();
 		if (req.method().toLocaleUpperCase() !== 'POST') {
-			return await route.abort();
+			return await route.continue();
 		}
 		const headerValue = await req.headerValue('auth-token');
 
 		if (headerValue !== authToken) {
-			return await route.abort();
+			return await route.continue();
 		}
 
 		const { page: targetPageUrl, property, args }: { page: string; property: string; args: any[] } = req.postDataJSON();
@@ -520,12 +520,16 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 		try {
 			const page = browser?.pages().find((p) => p.url().includes(targetPageUrl));
 			if (!page) {
-				return await route.abort();
+				return await route.continue();
 			}
 
 			const targetFunction: Function = _get(page, property);
 			if (typeof targetFunction !== 'function') {
-				return await route.abort();
+				return await route.continue();
+			}
+
+			if (property === 'waitForResponse' || property === 'waitForRequest') {
+				args[0] = new RegExp(args[0]);
 			}
 
 			const res = await targetFunction.apply(
@@ -535,13 +539,14 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 			if (typeof res === 'object') {
 				if (property === 'waitForResponse') {
 					const response: Response = res;
+
 					await route.fulfill({
 						status: 200,
 						body: JSON.stringify({
 							url: response.url(),
 							status: response.status(),
 							headers: response.headers(),
-							body: await response.body().then((b) => b.toString())
+							body: await response.body()
 						})
 					});
 				} else if (property === 'waitForRequest') {
@@ -562,7 +567,8 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 				await route.fulfill({ status: 200, body: res ?? 'OK' });
 			}
 		} catch (err) {
-			await route.abort();
+			await route.continue();
+			console.error(err);
 			console.error('软件辅助执行失败：', { targetPageUrl, property, args });
 		}
 	});
