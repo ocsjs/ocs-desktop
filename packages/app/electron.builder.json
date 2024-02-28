@@ -16,7 +16,8 @@
 	"win": {
 		"icon": "public/favicon.png",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
-		"target": [{ "target": "nsis", "arch": ["x64", "ia32"] }]
+		"target": [{ "target": "nsis", "arch": ["x64", "ia32"] }],
+		"requestedExecutionLevel": "highestAvailable"
 	},
 	"mac": {
 		"icon": "public/favicon.icns",
