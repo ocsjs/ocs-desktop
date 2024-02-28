@@ -537,7 +537,13 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 				args
 			);
 			if (typeof res === 'object') {
-				if (property === 'waitForResponse') {
+				if (property === 'screenshot') {
+					const buffer: Buffer = res;
+					await route.fulfill({
+						status: 200,
+						body: buffer.toString('base64')
+					});
+				} else if (property === 'waitForResponse') {
 					const response: Response = res;
 
 					await route.fulfill({
