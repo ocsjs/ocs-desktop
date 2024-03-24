@@ -14,7 +14,12 @@ pnpm install
 cd packages/web
 npm run dev
 # 终端2
-cd packages/app
+
+# 编译 common 库
+cd packages/common
+npx tsc
+# 回到 app 项目，并运行
+cd ../app
 npm run dev
 ```
 
