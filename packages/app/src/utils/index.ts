@@ -6,6 +6,7 @@ import { createWriteStream, existsSync, mkdirSync } from 'fs';
 import { finished } from 'stream/promises';
 import { Logger } from '../logger';
 import xlsx from 'xlsx';
+import unzipper from 'unzipper';
 
 const taskLogger = Logger('task');
 const logger = Logger('utils');
@@ -68,17 +69,9 @@ export function zip(input: string, output: string) {
  * 解压文件
  */
 
-export function unzip(input: string, output: string) {
-	return new Promise<void>((resolve, reject) => {
-		const zip = new AdmZip(input);
-		zip.extractAllToAsync(output, true, (err) => {
-			if (err) {
-				reject(err);
-			} else {
-				resolve();
-			}
-		});
-	});
+export async function unzip(input: string, output: string) {
+	const directory = await unzipper.Open.file(input);
+	await directory.extract({ path: output });
 }
 
 export function getProjectPath() {
