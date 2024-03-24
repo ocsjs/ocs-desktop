@@ -6,6 +6,8 @@ import { remote } from './remote';
 import { store } from '../store';
 import { electron } from '../utils/node';
 import { processes } from './process';
+import { Folder } from '../fs/folder';
+import { Browser } from '../fs/browser';
 const { shell } = electron;
 
 export async function checkBrowserCaches() {
@@ -52,19 +54,28 @@ export function showClearBrowserCachesModal(totalSize: number) {
 		},
 		okText: '清除缓存',
 		onOk() {
-			clearAllBrowserCaches(store.paths.userDataDirsFolder);
+			const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
+
+			clearAllBrowserCaches(
+				store.paths.userDataDirsFolder,
+				browsers.map((b) => b.uid)
+			);
 		}
 	});
 }
 
-export function clearAllBrowserCaches(userDataDirsFolder: string) {
+export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]) {
 	return new Promise<void>((resolve, reject) => {
 		remote.fs.call('readdirSync', userDataDirsFolder, {} as any).then(async (dirs) => {
 			try {
 				const paths = [];
 				console.log('dirs', dirs);
+				console.log('uids', uids);
+
 				for (const dir of dirs) {
-					paths.push(await remote.path.call('join', userDataDirsFolder, String(dir)));
+					if (dir.name && dir.name.trim() && uids.includes(dir.name.trim())) {
+						paths.push(await remote.path.call('join', userDataDirsFolder, String(dir)));
+					}
 				}
 				await Promise.all(
 					paths.map((path) => {
@@ -93,7 +104,7 @@ export function clearAllBrowserCaches(userDataDirsFolder: string) {
  * @param title 提示弹窗
  * @param browsers 需要清除的浏览器
  */
-export async function forceClearBrowserCache(title: string, userDataDirsFolder: string) {
+export async function forceClearBrowserCache(title: string, userDataDirsFolder: string, uids: string[]) {
 	const modal = Modal.warning({
 		title: '提示',
 		content: () => h('div', [h(SyncOutlined, { spin: true }), title]),
@@ -102,7 +113,7 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 		footer: false
 	});
 
-	await clearAllBrowserCaches(userDataDirsFolder);
+	await clearAllBrowserCaches(userDataDirsFolder, uids);
 
 	modal.close();
 	Message.success('配置浏览器路径成功');

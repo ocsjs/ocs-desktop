@@ -184,7 +184,11 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 		}
 	}
 
-	forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
+	forceClearBrowserCache(
+		'检测到浏览器缓存路径，正在清空之前的缓存数据...',
+		previous,
+		browsers.map((b) => b.uid)
+	);
 }
 </script>
 
