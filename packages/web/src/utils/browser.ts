@@ -66,14 +66,13 @@ export function showClearBrowserCachesModal(totalSize: number) {
 
 export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]) {
 	return new Promise<void>((resolve, reject) => {
-		remote.fs.call('readdirSync', userDataDirsFolder, {} as any).then(async (dirs) => {
+		remote.fs.call('readdirSync', userDataDirsFolder, {} as any).then(async (_dirs) => {
 			try {
 				const paths = [];
-				console.log('dirs', dirs);
-				console.log('uids', uids);
+				const dirs = _dirs as unknown as string[];
 
 				for (const dir of dirs) {
-					if (dir.name && dir.name.trim() && uids.includes(dir.name.trim())) {
+					if (dir && dir.trim() && uids.includes(dir.trim())) {
 						paths.push(await remote.path.call('join', userDataDirsFolder, String(dir)));
 					}
 				}
