@@ -66,50 +66,56 @@ const wrapper = h('div');
 const root = wrapper.attachShadow({ mode: 'closed' });
 
 function renderOCS() {
-	const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
+	try {
+		const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
 
-	// 清空元素
-	root.replaceChildren();
+		// 清空元素
+		root.replaceChildren();
 
-	loadCustomElements(definedCustomElements as any[]);
+		loadCustomElements(definedCustomElements as any[]);
 
-	root.append(h('style', state.css));
+		root.append(h('style', state.css));
 
-	/** 删除阴影 */
-	root.append(h('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
+		/** 删除阴影 */
+		root.append(h('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
 
-	if (project) {
-		for (const key in project.scripts) {
-			if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
-				const script = project.scripts[key];
+		if (project) {
+			for (const key in project.scripts) {
+				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
+					const script = project.scripts[key];
 
-				/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
-				script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
-				const { notes, ...otherConfigs } = script.configs || {};
+					/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
+					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
+					const { notes, ...otherConfigs } = script.configs || {};
 
-				if (
-					script.namespace &&
-					// 如果没有配置项，则不显示
-					Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
-					script.hideInPanel !== false
-				) {
-					const panel = $ui.scriptPanel(script, $store);
+					if (
+						script.namespace &&
+						// 如果没有配置项，则不显示
+						Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
+						script.hideInPanel !== false
+					) {
+						const panel = $ui.scriptPanel(script, $store);
 
-					/** 添加到页面中，并执行 onrender 函数 */
-					root.append(panel);
-					try {
-						script.onrender?.({ panel, header: h('header-element') })?.catch((err) => {
+						/** 添加到页面中，并执行 onrender 函数 */
+						root.append(panel);
+						try {
+							script.onrender?.({ panel, header: h('header-element') })?.catch((err) => {
+								console.error(err);
+							});
+						} catch (err) {
 							console.error(err);
-						});
-					} catch (err) {
-						console.error(err);
+						}
 					}
 				}
 			}
-		}
 
-		/** 挂载 ocs panel */
-		document.querySelector('#ocs-browser-configs')?.replaceChildren(wrapper);
+			/** 挂载 ocs panel */
+			document.querySelector('#ocs-browser-configs')?.replaceChildren(wrapper);
+		}
+	} catch (err) {
+		state.err = String(err);
+		console.error(err);
+		emits('error', state.err);
 	}
 }
 
@@ -130,8 +136,8 @@ async function loadOCS() {
 		}
 
 		// @ts-ignore
-		const OCS = global.OCS as typeof import('ocsjs');
-		global.OCS.$elements.root = root;
+		const OCS = global.OCS as typeof import('@ocsjs/script');
+		OCS.$elements.root = root;
 		$elements.root = root;
 		console.log(OCS);
 

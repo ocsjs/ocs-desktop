@@ -16,7 +16,9 @@ export default defineConfig({
 					}
 				}
 			}
-		}
+		},
+		/** 是否压缩代码， 这里写 false，不然打包后类名会发生变化 */
+		minify: false
 	},
 	server: {
 		open: false
