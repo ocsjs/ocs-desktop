@@ -1,14 +1,16 @@
 <template>
 	<div class="h-100">
-		<a-select v-model="Store.render.setting.ocs.currentProjectName">
-			<template #prefix> 配置 : </template>
+		<a-radio-group
+			v-model="Store.render.setting.ocs.currentProjectName"
+			type="button"
+		>
 			<template
 				v-for="project of state.projects"
 				:key="project.name"
 			>
-				<a-option :value="project.name"> {{ project.name }} </a-option>
+				<a-radio :value="project.name">{{ project.name }}</a-radio>
 			</template>
-		</a-select>
+		</a-radio-group>
 		<div
 			id="ocs-browser-configs"
 			class="mt-3"
@@ -20,6 +22,7 @@
 import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
 import { store as Store } from '../store/index';
+import { definedCustomElements, h, $, $ui, MemoryStoreProvider, $store, $elements } from 'easy-us';
 
 type Project = any;
 
@@ -38,8 +41,6 @@ const emits = defineEmits<{
 }>();
 
 const state = reactive({
-	/** ocs root 元素 */
-	root: undefined as ShadowRoot | undefined,
 	css: '',
 	/** 是否加载 */
 	loading: false,
@@ -61,20 +62,21 @@ state.watchStopHandle = watch(store, () => {
 	emits('update:store', store.value);
 });
 
+const wrapper = h('div');
+const root = wrapper.attachShadow({ mode: 'closed' });
+
 function renderOCS() {
-	// @ts-ignore
-	const OCS = global.OCS as typeof import('ocsjs');
 	const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
 
 	// 清空元素
-	OCS.$elements.root.replaceChildren();
+	root.replaceChildren();
 
-	OCS.$.loadCustomElements(OCS.definedCustomElements);
+	loadCustomElements(definedCustomElements as any[]);
 
-	OCS.$elements.root.append(OCS.el('style', state.css));
+	root.append(h('style', state.css));
 
 	/** 删除阴影 */
-	OCS.$elements.root.append(OCS.el('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
+	root.append(h('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
 
 	if (project) {
 		for (const key in project.scripts) {
@@ -82,7 +84,7 @@ function renderOCS() {
 				const script = project.scripts[key];
 
 				/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
-				script.cfg = Object.keys(script.cfg).length === 0 ? OCS.$.createConfigProxy(script) : script.cfg;
+				script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
 				const { notes, ...otherConfigs } = script.configs || {};
 
 				if (
@@ -91,12 +93,12 @@ function renderOCS() {
 					Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
 					script.hideInPanel !== false
 				) {
-					const panel = OCS.$creator.scriptPanel(script, { projectName: '' });
+					const panel = $ui.scriptPanel(script, $store);
 
 					/** 添加到页面中，并执行 onrender 函数 */
-					OCS.$elements.root.append(panel);
+					root.append(panel);
 					try {
-						script.onrender?.({ panel, header: OCS.el('header-element') })?.catch((err) => {
+						script.onrender?.({ panel, header: h('header-element') })?.catch((err) => {
 							console.error(err);
 						});
 					} catch (err) {
@@ -107,8 +109,7 @@ function renderOCS() {
 		}
 
 		/** 挂载 ocs panel */
-		OCS.$el(`#ocs-browser-configs`)?.replaceChildren(OCS.$elements.panel);
-		state.root = state.root || OCS.$elements.root;
+		document.querySelector('#ocs-browser-configs')?.replaceChildren(wrapper);
 	}
 }
 
@@ -130,9 +131,12 @@ async function loadOCS() {
 
 		// @ts-ignore
 		const OCS = global.OCS as typeof import('ocsjs');
+		global.OCS.$elements.root = root;
+		$elements.root = root;
+		console.log(OCS);
 
 		/** 双向绑定数据 */
-		OCS.ObjectStoreProvider._source.store = store.value;
+		MemoryStoreProvider._source.store = store.value;
 
 		state.projects = OCS.definedProjects();
 		emits('update:project', state.projects as Project[]);
@@ -141,6 +145,7 @@ async function loadOCS() {
 		}
 	} catch (err) {
 		state.err = String(err);
+		console.error(err);
 		emits('error', state.err);
 	}
 
@@ -165,6 +170,31 @@ onActivated(() => {
 onDeactivated(() => {
 	state.watchStopHandle?.();
 });
+
+/** 加载自定义元素 */
+function loadCustomElements(elements: { new (): HTMLElement }[]) {
+	for (const element of elements) {
+		const name = resolveCustomElementName(element, '-');
+		// 不能重复加载
+		if (customElements.get(name) === undefined) {
+			customElements.define(name, element);
+		}
+	}
+}
+
+/**
+ * 将每个驼峰前面添加目标字符串，用于自定义元素名的转换
+ * @param el  自定义元素
+ * @param target 目标字符串
+ */
+function resolveCustomElementName<T extends HTMLElement = HTMLElement>(el: { new (): T }, target: string) {
+	return el.name
+		.replace(/([A-Z])/g, target + '$1')
+		.toLowerCase()
+		.split(target)
+		.slice(1)
+		.join(target);
+}
 </script>
 
 <style scoped lang="less">

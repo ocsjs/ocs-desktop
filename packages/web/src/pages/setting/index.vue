@@ -8,6 +8,7 @@
 					<div
 						v-show="state.loading === false && state.err !== ''"
 						style="color: red"
+						:title="state.err"
 					>
 						解析错误！，请尝试重启软件
 					</div>
@@ -32,14 +33,22 @@
 
 					<a-modal
 						v-model:visible="state.show"
+						title="OCS配置"
 						:footer="false"
-						:simple="true"
-						:width="500"
+						width="auto"
 						modal-class="p-0 m-0"
+						:mask-closable="false"
+						body-style="padding: 0"
+						@close="
+							() => {
+								if (store.render.setting.ocs.openSync === false) {
+									Message.info('开启右侧的同步功能才可生效哦。');
+								}
+							}
+						"
 					>
 						<div
 							id="ocs-global-configs"
-							style="height: 90vh"
 							class="m-2"
 						>
 							<OCSConfigs
@@ -159,6 +168,7 @@ import Icon from '../../components/Icon.vue';
 import { forceClearBrowserCache } from '../../utils/browser';
 import { Folder } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
+import { Message } from '@arco-design/web-vue';
 
 const state = reactive({
 	/** 是否加载 */
@@ -199,7 +209,7 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 }
 
 #ocs-global-configs {
-	height: 70vh;
+	height: 80vh;
 	overflow: overlay;
 }
 </style>

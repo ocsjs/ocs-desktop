@@ -1,6 +1,17 @@
 {
-	"cSpell.words": ["greasyfork", "ICVE", "ocsjs", "scriptcat", "userscript", "userscripts"],
-	"eslint.validate": ["javascript", "javascriptreact", "vue"],
+	"cSpell.words": [
+		"greasyfork",
+		"ICVE",
+		"ocsjs",
+		"scriptcat",
+		"userscript",
+		"userscripts"
+	],
+	"eslint.validate": [
+		"javascript",
+		"javascriptreact",
+		"vue"
+	],
 	"editor.formatOnSave": true,
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "explicit"
@@ -20,5 +31,8 @@
 	"typescript.suggest.jsdoc.generateReturns": false,
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "vscode.json-language-features"
 	}
 }
