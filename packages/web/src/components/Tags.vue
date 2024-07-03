@@ -160,7 +160,14 @@ const handleInputConfirm = () => {
 	let tags = props.tags;
 
 	if (inputValue && tags.map((t) => t.name).findIndex((n) => n === inputValue) === -1) {
-		const newTag = { name: inputValue, color: state.color };
+		const origin_tag = store.render.browser.tags[state.inputValue];
+		let newTag;
+		// 使用原有标签颜色
+		if (origin_tag && origin_tag.color !== state.color) {
+			newTag = { name: inputValue, color: origin_tag.color };
+		} else {
+			newTag = { name: inputValue, color: state.color };
+		}
 		tags = [...tags, newTag];
 		emits('create', newTag);
 	}
