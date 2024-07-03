@@ -19,6 +19,7 @@
 						<a-input
 							v-model="cfg.value"
 							size="mini"
+							@blur="() => (cfg.value = cfg.value.trim())"
 						></a-input>
 					</a-col>
 				</a-row>
