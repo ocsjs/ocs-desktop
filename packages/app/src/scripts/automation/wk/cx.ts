@@ -1,5 +1,5 @@
 import type { Page } from 'playwright-core';
-import { breakVerifyCode, slowType } from '../../utils';
+import { breakSliderVerify, breakVerifyCode, getBase64, slowType } from '../../utils';
 import { PlaywrightScript } from '../../script';
 
 export const CXUnitLoginScript = new PlaywrightScript(
@@ -25,6 +25,8 @@ export const CXUnitLoginScript = new PlaywrightScript(
 			options?: {
 				ocrApiUrl?: string;
 				ocrApiImageKey?: string;
+				detTargetKey?: string;
+				detBackgroundKey?: string;
 			}
 		) {
 			try {
@@ -40,10 +42,7 @@ export const CXUnitLoginScript = new PlaywrightScript(
 					await page.fill('#uname', configs.id);
 					await page.fill('#password', configs.password);
 
-					await login(page, {
-						ocrApiUrl: options?.ocrApiUrl,
-						ocrApiImageKey: options?.ocrApiImageKey
-					});
+					await login(page, options);
 				}
 			} catch (err) {
 				CXUnitLoginScript.emit('script-error', String(err));
@@ -85,6 +84,8 @@ function login(
 	opts?: {
 		ocrApiUrl?: string;
 		ocrApiImageKey?: string;
+		detTargetKey?: string;
+		detBackgroundKey?: string;
 	}
 ) {
 	return new Promise<void>((resolve, reject) => {
@@ -118,11 +119,76 @@ function login(
 						ocrApiImageKey: opts.ocrApiImageKey
 					});
 				}
+
+				// 点击登录
+				await page.click('#loginBtn');
+				await page.waitForTimeout(3000);
 			}
 
-			// 点击登录
-			await page.click('#loginBtn');
-			await page.waitForTimeout(3000);
+			// 2024年新增-滑块验证码
+			const captchaEl = await page.$('#captcha');
+			if (captchaEl) {
+				// 先登录才会出现验证码
+				if (tryCount === 4) {
+					await page.click('#loginBtn');
+					await page.waitForTimeout(3000);
+				}
+
+				/** 破解验证码 */
+				if (opts?.ocrApiUrl && opts?.detBackgroundKey && opts?.detTargetKey) {
+					if (tryCount === 4) {
+						await page.waitForFunction(
+							() => document.querySelector<HTMLDivElement>('.u-opacity')?.style.display === 'block',
+							{},
+							{ timeout: 10 * 1000 }
+						);
+					}
+
+					// 删除遮挡
+					await page.evaluate(() => document.querySelectorAll('.u-opacity').forEach((el) => el.remove()));
+
+					const det_target_el = await page.$('.cx_imgBtn > img');
+					const det_slider_el = await page.$('.cx_rightBtn');
+					const src = await det_target_el?.getAttribute('src');
+
+					if (det_slider_el && src) {
+						const target_base64 = await getBase64(src);
+						// 隐藏拼图，要不然会影响算法
+						await page.evaluate(() =>
+							document.querySelector<HTMLDivElement>('.cx_imgBtn')?.style.setProperty('display', 'none')
+						);
+						const det_bg_base64 = await page.$('#cx_obstacle_canvas').then((el) => el?.screenshot());
+						if (det_bg_base64) {
+							await breakSliderVerify(page, det_slider_el, target_base64, det_bg_base64.toString('base64'), {
+								ocrApiUrl: opts.ocrApiUrl,
+								detTargetKey: opts.detTargetKey,
+								detBackgroundKey: opts.detBackgroundKey,
+								offset: 25
+							});
+						}
+
+						// 显示拼图
+						await page.evaluate(() =>
+							document.querySelector<HTMLDivElement>('.cx_imgBtn')?.style.setProperty('display', 'block')
+						);
+					}
+				}
+				try {
+					const captcha = await page.$('#captcha');
+					if (captcha && (await captcha.isVisible())) {
+						if (tryCount === 0) {
+							clearTimeout(timeout);
+							throw new Error('滑动验证失败，请尝试手动处理。');
+						} else {
+							console.log('tryLogin');
+							await tryLogin();
+						}
+					}
+				} catch (e) {
+					console.log(e);
+					await tryLogin();
+				}
+			}
 
 			// 检测错误
 			const vercodeMsg = await page.evaluate(() =>

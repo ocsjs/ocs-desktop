@@ -28,8 +28,8 @@ export async function startupServer() {
 		next();
 	});
 	// 解析 post 数据
-	app.use(express.urlencoded({ extended: false }));
-	app.use(express.json());
+	app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+	app.use(express.json({ limit: '10mb' }));
 
 	app.get('/state', (req, res) => {
 		res.json({

@@ -1,6 +1,5 @@
 import { Page } from 'playwright-core';
-import { slowType } from '../../utils';
-import axios from 'axios';
+import { breakSliderVerify, getBase64, slowType } from '../../utils';
 import { PlaywrightScript } from '../../script';
 
 export const ZHSUnitLoginScript = new PlaywrightScript(
@@ -140,62 +139,18 @@ async function verify(page: Page, opts: { ocrApiUrl: string; detTargetKey: strin
 		document.querySelectorAll('.yidun_cover-frame,.yidun_popup__mask').forEach((el) => el.remove())
 	);
 
+	const det_slider_el = await page.$('.yidun_slider');
 	const det_target_el = await page.$('[alt="验证码滑块"]');
 	const det_bg_el = await page.$('[alt="验证码背景"]');
 
-	if (det_target_el && det_bg_el) {
+	if (det_target_el && det_slider_el && det_bg_el) {
 		const det_target_src = await det_target_el.getAttribute('src');
 		const det_bg_src = await det_bg_el.getAttribute('src');
 		if (det_target_src && det_bg_src) {
-			const det_target_base64 = await getBase64(det_target_src);
-			const det_bg_base64 = await getBase64(det_bg_src);
-
-			const body = Object.create({});
-			Reflect.set(body, opts.detTargetKey, det_target_base64);
-			Reflect.set(body, opts.detBackgroundKey, det_bg_base64);
-
-			const data = await axios.post(opts.ocrApiUrl, body);
-			console.log('zhs ocr', JSON.stringify(data?.data));
-
-			if (data?.data?.error) {
-				console.error(data.data.error);
-			} else {
-				if (data?.data?.canOCR) {
-					/** 破解滑块验证码 */
-					const result: { target_y: number; target: number[] } = data?.data?.det;
-
-					if (result) {
-						const bg_rect = await det_target_el.evaluate((node) => node.getBoundingClientRect());
-						const x1 = bg_rect.x + 10;
-						const y1 = bg_rect.y + result.target_y;
-						const x2 = bg_rect.x + result.target[0] + 20;
-						const y2 = bg_rect.y + result.target[1];
-
-						await page.mouse.move(x1, y1);
-						await page.mouse.down();
-						await page.mouse.move(x2, y2, { steps: 10 });
-						await page.mouse.up();
-
-						try {
-							await page.waitForNavigation({ timeout: 3000, waitUntil: 'domcontentloaded' });
-						} catch {}
-					} else {
-						console.error(`OCR_DET: `, {
-							data,
-							opts,
-							det_bg_src,
-							det_target_src,
-							det_target_base64: det_target_base64.length,
-							det_bg_base64: det_bg_base64.length
-						});
-						throw new Error('滑块验证识别失败，请尝试手动登录。');
-					}
-				} else {
-					throw new Error(
-						'未检测到图片验证码识别模块, 请手动输入验证码，或在软件左侧应用中心安装识别模块后重启浏览器。'
-					);
-				}
-			}
+			await breakSliderVerify(page, det_slider_el, await getBase64(det_target_src), await getBase64(det_bg_src), {
+				...opts,
+				offset: 10
+			});
 		}
 	}
 }
@@ -215,14 +170,6 @@ async function isNotVerified(page: Page) {
 	}
 
 	return page.url().includes('passport.zhihuishu.com');
-}
-
-function getBase64(url: string) {
-	return axios
-		.get(url, {
-			responseType: 'arraybuffer'
-		})
-		.then((response) => Buffer.from(response.data, 'binary').toString('base64'));
 }
 
 async function isNotLogin(page: Page) {
