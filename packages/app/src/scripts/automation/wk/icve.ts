@@ -17,11 +17,11 @@ export const ICVELoginScript = new PlaywrightScript(
 		async run(page, configs) {
 			try {
 				if (await isNotLogin(page)) {
-					await page.fill('[name="userName"]', configs.username);
-					await page.fill('[name="password"]', configs.password);
+					await page.fill('[placeholder="请输入账号"]', configs.username);
+					await page.fill('[placeholder="请输入密码"]', configs.password);
 					// 同意协议
-					await page.click('#isTy');
-					await page.click('.dl');
+					await page.click('.agreement label.el-checkbox');
+					await page.click('form .login');
 				}
 			} catch (err) {
 				ICVELoginScript.emit('script-error', String(err));
