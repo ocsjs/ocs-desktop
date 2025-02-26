@@ -1,4 +1,4 @@
-import { Instance as Chalk } from 'chalk';
+import { Chalk } from 'chalk';
 import { LoggerCore } from '../logger.core';
 import path, { basename } from 'path';
 import fs from 'fs';
@@ -297,12 +297,15 @@ export async function launchBrowser({
 					// 加载浏览器数据
 					blankPage.on('load', async () => {
 						if (bookmarksPageUrl && blankPage.url().includes(bookmarksPageUrl)) {
-							await blankPage.evaluate((info) => {
-								const slot = document.querySelector('#data-slot');
-								if (slot) {
-									slot.textContent = JSON.stringify(info);
-								}
-							}, Object.assign(browserInfo || {}, { uid: uid }));
+							await blankPage.evaluate(
+								(info) => {
+									const slot = document.querySelector('#data-slot');
+									if (slot) {
+										slot.textContent = JSON.stringify(info);
+									}
+								},
+								Object.assign(browserInfo || {}, { uid })
+							);
 						}
 					});
 

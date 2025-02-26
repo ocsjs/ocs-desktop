@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 
 import { XTerm } from '../utils/xterm';
 import { Process } from '../utils/process';

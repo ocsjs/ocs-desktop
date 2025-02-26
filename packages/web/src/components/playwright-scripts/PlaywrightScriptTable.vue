@@ -105,7 +105,7 @@ import { store } from '../../store';
 import Icon from '../Icon.vue';
 import { Config } from '@ocs-desktop/app/src/scripts/interface';
 import { remote } from '../../utils/remote';
-import xlsx from 'xlsx';
+import * as xlsx from 'xlsx';
 
 const props = defineProps<{
 	rawPlaywrightScript: RawPlaywrightScript;

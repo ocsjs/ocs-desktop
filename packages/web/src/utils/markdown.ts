@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import Emoji from 'markdown-it-emoji';
+import { full as Emoji } from 'markdown-it-emoji';
 import { markdownContainer } from '../utils/markdown.container';
 
 // @ts-ignore full options list (defaults)

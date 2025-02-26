@@ -12,31 +12,26 @@
 		"proxy": "HTTPS_PROXY=127.0.0.1:7890"
 	},
 	"devDependencies": {
-		"@types/adm-zip": "^0.5.5",
-		"@types/axios": "^0.14.0",
-		"@types/node-forge": "^1.0.0",
-		"@types/semver": "^7.3.9",
-		"@types/unzipper": "^0.10.9",
-		"electron": "23.0.0",
-		"electron-builder": "^23.1.0"
+		"@types/adm-zip": "^0.5.7",
+		"@types/express": "^5.0.0",
+		"@types/semver": "^7.5.8",
+		"@types/unzipper": "^0.10.10",
+		"electron": "34.2.0",
+		"electron-builder": "^25.1.8"
 	},
 	"dependencies": {
-		"@ocs-desktop/common": "workspace:^0.0.1",
-		"@types/express": "^4.17.13",
-		"adm-zip": "^0.5.12",
-		"axios": "^0.25.0",
-		"chalk": "4.1.0",
-		"chromium": "^3.0.3",
-		"dayjs": "^1.10.7",
-		"electron-store": "^8.0.1",
-		"express": "^4.18.1",
+		"@ocs-desktop/common": "workspace:*",
+		"adm-zip": "^0.5.16",
+		"axios": "^1.8.0",
+		"chalk": "^5.4.1",
+		"electron-store": "^8.2.0",
+		"express": "^4.21.2",
 		"lodash": "^4.17.21",
-		"node-forge": "1.0.0",
-		"playwright-core": "^1.28.0",
-		"semver": "^7.3.5",
-		"systeminformation": "^5.17.10",
-		"unzipper": "^0.10.14",
-		"xlsx": "^0.17.5"
+		"playwright-core": "^1.50.1",
+		"semver": "^7.7.1",
+		"systeminformation": "^5.25.11",
+		"unzipper": "^0.12.3",
+		"xlsx": "^0.18.5"
 	},
 	"repository": {
 		"type": "git",

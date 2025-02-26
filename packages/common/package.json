@@ -26,6 +26,6 @@
 	},
 	"homepage": "https://github.com/ocsjs/ocs-desktop#readme",
 	"dependencies": {
-		"axios": "^0.25.0"
+		"axios": "^1.8.0"
 	}
 }

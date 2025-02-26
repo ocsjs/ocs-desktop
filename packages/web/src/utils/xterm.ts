@@ -1,5 +1,5 @@
-import { ITerminalOptions, Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
+import { ITerminalOptions, Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { remote } from './remote';
 const fitAddon = new FitAddon();
 

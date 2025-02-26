@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
-import MarkdownIt from 'markdown-it';
+import type MarkdownIt from 'markdown-it';
 import container from 'markdown-it-container';
-import Token from 'markdown-it/lib/token';
+import type Token from 'markdown-it/lib/token.mjs';
 
 export enum CommonContainerNames {
 	INFO = 'info',

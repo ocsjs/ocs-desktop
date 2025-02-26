@@ -1,6 +1,6 @@
 const { series, src, dest } = require('gulp');
-const del = require('del');
-const zip = require('gulp-zip');
+const { deleteAsync } = require('del');
+const zip = require('gulp-zip').default;
 const { execOut } = require('./utils');
 const { readFileSync } = require('fs');
 const { version } = JSON.parse(readFileSync('../packages/app/package.json').toString());
@@ -14,7 +14,7 @@ function buildApp() {
 }
 
 function cleanOutput() {
-	return del([`../packages/app/dist/app${version}.zip`], { force: true });
+	return deleteAsync([`../packages/app/dist/app${version}.zip`], { force: true });
 }
 
 function packResource() {
