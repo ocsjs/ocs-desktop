@@ -17,7 +17,7 @@
 		"@types/node-forge": "^1.0.0",
 		"@types/semver": "^7.3.9",
 		"@types/unzipper": "^0.10.9",
-		"electron": "23.0.0",
+		"electron": "35.0.0",
 		"electron-builder": "^23.1.0"
 	},
 	"dependencies": {

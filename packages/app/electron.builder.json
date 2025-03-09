@@ -16,20 +16,52 @@
 	"win": {
 		"icon": "public/favicon.png",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
-		"target": [{ "target": "nsis", "arch": ["x64", "ia32"] }],
+		"target": [
+			{
+				"target": "nsis",
+				"arch": [
+					"x64",
+					"ia32",
+					"arm64"
+				]
+			}
+		],
 		"requestedExecutionLevel": "highestAvailable"
 	},
 	"mac": {
 		"icon": "public/favicon.icns",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
-			{ "target": "zip", "arch": ["x64", "arm64"] },
-			{ "target": "dmg", "arch": ["x64", "arm64"] }
+			{
+				"target": "zip",
+				"arch": [
+					"x64",
+					"ia32",
+					"arm64"
+				]
+			},
+			{
+				"target": "dmg",
+				"arch": [
+					"x64",
+					"ia32",
+					"arm64"
+				]
+			}
 		]
 	},
 	"linux": {
 		"icon": "public/favicon.png",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
-		"target": [{ "target": "AppImage", "arch": ["x64", "arm64"] }]
+		"target": [
+			{
+				"target": "AppImage",
+				"arch": [
+					"x64",
+					"ia32",
+					"arm64"
+				]
+			}
+		]
 	}
 }
