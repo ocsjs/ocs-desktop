@@ -41,93 +41,19 @@
 				<a-doption @click="openDevTools"> 开发者工具 </a-doption>
 			</template>
 		</a-dropdown>
-		<a-dropdown
-			class="tittle-dropdown"
-			trigger="hover"
-			:popup-max-height="false"
-		>
+
+		<CommonEditActionDropdown>
 			<span
 				class="title-item"
-				@mousedown="mousedown"
+				@mousedown="
+					(e) => {
+						e.preventDefault();
+					}
+				"
 			>
 				编辑
 			</span>
-			<template #content>
-				<a-doption style="width: 200px"> </a-doption>
-
-				<a-doption
-					class="w-100"
-					@mousedown="mousedown"
-					@click="exec('copy')"
-				>
-					<a-row>
-						<a-col flex="20px"> 复制 </a-col>
-						<a-col
-							flex="auto"
-							class="text-end"
-						>
-							Ctrl + C
-						</a-col>
-					</a-row>
-				</a-doption>
-				<a-doption
-					@mousedown="mousedown"
-					@click="exec('cut')"
-				>
-					<a-row>
-						<a-col flex="20px"> 剪切 </a-col>
-						<a-col
-							flex="auto"
-							class="text-end"
-						>
-							Ctrl + X
-						</a-col>
-					</a-row>
-				</a-doption>
-				<a-doption
-					@mousedown="mousedown"
-					@click="exec('paste')"
-				>
-					<a-row>
-						<a-col flex="20px"> 粘贴 </a-col>
-						<a-col
-							flex="auto"
-							class="text-end"
-						>
-							Ctrl + V
-						</a-col>
-					</a-row>
-				</a-doption>
-				<a-doption
-					@mousedown="mousedown"
-					@click="exec('undo')"
-				>
-					<a-row>
-						<a-col flex="20px"> 上一步 </a-col>
-						<a-col
-							flex="auto"
-							class="text-end"
-						>
-							Ctrl + Z
-						</a-col>
-					</a-row>
-				</a-doption>
-				<a-doption
-					@mousedown="mousedown"
-					@click="exec('redo')"
-				>
-					<a-row>
-						<a-col flex="20px"> 下一步 </a-col>
-						<a-col
-							flex="auto"
-							class="text-end"
-						>
-							Ctrl + Y
-						</a-col>
-					</a-row>
-				</a-doption>
-			</template>
-		</a-dropdown>
+		</CommonEditActionDropdown>
 
 		<a-dropdown
 			class="tittle-dropdown"
@@ -171,16 +97,9 @@ import { h } from 'vue';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
+import CommonEditActionDropdown from './CommonEditActionDropdown.vue';
 
 const { shell } = electron;
-
-function exec(id: string) {
-	if (typeof window === 'undefined') {
-		return remote.webContents.call(id as any);
-	} else {
-		return document.execCommand(id);
-	}
-}
 
 // 重启
 function relaunch() {
@@ -296,10 +215,6 @@ function exportData() {
 				});
 		}
 	});
-}
-
-function mousedown(e: MouseEvent) {
-	e.preventDefault();
 }
 
 function openDevTools() {

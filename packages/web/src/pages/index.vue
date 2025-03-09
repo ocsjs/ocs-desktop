@@ -1,97 +1,104 @@
 <template>
 	<a-config-provider :locale="zhCN">
-		<div class="row h-100 w-100 p-0 m-0">
-			<div class="col p-0 m-0">
-				<div class="row main h-100 w-100 p-0 m-0">
-					<div class="col-12 p-0 m-0"><Title id="title" /></div>
-					<div class="col-12 p-0 m-0 overflow-auto d-flex">
-						<div
-							:style="{ width: state.sideBarWidth + 'px' }"
-							class="h-100"
-						>
-							<!-- 侧边栏图标 -->
-							<div class="col-auto sider h-100">
-								<div
-									v-if="routes.find((r) => r.name === 'index')"
-									:style="{
-										width: state.sideBarWidth + 'px',
-										flex: `0 0 ${state.sideBarWidth}px`
-									}"
-									class="sider-items"
-								>
-									<template
-										v-for="(item, index) in (routes.find((r) => r.name === 'index')?.children as CustomRouteType[])"
-										:key="index"
+		<CommonEditActionDropdown
+			trigger="contextMenu"
+			align-point
+			position="bl"
+			:style="{ display: 'block' }"
+		>
+			<div class="row h-100 w-100 p-0 m-0">
+				<div class="col p-0 m-0">
+					<div class="row main h-100 w-100 p-0 m-0">
+						<div class="col-12 p-0 m-0"><Title id="title" /></div>
+						<div class="col-12 p-0 m-0 overflow-auto d-flex">
+							<div
+								:style="{ width: state.sideBarWidth + 'px' }"
+								class="h-100"
+							>
+								<!-- 侧边栏图标 -->
+								<div class="col-auto sider h-100">
+									<div
+										v-if="routes.find((r) => r.name === 'index')"
+										:style="{
+											width: state.sideBarWidth + 'px',
+											flex: `0 0 ${state.sideBarWidth}px`
+										}"
+										class="sider-items"
 									>
-										<div
-											class="sider-item"
-											:class="{ active: item.name === currentRoute.name }"
-											@click="clickMenu(item)"
+										<template
+											v-for="(item, index) in (routes.find((r) => r.name === 'index')?.children as CustomRouteType[])"
+											:key="index"
 										>
-											<component
-												:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
-												style="height: 28px"
-												:content="item.meta.title"
-												position="right"
-											>
-												<Icon
-													class="icon"
-													:type="item.meta.icon"
-													theme="outlined"
-												/>
-											</component>
-
 											<div
-												v-if="store.render.setting.showSideBarText"
-												class="ms-2 sider-item-title text-secondary"
+												class="sider-item"
+												:class="{ active: item.name === currentRoute.name }"
+												@click="clickMenu(item)"
 											>
-												{{ item.meta.title }}
-											</div>
-										</div>
-									</template>
-								</div>
+												<component
+													:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
+													style="height: 28px"
+													:content="item.meta.title"
+													position="right"
+												>
+													<Icon
+														class="icon"
+														:type="item.meta.icon"
+														theme="outlined"
+													/>
+												</component>
 
-								<div class="text-secondary version mb-1 ms-2">{{ version }}</div>
+												<div
+													v-if="store.render.setting.showSideBarText"
+													class="ms-2 sider-item-title text-secondary"
+												>
+													{{ item.meta.title }}
+												</div>
+											</div>
+										</template>
+									</div>
+
+									<div class="text-secondary version mb-1 ms-2">{{ version }}</div>
+								</div>
 							</div>
-						</div>
-						<div :style="{ width: `calc(100% - ${state.sideBarWidth}px)` }">
-							<router-view v-slot="{ Component }">
-								<keep-alive>
-									<component :is="Component" />
-								</keep-alive>
-							</router-view>
+							<div :style="{ width: `calc(100% - ${state.sideBarWidth}px)` }">
+								<router-view v-slot="{ Component }">
+									<keep-alive>
+										<component :is="Component" />
+									</keep-alive>
+								</router-view>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 
-		<!-- 显示当前浏览器的操作面板 -->
-		<a-drawer
-			v-if="currentBrowser"
-			id="browser-panel"
-			popup-container="#component"
-			:closable="false"
-			:visible="!!currentBrowser"
-			:width="600"
-			:footer="false"
-			:header="false"
-			@cancel="store.render.browser.currentBrowserUid = ''"
-		>
-			<BrowserPanel :browser="currentBrowser"></BrowserPanel>
-		</a-drawer>
+			<!-- 显示当前浏览器的操作面板 -->
+			<a-drawer
+				v-if="currentBrowser"
+				id="browser-panel"
+				popup-container="#component"
+				:closable="false"
+				:visible="!!currentBrowser"
+				:width="600"
+				:footer="false"
+				:header="false"
+				@cancel="store.render.browser.currentBrowserUid = ''"
+			>
+				<BrowserPanel :browser="currentBrowser"></BrowserPanel>
+			</a-drawer>
 
-		<!-- 显示一键安装 -->
-		<a-modal
-			v-if="store.render.state.setup"
-			:visible="true"
-			:footer="false"
-			:closable="false"
-			:mask-closable="false"
-		>
-			<template #title> 初始化软件设置 </template>
-			<Setup></Setup>
-		</a-modal>
+			<!-- 显示一键安装 -->
+			<a-modal
+				v-if="store.render.state.setup"
+				:visible="true"
+				:footer="false"
+				:closable="false"
+				:mask-closable="false"
+			>
+				<template #title> 初始化软件设置 </template>
+				<Setup></Setup>
+			</a-modal>
+		</CommonEditActionDropdown>
 	</a-config-provider>
 </template>
 
@@ -115,6 +122,7 @@ import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
 import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
+import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
 const { ipcRenderer } = electron;
 
 const version = ref('');
