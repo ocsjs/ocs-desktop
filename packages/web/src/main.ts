@@ -26,14 +26,18 @@ window.addEventListener('error', function (e) {
 window.addEventListener('unhandledrejection', function (e) {
 	e.promise.catch((e) => {
 		console.error(e);
-		if (errorFilter(e)) {
-			return;
+		try {
+			if (errorFilter(String(e))) {
+				return;
+			}
+			remote.logger.call('error', '未捕获的异步错误', e);
+			notify('未捕获的异步错误', e, 'render-error', {
+				type: 'error',
+				copy: true
+			});
+		} catch (e) {
+			console.error(e);
 		}
-		remote.logger.call('error', '未捕获的异步错误', e);
-		notify('未捕获的异步错误', e, 'render-error', {
-			type: 'error',
-			copy: true
-		});
 	});
 });
 

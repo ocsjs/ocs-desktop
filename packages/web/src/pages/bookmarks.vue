@@ -147,10 +147,10 @@ onMounted(async () => {
 		const nameEl = document.querySelector('#browser-name');
 		const tagsEl = document.querySelector('#browser-tags');
 		const notesEl = document.querySelector('#browser-notes');
-		console.log(document.querySelector('#data-slot')?.textContent);
-		const { name, tags, notes } = JSON.parse(document.querySelector('#data-slot')?.textContent || '{}');
-
-		if (nameEl && tagsEl && notesEl) {
+		const dataTextContent = document.querySelector('#data-slot')?.textContent || '';
+		console.log('data-slot', dataTextContent);
+		if (nameEl && tagsEl && notesEl && dataTextContent) {
+			const { name = '', tags = [], notes = '' } = JSON.parse(dataTextContent || '{}');
 			nameEl.innerHTML = name || '未知名称';
 			tagsEl.innerHTML = tags.map(
 				(t) => `<span style="background-color: ${t.color};" class="browser-tag">${t.name}</span>`
