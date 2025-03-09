@@ -3,7 +3,7 @@ import { remote } from './remote';
 import { store } from '../store';
 import { LaunchOptions } from 'playwright-core';
 import { reactive } from 'vue';
-import { ScriptWorker } from '@ocs-desktop/app';
+import type { ScriptWorker } from '@ocs-desktop/app';
 import { Browser } from '../fs/browser';
 import { Message } from '@arco-design/web-vue';
 import EventEmitter from 'events';

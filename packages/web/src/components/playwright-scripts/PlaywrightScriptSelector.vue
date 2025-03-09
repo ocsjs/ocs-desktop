@@ -36,10 +36,10 @@
 </template>
 
 <script setup lang="ts">
-import { scripts as Scripts } from '@ocs-desktop/app/src/scripts/index';
 import { reactive, computed } from 'vue';
 import { RawPlaywrightScript } from './index';
 import CommonSelector from '../CommonSelector.vue';
+import { remote } from '../../utils/remote';
 
 const state = reactive({
 	search: ''
@@ -61,7 +61,9 @@ const emits = defineEmits<{
 	(e: 'confirm');
 }>();
 
-const scripts = computed<RawPlaywrightScript[]>(() => Scripts.filter((s) => s.name.includes(state.search)));
+const RawScripts = remote.methods.callSync('getRawScripts');
+console.log('RawScripts', RawScripts);
+const scripts = computed<RawPlaywrightScript[]>(() => RawScripts.filter((s) => s.name.includes(state.search)));
 
 function confirm(selectedScripts: RawPlaywrightScript[]) {
 	// 使用拷贝消除响应式特性

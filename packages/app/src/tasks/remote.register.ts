@@ -13,6 +13,10 @@ import { store } from '../store';
 import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
+import { scripts } from '../scripts';
+import { PlaywrightScript } from '../scripts/script';
+
+export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
 
 /**
  * 注册主进程远程通信事件
@@ -102,7 +106,8 @@ const methods = {
 	encryptString: (text: string) => safeStorage.encryptString(text).toString('base64'),
 	decryptString: (text: string) => {
 		return safeStorage.decryptString(Buffer.from(text, 'base64'));
-	}
+	},
+	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[]
 };
 
 /**

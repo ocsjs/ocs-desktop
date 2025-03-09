@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import EventEmitter from 'events';
 
 export type EventsRecord = Record<string, (...args: any[]) => void>;

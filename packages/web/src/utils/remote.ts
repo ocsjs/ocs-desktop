@@ -1,6 +1,6 @@
 import { BrowserWindow, App, Dialog, WebContents, DesktopCapturer } from 'electron';
 import { notify } from './notify';
-import { RemoteMethods } from '@ocs-desktop/app';
+import type { RemoteMethods } from '@ocs-desktop/app';
 import type fs from 'fs';
 import type os from 'os';
 import type path from 'path';

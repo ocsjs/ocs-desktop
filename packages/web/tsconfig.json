@@ -9,10 +9,21 @@
 		"sourceMap": true,
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
-		"lib": ["esnext", "dom"],
+		"lib": [
+			"esnext",
+			"dom"
+		],
 		"skipLibCheck": true,
 		"outDir": "./lib",
-		"typeRoots": ["./src/env.d.ts"]
+		"typeRoots": [
+			"./src/env.d.ts"
+		]
 	},
-	"include": ["src/**/*.ts", "src/**/*.d.ts"]
+	"exclude": [
+		"app/**/*"
+	],
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.d.ts"
+	]
 }

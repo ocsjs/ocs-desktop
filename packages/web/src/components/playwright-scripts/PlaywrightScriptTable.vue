@@ -103,7 +103,7 @@ import { Modal, TableColumnData } from '@arco-design/web-vue';
 import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
 import Icon from '../Icon.vue';
-import { Config } from '@ocs-desktop/app/src/scripts/interface';
+import type { Config } from '@ocs-desktop/app/src/scripts/interface';
 import { remote } from '../../utils/remote';
 import xlsx from 'xlsx';
 
