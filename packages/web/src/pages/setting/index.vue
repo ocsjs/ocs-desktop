@@ -177,9 +177,9 @@ import { reactive } from 'vue';
 import { changeTheme } from '../../utils';
 import Icon from '../../components/Icon.vue';
 import { forceClearBrowserCache } from '../../utils/browser';
+import { Message } from '@arco-design/web-vue';
 import { Folder } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
-import { Message } from '@arco-design/web-vue';
 
 const state = reactive({
 	/** 是否加载 */
@@ -205,11 +205,7 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 		}
 	}
 
-	forceClearBrowserCache(
-		'检测到浏览器缓存路径，正在清空之前的缓存数据...',
-		previous,
-		browsers.map((b) => b.uid)
-	);
+	forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
 }
 </script>
 

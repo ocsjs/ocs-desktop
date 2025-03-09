@@ -103,7 +103,7 @@ export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]
  * @param title 提示弹窗
  * @param browsers 需要清除的浏览器
  */
-export async function forceClearBrowserCache(title: string, userDataDirsFolder: string, uids: string[]) {
+export async function forceClearBrowserCache(title: string, userDataDirsFolder: string) {
 	const modal = Modal.warning({
 		title: '提示',
 		content: () => h('div', [h(SyncOutlined, { spin: true }), title]),
@@ -112,7 +112,13 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 		footer: false
 	});
 
-	await clearAllBrowserCaches(userDataDirsFolder, uids);
+	// 更改全部浏览器缓存路径
+	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser');
+
+	await clearAllBrowserCaches(
+		userDataDirsFolder,
+		browsers.map((b) => b.uid)
+	);
 
 	modal.close();
 	Message.success('配置浏览器路径成功');
