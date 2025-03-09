@@ -64,6 +64,19 @@ function registerRemote<T>(eventName: string) {
 			// 回调名
 			const respondChannel = getRespondChannelId(property.toString());
 			return send(eventName + '-call', [respondChannel, property, ...args]);
+		},
+
+		/** 同步调用远程方法 */
+		callSync<K extends keyof T>(
+			property: K,
+			...args: T[K] extends { (...args: any[]): any } ? Parameters<T[K]> : any[]
+		): T[K] extends { (...args: any[]): any } ? ReturnType<T[K]> : any {
+			const response = sendSync(eventName + '-call-sync', [property, ...args]);
+			if (response?.error) {
+				notify('remote 模块错误', response.error, 'remote', { copy: true, type: 'error' });
+				throw new Error(response.error);
+			}
+			return response.data;
 		}
 	};
 }

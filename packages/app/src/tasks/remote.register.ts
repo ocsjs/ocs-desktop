@@ -64,9 +64,10 @@ function registerRemoteEvent(name: string, target: any) {
 
 			/** 同步调用 */
 			.on(name + '-call-sync', (event, [property, ...args]) => {
+				// logger.info({ event: name + '-call-sync', args: [property] });
 				try {
-					// logger.info({ event: name + '-call-sync', args: [property] });
-					event.returnValue = target[property](...args);
+					const result = target[property](...args);
+					event.returnValue = { data: result };
 				} catch (e) {
 					event.returnValue = { error: e };
 				}

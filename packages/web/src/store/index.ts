@@ -149,15 +149,18 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 
 try {
 	JSON.parse(JSON.stringify(_store.render));
+	// 这个输出不能删除，主要用于触发异常适配旧版本
+	console.log(_store.render.browser.root);
 } catch (e) {
 	try {
 		const data = JSON.parse(
-			await remote.methods.call(
+			remote.methods.callSync(
 				'decryptString',
 				// @ts-ignore
 				_store.render
 			)
 		);
+		console.log('data', data);
 		// 解密
 		Reflect.set(_store, 'render', data);
 	} catch (e) {
