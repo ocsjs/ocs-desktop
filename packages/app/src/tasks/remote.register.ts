@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog, BrowserWindow, desktopCapturer } from 'electron';
+import { ipcMain, app, dialog, BrowserWindow, desktopCapturer, safeStorage } from 'electron';
 import { Logger } from '../logger';
 import { autoLaunch } from './auto.launch';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -97,7 +97,11 @@ const methods = {
 	statisticFolderSize: statisticFolderSize,
 	getPlatform: () => process.platform,
 	updateApp: updateApp,
-	moveWindowToTop: moveWindowToTop
+	moveWindowToTop: moveWindowToTop,
+	encryptString: (text: string) => safeStorage.encryptString(text).toString('base64'),
+	decryptString: (text: string) => {
+		return safeStorage.decryptString(Buffer.from(text, 'base64'));
+	}
 };
 
 /**

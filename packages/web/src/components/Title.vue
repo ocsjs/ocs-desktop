@@ -256,39 +256,46 @@ function importData() {
 		});
 }
 function exportData() {
-	remote.dialog
-		.call('showSaveDialog', {
-			title: '选择导出位置',
-			buttonLabel: '导出',
-			defaultPath: `config-${date(Date.now())}`
-		})
-		.then(async ({ canceled, filePath }) => {
-			if (canceled === false && filePath) {
-				const _store: typeof store = JSON.parse(
-					(await remote.fs.call('readFileSync', store.paths['config-path'], { encoding: 'utf8' })).toString()
-				);
-				const root = _store.render.browser.root;
-				// 遍历文件夹，将每个浏览器的缓存路径改成相对路径
-				const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
-				while (folders.length) {
-					const folder = folders.shift();
-					if (Object.keys(folder?.children || {}).length) {
-						for (const key in folder?.children) {
-							if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
-								const entity = folder?.children[key];
-								if (entity.type === 'folder') {
-									folders.push(entity);
-								} else if (entity.type === 'browser') {
-									entity.cachePath = '$CACHE_PATH';
+	Modal.confirm({
+		title: '导出数据',
+		content: '数据中包含自动化脚本的配置（例如账号密码），请小心保存防止泄露。导出后可在其他电脑中恢复数据。',
+		okText: '确认',
+		cancelText: '取消',
+		onOk() {
+			remote.dialog
+				.call('showSaveDialog', {
+					title: '选择导出位置',
+					buttonLabel: '导出',
+					defaultPath: `config-${date(Date.now())}`
+				})
+				.then(async ({ canceled, filePath }) => {
+					if (canceled === false && filePath) {
+						const _store: typeof store = JSON.parse(JSON.stringify(store));
+
+						const root = _store.render.browser.root;
+						// 遍历文件夹，将每个浏览器的缓存路径改成相对路径
+						const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
+						while (folders.length) {
+							const folder = folders.shift();
+							if (Object.keys(folder?.children || {}).length) {
+								for (const key in folder?.children) {
+									if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
+										const entity = folder?.children[key];
+										if (entity.type === 'folder') {
+											folders.push(entity);
+										} else if (entity.type === 'browser') {
+											entity.cachePath = '$CACHE_PATH';
+										}
+									}
 								}
 							}
 						}
+						await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
+						Message.success('导出成功！');
 					}
-				}
-				await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
-				Message.success('导出成功！');
-			}
-		});
+				});
+		}
+	});
 }
 
 function mousedown(e: MouseEvent) {

@@ -66,6 +66,8 @@ export type WebStore = {
 		browser: {
 			/** 浏览器缓存大小预警阈值（GB） */
 			cachesSizeWarningPoint: number;
+			/** 是否启用浏览器原版对话框 */
+			enableDialog: boolean;
 		};
 	};
 	state: {
@@ -79,73 +81,92 @@ export type WebStore = {
 	};
 };
 
-/** 数据存储对象 */
-export const store: AppStore & { render: WebStore } = reactive(
-	defaultsDeep(
-		inBrowser ? JSON.parse(localStorage.getItem('ocs-app-store') || '{}') : remote['electron-store'].get('store'),
-		{
-			render: {
-				scripts: [],
-				notifies: [],
-				browser: {
-					currentFolderUid: '',
-					currentBrowserUid: '',
-					root: {
-						name: '根目录',
-						parent: undefined,
-						createTime: Date.now(),
-						type: 'root',
-						uid: 'root-folder',
-						children: {},
-						renaming: false
-					},
-					tags: {},
-					search: {
-						value: '',
-						tags: [],
-						results: undefined
-					}
+const _store: AppStore & { render: WebStore } = defaultsDeep(
+	inBrowser ? JSON.parse(localStorage.getItem('ocs-app-store') || '{}') : remote['electron-store'].get('store'),
+	{
+		render: {
+			scripts: [],
+			notifies: [],
+			browser: {
+				currentFolderUid: '',
+				currentBrowserUid: '',
+				root: {
+					name: '根目录',
+					parent: undefined,
+					createTime: Date.now(),
+					type: 'root',
+					uid: 'root-folder',
+					children: {},
+					renaming: false
 				},
-				dashboard: {
-					details: {
-						tags: false,
-						notes: false
-					},
-					num: 4,
-					video: {
-						aspectRatio: 0,
-						frameRate: 0.1
-					}
-				},
-				setting: {
-					browserType: 'diy',
-					showSideBarText: true,
-					launchOptions: {
-						executablePath: ''
-					},
-					theme: {
-						dark: false
-					},
-					ocs: {
-						currentProjectName: '',
-						store: {},
-						openSync: false
-					},
-					browser: {
-						cachesSizeWarningPoint: 10
-					}
-				},
-				state: {
-					first: true,
-					setup: true,
-					mini: false,
-					responsive: 'small',
-					height: document.documentElement.clientHeight
+				tags: {},
+				search: {
+					value: '',
+					tags: [],
+					results: undefined
 				}
-			} as WebStore
-		}
-	)
+			},
+			dashboard: {
+				details: {
+					tags: false,
+					notes: false
+				},
+				num: 4,
+				video: {
+					aspectRatio: 0,
+					frameRate: 0.1
+				}
+			},
+			setting: {
+				browserType: 'diy',
+				showSideBarText: true,
+				launchOptions: {
+					executablePath: ''
+				},
+				theme: {
+					dark: false
+				},
+				ocs: {
+					currentProjectName: '',
+					store: {},
+					openSync: false
+				},
+				browser: {
+					cachesSizeWarningPoint: 10,
+					enableDialog: false
+				}
+			},
+			state: {
+				first: true,
+				setup: true,
+				mini: false,
+				responsive: 'small',
+				height: document.documentElement.clientHeight
+			}
+		} as WebStore
+	}
 );
+
+try {
+	JSON.parse(JSON.stringify(_store.render));
+} catch (e) {
+	try {
+		const data = JSON.parse(
+			await remote.methods.call(
+				'decryptString',
+				// @ts-ignore
+				_store.render
+			)
+		);
+		// 解密
+		Reflect.set(_store, 'render', data);
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+/** 数据存储对象 */
+export const store: AppStore & { render: WebStore } = reactive(_store);
 
 console.log('store', store);
 // @ts-ignore

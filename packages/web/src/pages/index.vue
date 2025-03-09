@@ -110,11 +110,12 @@ import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import { Modal, Tooltip } from '@arco-design/web-vue';
 import BrowserPanel from '../components/browsers/BrowserPanel.vue';
 import { currentBrowser } from '../fs';
-import { inBrowser } from '../utils/node';
+import { inBrowser, electron } from '../utils/node';
 import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
 import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
+const { ipcRenderer } = electron;
 
 const version = ref('');
 
@@ -129,108 +130,134 @@ const state = reactive({
 onUnmounted(() => closeAllBrowser(false));
 
 onMounted(async () => {
-	/**
-	 * 开启 Ipc 通道监听
-	 */
+	try {
+		/**
+		 * 开启 Ipc 通道监听
+		 */
 
-	activeIpcRenderListener();
+		activeIpcRenderListener();
 
-	/** 设置窗口边框 */
-	remote.os.call('platform').then(async (platform) => {
-		if (platform === 'win32') {
-			const release = await getWindowsRelease();
-			if (release !== 'win11') {
-				document.documentElement.classList.add('window-frame');
-			}
-		}
-	});
-
-	/** 检测环境 */
-	// @ts-ignore
-	if (inBrowser) {
-		store.render.state.setup = false;
-		Modal.warning({
-			content: '下载桌面版软件才能体验全部功能！',
-			title: '警告',
-			simple: true,
-			hideCancel: false,
-			okText: '前往官网下载',
-			onOk() {
-				window.open('https://docs.ocsjs.com/docs/资源下载/app-downloads', '_blank');
+		/** 设置窗口边框 */
+		remote.os.call('platform').then(async (platform) => {
+			if (platform === 'win32') {
+				const release = await getWindowsRelease();
+				if (release !== 'win11') {
+					document.documentElement.classList.add('window-frame');
+				}
 			}
 		});
-	}
 
-	/** 设置版本 */
-	remote.app.call('getVersion').then((v) => {
-		version.value = v;
-	});
-
-	/** 初始化标题 */
-	remote.win.call('setTitle', `OCS - ${router.resolve(currentRoute.value).meta.title}`);
-
-	/** 初始化 store */
-	remote.logger.call('info', 'render store init');
-	setAutoLaunch();
-	setAlwaysOnTop();
-	changeTheme();
-
-	/** 打开关于软件 */
-	if (store.render.state.first) {
-		about();
-	}
-
-	/** 监听屏幕变化 */
-	onResize();
-	window.addEventListener('resize', onResize);
-
-	/** 获取最新远程通知 */
-	fetchRemoteNotify(false);
-
-	/** 检测浏览器缓存大小，超过10GB则提示 */
-	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
-		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
-			showClearBrowserCachesModal(totalSize);
+		/** 检测环境 */
+		// @ts-ignore
+		if (inBrowser) {
+			store.render.state.setup = false;
+			Modal.warning({
+				content: '下载桌面版软件才能体验全部功能！',
+				title: '警告',
+				simple: true,
+				hideCancel: false,
+				okText: '前往官网下载',
+				onOk() {
+					window.open('https://docs.ocsjs.com/docs/资源下载/app-downloads', '_blank');
+				}
+			});
 		}
-	});
 
-	/** 监听主题变化 */
-	watch(
-		() => cloneDeep(store.render.setting.theme),
-		(cur, prev) => {
-			if (cur.dark) {
-				// 设置为暗黑主题
-				document.body.setAttribute('arco-theme', 'dark');
-			} else {
-				// 恢复亮色主题
-				document.body.removeAttribute('arco-theme');
-			}
+		/** 设置版本 */
+		remote.app.call('getVersion').then((v) => {
+			version.value = v;
+		});
+
+		/** 初始化标题 */
+		remote.win.call('setTitle', `OCS - ${router.resolve(currentRoute.value).meta.title}`);
+
+		/** 初始化 store */
+		remote.logger.call('info', 'render store init');
+		setAutoLaunch();
+		setAlwaysOnTop();
+		changeTheme();
+
+		/** 打开关于软件 */
+		if (store.render.state.first) {
+			about();
 		}
-	);
 
-	watch(
-		store,
-		(newStore) => {
-			if (inBrowser) {
-				localStorage.setItem('ocs-app-store', JSON.stringify(newStore));
-			} else {
-				remote['electron-store'].set('store', JSON.parse(JSON.stringify(newStore)));
+		/** 监听屏幕变化 */
+		onResize();
+		window.addEventListener('resize', onResize);
+
+		/** 获取最新远程通知 */
+		fetchRemoteNotify(false);
+
+		/** 检测浏览器缓存大小，超过10GB则提示 */
+		remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
+			if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
+				showClearBrowserCachesModal(totalSize);
 			}
-		},
-		{ deep: true }
-	);
+		});
 
-	watch(() => store.window.autoLaunch, setAutoLaunch);
-	watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
+		/** 监听主题变化 */
+		watch(
+			() => cloneDeep(store.render.setting.theme),
+			(cur, prev) => {
+				if (cur.dark) {
+					// 设置为暗黑主题
+					document.body.setAttribute('arco-theme', 'dark');
+				} else {
+					// 恢复亮色主题
+					document.body.removeAttribute('arco-theme');
+				}
+			}
+		);
 
-	window.onresize = () => {
-		store.render.state.height = document.documentElement.clientHeight;
-	};
+		/**
+		 * 监听 store 变化，自动存储
+		 */
+		watch(
+			store,
+			async (newStore) => {
+				saveStoreToLocal(newStore);
+			},
+			{ deep: true }
+		);
+
+		watch(() => store.window.autoLaunch, setAutoLaunch);
+		watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
+
+		window.onresize = () => {
+			store.render.state.height = document.documentElement.clientHeight;
+		};
+	} catch (e) {
+		console.error(e);
+	}
+});
+
+ipcRenderer.on('close', () => {
+	saveStoreToLocal(store);
 });
 
 function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 	router.push(route.path);
 	remote.win.call('setTitle', `OCS - ${route.meta.title}`);
+}
+
+async function saveStoreToLocal(_store: typeof store) {
+	try {
+		if (inBrowser) {
+			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
+		} else {
+			const resolved_store: typeof store = JSON.parse(JSON.stringify(_store));
+			// 加密
+			Reflect.set(
+				resolved_store,
+				'render',
+				await remote.methods.call('encryptString', JSON.stringify(resolved_store.render))
+			);
+			await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolved_store)));
+		}
+	} catch (e) {
+		console.error(e);
+	}
 }
 
 function onResize() {
