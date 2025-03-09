@@ -172,6 +172,8 @@ export class Process extends EventEmitter {
 			child_process.exec(
 				`"${this.launchOptions.executablePath}" --user-data-dir="${this.browser.cachePath}" "${action}"`
 			);
+			this.worker?.('bringToFront');
+			Message.warning('已置顶，如未生效，电脑底部任务栏闪烁的浏览器图标即为置顶浏览器。');
 		} else {
 			Message.warning('必须先启动文件');
 		}
