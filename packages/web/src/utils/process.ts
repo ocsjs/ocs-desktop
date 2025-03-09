@@ -117,6 +117,9 @@ export class Process extends EventEmitter {
 				name: this.browser.name,
 				notes: this.browser.notes,
 				tags: this.browser.tags
+			},
+			config: {
+				enable_dialog: store.render.setting.browser.enableDialog
 			}
 		});
 	}

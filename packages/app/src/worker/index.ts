@@ -7,12 +7,18 @@ import { AppStore } from '../../types';
 import { scripts as PlaywrightScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
 import _get from 'lodash/get';
+import child_process from 'child_process';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
 type PS = { name: string; configs: Record<string, Config> };
 
 type BrowserInfo = { name: string; notes: string; tags: { color: string; name: string }[] };
+
+type BrowserConfig = {
+	/** 是否启用弹窗 */
+	enable_dialog?: boolean;
+};
 
 /** 脚本工作线程 */
 export class ScriptWorker {
@@ -27,19 +33,22 @@ export class ScriptWorker {
 	store?: AppStore;
 	/** 浏览器中软件设置的名字 */
 	browserInfo?: BrowserInfo;
+	config?: BrowserConfig;
 
 	init({
 		store,
 		uid,
 		cachePath,
 		playwrightScripts,
-		browserInfo
+		browserInfo,
+		config
 	}: {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
 		playwrightScripts: PS[];
 		browserInfo: BrowserInfo;
+		config: BrowserConfig;
 	}) {
 		this.debug('正在初始化进程...');
 
@@ -60,6 +69,7 @@ export class ScriptWorker {
 
 		// 浏览器中软件设置的名字
 		this.browserInfo = browserInfo;
+		this.config = config;
 
 		this.debug('初始化成功');
 	}
@@ -93,7 +103,6 @@ export class ScriptWorker {
 						const match = page.url().match(/ocs-action_(.+)/);
 						if (match?.[1]) {
 							const action = match[1];
-
 							const actions: any = {
 								'bring-to-top': () => {
 									// 通过命令行打开此页面后会置顶浏览器，并自动关闭当前事件页面
@@ -118,6 +127,7 @@ export class ScriptWorker {
 				authToken: this.store?.server.authToken || '',
 				browserInfo: this.browserInfo,
 				uid: this.uid,
+				config: this.config,
 				...options
 			});
 		} catch (err) {
@@ -129,9 +139,7 @@ export class ScriptWorker {
 					err.message.includes('Browser closed')
 				) {
 					console.error('异常关闭，请尝试重启任务。', err.message);
-					send('browser-closed');
-					// 浏览器关闭跟随退出
-					process.exit();
+					this.close();
 				} else {
 					console.error('错误 : ', err.message);
 				}
@@ -149,6 +157,11 @@ export class ScriptWorker {
 		this.browser = undefined;
 		send('browser-closed');
 		process.exit();
+	}
+
+	// TODO
+	async bringToFront() {
+		this.browser?.pages().at(-1)?.bringToFront();
 	}
 
 	/** 跳转到特殊图像共享浏览器窗口 */
@@ -227,6 +240,7 @@ export async function launchBrowser({
 	authToken,
 	browserInfo,
 	uid,
+	config,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -246,31 +260,26 @@ export async function launchBrowser({
 	/** 浏览器信息 */
 	browserInfo?: BrowserInfo;
 	uid: string;
+	config?: BrowserConfig;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
 		chromium
 			.launchPersistentContext(userDataDir, {
+				headless,
 				viewport: null,
 				executablePath,
 				ignoreHTTPSErrors: true,
+				acceptDownloads: true,
 				ignoreDefaultArgs: ['--disable-extensions'],
-				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args],
-				headless
+				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args]
 			})
 			.then(async (browser) => {
+				// 处理浏览器初始
+				handleBrowserInit(browser, { enable_dialog: config?.enable_dialog, userDataDir });
+
+				// 监听网络请求
 				browserNetworkRoute(authToken, browser);
-
-				browser.once('close', () => {
-					send('browser-closed');
-					// 浏览器关闭跟随退出
-					process.exit();
-				});
-
-				// 防检测
-				browser.addInitScript({
-					content: 'Object.defineProperty(navigator, "webdriver", { get: () => false });console.log(navigator)'
-				});
 
 				try {
 					/**
@@ -295,7 +304,7 @@ export async function launchBrowser({
 					const [blankPage] = browser.pages();
 
 					// 加载浏览器数据
-					blankPage.on('load', async () => {
+					blankPage.on('load', async (page) => {
 						if (bookmarksPageUrl && blankPage.url().includes(bookmarksPageUrl)) {
 							await blankPage.evaluate((info) => {
 								const slot = document.querySelector('#data-slot');
@@ -578,4 +587,61 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 			console.error('软件辅助执行失败：', { targetPageUrl, property, args });
 		}
 	});
+}
+
+function handleBrowserInit(browser: BrowserContext, config: { enable_dialog?: boolean; userDataDir: string }) {
+	// 防检测
+	browser.addInitScript({
+		content: 'Object.defineProperty(navigator, "webdriver", { get: () => false });console.log(navigator)'
+	});
+
+	// 关闭检测
+	const interval = setInterval(async () => {
+		if (browser.pages().length === 0) {
+			clearInterval(interval);
+
+			await browser.close({
+				reason: 'no pages'
+			});
+		}
+	}, 100);
+
+	browser.once('close', () => {
+		send('browser-closed');
+		process.exit();
+	});
+
+	const pageHandle = (page: Page) => {
+		// 按照文档的说法，如果不进行任何处理，则动作会和原版浏览器一致
+		// 如果不进行监听 page.on('dialog') playwright 会自动处理弹窗
+		page.on('dialog', async (dialog) => {
+			if (config?.enable_dialog) {
+				// 不进行任何处理
+			} else {
+				await dialog.accept(dialog.defaultValue());
+			}
+		});
+
+		// 修改下载逻辑
+		page.on('download', async (download) => {
+			download.cancel();
+			// 调用电脑本地浏览器进行文件下载
+			openUrl(download.url());
+			await page.evaluate(() => alert('自动化浏览器无法下载文件，已使用本地浏览器进行下载任务。'));
+		});
+	};
+	for (const page of browser.pages()) {
+		pageHandle(page);
+	}
+	browser.on('page', pageHandle);
+}
+
+function openUrl(url: string) {
+	let cmd = 'start';
+	if (process.platform === 'darwin') {
+		cmd = 'open';
+	} else if (process.platform === 'linux') {
+		cmd = 'xdg-open';
+	}
+	child_process.exec(`${cmd} ${url}`);
 }

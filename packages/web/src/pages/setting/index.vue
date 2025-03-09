@@ -63,6 +63,17 @@
 				</Description>
 			</Card>
 
+			<Card title="浏览器设置">
+				<Description label="原生弹窗">
+					<a-tooltip content="启用后，浏览器中的原版弹窗可能会影响脚本运行">
+						<a-switch
+							v-model="store.render.setting.browser.enableDialog"
+							size="small"
+						/>
+					</a-tooltip>
+				</Description>
+			</Card>
+
 			<Card title="基本设置">
 				<Description label="开机自启">
 					<a-switch
