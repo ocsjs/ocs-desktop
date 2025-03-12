@@ -1,9 +1,9 @@
-## [2.6.22](https://github.com/ocsjs/ocs-desktop/compare/2.6.21...2.6.22) (2025-03-09)
+## [2.6.23](https://github.com/ocsjs/ocs-desktop/compare/2.6.22...2.6.23) (2025-03-12)
 
 
-### Bug Fixes
+### Features
 
-* 删除 mac ia32 打包 ([fec865d](https://github.com/ocsjs/ocs-desktop/commit/fec865d5a0254ca551d48f8d6af32058b8715834))
+* 添加自动打开浏览器拓展开发者模式功能 ([be503b8](https://github.com/ocsjs/ocs-desktop/commit/be503b8e7b988bbccf4ca2b7fcfe9ce7dff46df8))
 
 
 

@@ -1,6 +1,6 @@
 {
 	"name": "ocs-desktop",
-	"version": "2.6.22",
+	"version": "2.6.23",
 	"description": "desktop for userscript",
 	"files": [
 		"lib",
