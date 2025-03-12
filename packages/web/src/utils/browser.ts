@@ -112,7 +112,6 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 		footer: false
 	});
 
-	// 更改全部浏览器缓存路径
 	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser');
 
 	await clearAllBrowserCaches(
@@ -121,7 +120,6 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 	);
 
 	modal.close();
-	Message.success('配置浏览器路径成功');
 }
 
 export async function closeAllBrowser(quit: boolean) {
