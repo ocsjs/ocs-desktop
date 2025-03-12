@@ -320,6 +320,10 @@ export async function launchBrowser({
 
 					// 关闭拓展加载时弹出的首页
 					await waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
+
+					// 打开开发者模式
+					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
+
 					// 安装用户脚本
 					const warn = await setupUserScripts({ browser, userscripts, step });
 					// 运行自动化脚本
@@ -644,4 +648,39 @@ function openUrl(url: string) {
 		cmd = 'xdg-open';
 	}
 	child_process.exec(`${cmd} ${url}`);
+}
+
+/**
+ * 打开浏览器拓展开发者模式（由于 MV3 的限制，运行脚本需要打开开发者模式）
+ */
+async function openExtensionDeveloperMode(browser: BrowserContext, edge: boolean = false) {
+	const page = await browser.newPage();
+	await page.goto('chrome://extensions/');
+
+	try {
+		await page.bringToFront();
+		await page.waitForTimeout(200);
+		if (edge) {
+			const els = await page.$$('[aria-label="扩展 菜单"]');
+			await els[1]?.click();
+			const element = await page.waitForSelector('#developer-mode', {
+				timeout: 1000
+			});
+			if (await element.evaluate<boolean, HTMLInputElement>((el) => el.checked === false)) {
+				await element.click();
+			}
+		} else {
+			const element = await page.waitForSelector('#devMode', {
+				timeout: 1000
+			});
+			if (
+				await element.evaluate<boolean, HTMLDivElement>((el) => el.getAttribute('aria-pressed')?.toString() === 'false')
+			) {
+				await element.click();
+			}
+		}
+	} catch {}
+	await page.waitForTimeout(500);
+	console.log('开发者模式已打开');
+	await page.close();
 }
