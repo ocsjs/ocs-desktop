@@ -71,13 +71,11 @@
 				</a-doption>
 				<a-doption @click="allNotify"> 查看通知 </a-doption>
 
+				<a-doption @click="showVersionLogs"> 更新日志 </a-doption>
+
 				<TitleLink
 					title="软件官网"
 					url="https://docs.ocsjs.com/"
-				/>
-				<TitleLink
-					title="其他版本"
-					url="https://docs.ocsjs.com/docs/资源下载/app-downloads"
 				/>
 			</template>
 		</a-dropdown>
@@ -85,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { fetchRemoteNotify, date, about } from '../utils';
+import { fetchRemoteNotify, date, about, getRemoteInfos } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal } from '@arco-design/web-vue';
@@ -229,6 +227,62 @@ function openDevTools() {
 	};
 
 	remote.webContents.call('openDevTools');
+}
+
+async function showVersionLogs() {
+	const infos = await getRemoteInfos();
+
+	Modal.confirm({
+		title: () => '🎉 更新日志 🎉',
+		okText: '确定',
+		hideCancel: true,
+		simple: true,
+		width: 600,
+		content: () =>
+			h('div', [
+				h('h', [
+					'可前往官网下载最新版本：',
+					h(
+						'a',
+						{
+							href: 'https://docs.ocsjs.com/docs/app',
+							target: '_blank'
+						},
+						'https://docs.ocsjs.com/docs/app'
+					)
+				]),
+				h(
+					'div',
+					{
+						style: {
+							maxHeight: '320px',
+							overflow: 'auto'
+						}
+					},
+					infos.versions.map((item) =>
+						h('div', [
+							h(
+								'div',
+								{
+									style: {
+										marginBottom: '6px',
+										fontWeight: 'bold'
+									}
+								},
+								item.tag
+							),
+							h(
+								'ul',
+								(item.description.feat || [])
+									.concat(item.description.fix || [])
+									.concat(item.description.other || [])
+									.map((text: string) => h('li', text))
+							)
+						])
+					)
+				)
+			])
+	});
 }
 </script>
 
