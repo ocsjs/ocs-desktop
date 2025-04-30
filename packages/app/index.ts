@@ -61,6 +61,15 @@ function bootstrap() {
 					window.webContents.send('close');
 				});
 
+				window.webContents.once('did-finish-load', () => {
+					setTimeout(() => {
+						// 因为需要对渲染进程发送信息，所以要在显示完成后开始监听
+						if (app.isPackaged) {
+							task('软件更新', () => updater());
+						}
+					}, 1000);
+				});
+
 				task('初始化远程通信模块', () => remoteRegister(window));
 				task('注册app事件监听器', () => globalListenerRegister(window));
 
@@ -70,15 +79,6 @@ function bootstrap() {
 					await window.loadURL('http://localhost:3000');
 					window.webContents.openDevTools();
 				}
-
-				window.webContents.once('did-finish-load', () => {
-					setTimeout(() => {
-						// 因为需要对渲染进程发送信息，所以要在显示完成后开始监听
-						if (app.isPackaged) {
-							task('软件更新', () => updater());
-						}
-					}, 1000);
-				});
 
 				// 加载完成显示，解决一系列的显示/黑屏问题
 				window.show();
