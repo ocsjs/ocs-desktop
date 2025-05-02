@@ -42,9 +42,10 @@ function bootstrap() {
 			task('初始化自动启动', () => autoLaunch()),
 			task('启动渲染进程', async () => {
 				// 设置 webrtc 的影像帧率比例，最高100，太高会造成卡顿，参数默认50
+
 				app.commandLine.appendSwitch(
 					'webrtc-max-cpu-consumption-percentage',
-					(store?.store?.render?.dashboard?.video?.frameRate ?? 1).toString()
+					(store.store.app?.video_frame_rate ?? 1).toString()
 				);
 
 				await app.whenReady();

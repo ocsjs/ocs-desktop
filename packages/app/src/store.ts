@@ -21,6 +21,10 @@ export const OriginalAppStore = {
 		/** 加载拓展路径 */
 		extensionsFolder: path.resolve(app.getPath('userData'), './downloads/extensions')
 	},
+	/** 软件设置 */
+	app: {
+		video_frame_rate: 1
+	},
 	/** 窗口设置 */
 	window: {
 		/** 开机自启 */

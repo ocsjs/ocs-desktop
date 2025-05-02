@@ -38,8 +38,6 @@ export type WebStore = {
 		video: {
 			/** 横纵比 */
 			aspectRatio?: number;
-			/** 帧率 */
-			frameRate?: number;
 		};
 	};
 	setting: {
@@ -68,6 +66,8 @@ export type WebStore = {
 			cachesSizeWarningPoint: number;
 			/** 是否启用浏览器原版对话框 */
 			enableDialog: boolean;
+			/** 是否强制更新/安装脚本 */
+			forceUpdateScript: boolean;
 		};
 	};
 	state: {
@@ -113,8 +113,7 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 				},
 				num: 4,
 				video: {
-					aspectRatio: 0,
-					frameRate: 0.1
+					aspectRatio: 0
 				}
 			},
 			setting: {
@@ -133,7 +132,8 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 				},
 				browser: {
 					cachesSizeWarningPoint: 10,
-					enableDialog: false
+					enableDialog: false,
+					forceUpdateScript: false
 				}
 			},
 			state: {
