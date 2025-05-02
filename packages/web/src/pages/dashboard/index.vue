@@ -62,7 +62,7 @@
 				</a-select>
 
 				<a-select
-					v-model="store.render.dashboard.video.frameRate"
+					v-model="store.app.video_frame_rate"
 					size="mini"
 					style="width: 180px"
 					:options="[
@@ -276,7 +276,7 @@ watch(
 );
 
 watch(
-	() => store.render.dashboard.video.frameRate,
+	() => store.app.video_frame_rate,
 	() => {
 		Modal.info({
 			content: '修改帧率后请 重启软件 才可生效。'
@@ -377,7 +377,7 @@ async function refreshVideo() {
 								process.stream?.getTracks().forEach((track) => {
 									track.applyConstraints({
 										/** 尽量减低帧率不占用高内存 */
-										frameRate: store.render.dashboard.video.frameRate ?? 1,
+										frameRate: store.app.video_frame_rate ?? 1,
 										/** 横纵比 */
 										aspectRatio:
 											store.render.dashboard.video.aspectRatio === 0

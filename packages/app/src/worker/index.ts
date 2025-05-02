@@ -18,6 +18,8 @@ type BrowserInfo = { name: string; notes: string; tags: { color: string; name: s
 type BrowserConfig = {
 	/** 是否启用弹窗 */
 	enable_dialog?: boolean;
+	/** 是否强制更新脚本 */
+	force_update_script?: boolean;
 };
 
 /** 脚本工作线程 */
@@ -325,7 +327,7 @@ export async function launchBrowser({
 					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
 
 					// 安装用户脚本
-					const warn = await setupUserScripts({ browser, userscripts, step });
+					const warn = await setupUserScripts({ browser, userscripts, step, config });
 					// 运行自动化脚本
 					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
 
@@ -349,7 +351,7 @@ export async function launchBrowser({
  * 安装/更新脚本
  *
  */
-async function initScripts(urls: string[], browser: BrowserContext, page: Page) {
+async function initScripts(urls: string[], browser: BrowserContext, page: Page, config?: BrowserConfig) {
 	console.log('install ', urls);
 	let installCont = 0;
 
@@ -367,18 +369,33 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page) 
 				// 置顶页面，防止点击安装失败
 				await installPage.bringToFront();
 				await sleep(500);
-				await installPage.evaluate(() => {
+				const closed = await installPage.evaluate((config) => {
 					const btn = (document.querySelector('[class*="primary"]') ||
 						document.querySelector('[type*="button"]')) as HTMLElement;
-					btn?.click();
-				});
+					if (config?.force_update_script) {
+						btn?.click();
+					} else {
+						if (['更新', '安装', '添加'].some((text) => (btn?.textContent || '').trim() === text)) {
+							btn?.click();
+						} else {
+							return false;
+						}
+					}
+					if (!btn) {
+						return false;
+					}
+				}, config);
+
+				if (!closed) {
+					await installPage.close();
+				}
 
 				await sleep(1000);
 
 				if (installPage.isClosed()) {
 					installCont++;
 				}
-				if (installCont !== urls.length) {
+				if (installCont < urls.length) {
 					await tryInstall();
 				}
 			} else if (installCont === urls.length) {
@@ -422,6 +439,7 @@ async function setupUserScripts(opts: {
 	browser: BrowserContext;
 	userscripts: string[];
 	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
+	config?: BrowserConfig;
 }) {
 	const { userscripts, browser, step } = opts;
 
@@ -432,7 +450,7 @@ async function setupUserScripts(opts: {
 		const [page] = browser.pages();
 		// 载入本地脚本
 		try {
-			await initScripts(userscripts, browser, page);
+			await initScripts(userscripts, browser, page, opts.config);
 		} catch (e) {
 			// @ts-ignore
 			console.error(e);
