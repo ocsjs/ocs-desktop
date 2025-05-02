@@ -2,7 +2,7 @@ import express from 'express';
 import { Logger } from '../logger';
 import path from 'path';
 import axios from 'axios';
-import { store } from '../store';
+import { getDecryptedRenderData, store } from '../store';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID } from 'crypto';
@@ -39,13 +39,15 @@ export async function startupServer() {
 	});
 
 	app.get('/ocs-global-setting', (req, res) => {
-		res.json(store.store.render.setting.ocs);
+		const render = getDecryptedRenderData();
+		res.json(render.setting.ocs);
 	});
 
 	/** 获取 browser 数据 */
 	app.get('/browser', (req, res) => {
+		const render = getDecryptedRenderData();
 		// 如果开启了同步配置，就返回，否则返回空对象
-		res.json(store?.store?.render?.setting?.ocs?.openSync ? store?.store?.render?.setting?.ocs?.store : {});
+		res.json(render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {});
 	});
 
 	/** 脚本操作 */

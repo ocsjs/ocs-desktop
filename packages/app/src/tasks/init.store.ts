@@ -17,7 +17,6 @@ export function initStore() {
 	const version = store.store.version;
 	logger.log('version', version);
 
-	// 是否需要初始化
 	if (typeof version === 'string') {
 		// 当前app版本
 		const appVersion = parseVersion(app.getVersion());
@@ -27,7 +26,9 @@ export function initStore() {
 		if (gt(appVersion, originVersion)) {
 			store.store = defaultsDeep(store.store, OriginalAppStore);
 		}
-	} else {
+	}
+	//  初始化
+	else {
 		const render = store.store.render ? JSON.parse(JSON.stringify(store.store.render)) : {};
 		OriginalAppStore.render = render;
 		// 初始化设置

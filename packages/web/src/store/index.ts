@@ -147,11 +147,8 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 	}
 );
 
-try {
-	JSON.parse(JSON.stringify(_store.render));
-	// 这个输出不能删除，主要用于触发异常适配旧版本
-	console.log(_store.render.browser.root);
-} catch (e) {
+// 解密数据
+if (typeof _store.render === 'string') {
 	try {
 		const data = JSON.parse(
 			remote.methods.callSync(
@@ -160,11 +157,11 @@ try {
 				_store.render
 			)
 		);
-		console.log('data', data);
+		console.log(data);
 		// 解密
 		Reflect.set(_store, 'render', data);
 	} catch (e) {
-		console.error(e);
+		console.error('数据解密失败：' + e);
 	}
 }
 

@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, safeStorage } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
 
@@ -42,3 +42,13 @@ export const OriginalAppStore = {
  * - 设置数据请使用 store.set('key', value)
  */
 export const store = new Store<typeof OriginalAppStore>();
+
+/**
+ * 获取解密后的渲染进程数据
+ */
+export function getDecryptedRenderData(): (typeof OriginalAppStore)['render'] {
+	if (typeof store?.store?.render === 'string') {
+		return JSON.parse(safeStorage.decryptString(Buffer.from(store?.store?.render, 'base64')));
+	}
+	return store?.store?.render || {};
+}
