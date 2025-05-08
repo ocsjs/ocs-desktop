@@ -1,5 +1,4 @@
 import { Page } from 'playwright-core';
-import { breakVerifyCode } from '../../utils';
 import { PlaywrightScript } from '../../script';
 
 export const ZJYLoginScript = new PlaywrightScript(
@@ -14,37 +13,25 @@ export const ZJYLoginScript = new PlaywrightScript(
 		}
 	},
 	{
-		name: '职教云-账号密码登录',
-		async run(
-			page,
-			configs,
-			options?: {
-				ocrApiUrl?: string;
-				ocrApiImageKey?: string;
-			}
-		) {
+		name: '新职教云-账号密码登录',
+		async run(page, configs) {
 			try {
+				await page.goto('https://zjy2.icve.com.cn/study/index');
 				if (await isNotLogin(page)) {
-					await page.fill('input[name="userName"]', configs.username);
-					await page.fill('input[name="userPassword"]', configs.username);
+					await page.fill('[placeholder="请输入账号"]', configs.username);
+					await page.fill('[placeholder="请输入密码"]', configs.password);
+					await page.click('.agreement .el-checkbox__input');
+					await page.click('.ri .login', { position: { x: 10, y: 10 } });
+					await page.waitForTimeout(1000);
+					if (await isNotLogin(page)) {
+						const errors = await page.evaluate(() =>
+							Array.from(document.querySelectorAll('.xcConfirm .txtBox'))
+								.map((e) => e.textContent || '')
+								.filter(Boolean)
+						);
 
-					if (options?.ocrApiUrl && options?.ocrApiImageKey) {
-						let count = 5;
-						while (await isNotVerified(page)) {
-							if (count > 0) {
-								count--;
-								const image = await page.$('img[alt="验证码"]');
-								const codeInput = await page.$('[name="photoCode"]');
-								if (image && codeInput) {
-									await breakVerifyCode(page, image, codeInput, {
-										ocrApiUrl: options.ocrApiUrl,
-										ocrApiImageKey: options.ocrApiImageKey
-									});
-									await page.click('#btnLogin');
-								}
-							} else {
-								throw new Error('验证码识别失败，请手动登录。');
-							}
+						if (errors.length) {
+							throw new Error(errors.join('\n'));
 						}
 					}
 				}
@@ -55,31 +42,7 @@ export const ZJYLoginScript = new PlaywrightScript(
 	}
 );
 
-/** 是否未通过验证 */
-async function isNotVerified(page: Page) {
-	await page.waitForTimeout(2000);
-
-	const errors = await page.evaluate(() =>
-		Array.from(document.querySelectorAll('.xcConfirm .txtBox'))
-			.map((e) => e.textContent || '')
-			.filter(Boolean)
-	);
-
-	if (errors.some((e) => e.includes('验证码输入错误'))) {
-		// 点击确认
-		await page.click('.xcConfirm .ok');
-		return true;
-	}
-
-	if (errors.length) {
-		throw new Error(errors.join('\n'));
-	}
-
-	return page.url().includes('login.html');
-}
-
+/** 是否未登录 */
 async function isNotLogin(page: Page) {
-	await page.goto('https://zjy2.icve.com.cn/student/studio/studio.html');
-	await page.waitForTimeout(2000);
-	return page.url().includes('login.html');
+	return page.url().includes('/sso/auth');
 }
