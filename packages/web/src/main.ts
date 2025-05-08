@@ -11,7 +11,7 @@ import 'material-icons/iconfont/material-icons.css';
 window.addEventListener('error', function (e) {
 	console.error(e);
 	if (e instanceof ErrorEvent) {
-		if (errorFilter(e.message)) {
+		if (errorFilter(e?.message || String(e) || '')) {
 			return;
 		}
 	}
@@ -27,7 +27,7 @@ window.addEventListener('unhandledrejection', function (e) {
 	e.promise.catch((e) => {
 		console.error(e);
 		try {
-			if (errorFilter(String(e))) {
+			if (errorFilter(e?.message || String(e) || '')) {
 				return;
 			}
 			remote.logger.call('error', '未捕获的异步错误', e);
