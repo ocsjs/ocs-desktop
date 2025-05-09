@@ -1,6 +1,6 @@
-import { SyncOutlined } from '@ant-design/icons-vue';
 import { h } from 'vue';
 import { Button, Message, Modal } from '@arco-design/web-vue';
+import { IconSync } from '@arco-design/web-vue/es/icon';
 import { size, sleep } from '.';
 import { remote } from './remote';
 import { store } from '../store';
@@ -17,7 +17,7 @@ export async function checkBrowserCaches() {
 		footer: false,
 		maskClosable: false,
 		content: () => {
-			return h('div', [h(SyncOutlined, { spin: true }), '正在计算浏览器缓存...']);
+			return h('div', [h(IconSync, { spin: true }), '正在计算浏览器缓存...']);
 		}
 	});
 	const totalSize = await remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder);
@@ -106,7 +106,7 @@ export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]
 export async function forceClearBrowserCache(title: string, userDataDirsFolder: string) {
 	const modal = Modal.warning({
 		title: '提示',
-		content: () => h('div', [h(SyncOutlined, { spin: true }), title]),
+		content: () => h('div', [h(IconSync, { spin: true }), title]),
 		maskClosable: false,
 		closable: false,
 		footer: false

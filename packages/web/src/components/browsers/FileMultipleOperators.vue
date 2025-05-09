@@ -122,8 +122,8 @@ import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
 import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
-import { SyncOutlined } from '@ant-design/icons-vue';
 import BrowserList from '../BrowserList.vue';
+import { IconSync } from '@arco-design/web-vue/es/icon';
 
 const state = reactive({
 	showChecked: false,
@@ -319,7 +319,7 @@ async function multipleOperationRegister(name: string, runner: (canRun: () => bo
 	let canRun = true;
 	const modal = Modal.info({
 		title: '批量化操作',
-		content: () => h('div', [h(SyncOutlined, { spin: true }), ' - 正在执行批量化操作中： ' + name]),
+		content: () => h('div', [h(IconSync, { spin: true }), ' 正在执行批量化操作中： ' + name]),
 		maskClosable: false,
 		closable: false,
 		simple: false,

@@ -9,11 +9,9 @@
 		"serve": "vite preview"
 	},
 	"dependencies": {
-		"@ant-design/icons-vue": "6.0.1",
 		"@ocs-desktop/app": "workspace:^2.1.3",
 		"@ocs-desktop/common": "workspace:^0.0.1",
 		"@ocsjs/scripts": "^4.0.1",
-		"ant-design-vue": "3.2.9",
 		"axios": "^0.25.0",
 		"chalk": "4.1.0",
 		"colorpicker-v3": "^2.10.2",
