@@ -73,27 +73,46 @@
 			</div>
 
 			<!-- 显示当前浏览器的操作面板 -->
-			<a-drawer
-				v-if="currentBrowser"
-				id="browser-panel"
-				popup-container="#component"
-				:closable="false"
-				:visible="!!currentBrowser"
-				:width="600"
-				:footer="false"
-				:header="false"
-				@cancel="store.render.browser.currentBrowserUid = ''"
-			>
-				<BrowserPanel :browser="currentBrowser"></BrowserPanel>
-			</a-drawer>
+			<template v-if="currentBrowser">
+				<template v-if="store.render.state.mini">
+					<a-modal
+						title="浏览器操作"
+						:visible="!!currentBrowser"
+						:width="600"
+						:footer="false"
+						fullscreen
+						@cancel="store.render.browser.currentBrowserUid = ''"
+					>
+						<template #title>
+							<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
+						</template>
+						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
+					</a-modal>
+				</template>
+				<template v-else>
+					<a-drawer
+						id="browser-panel"
+						popup-container="#component"
+						:closable="false"
+						:visible="!!currentBrowser"
+						:width="600"
+						:footer="false"
+						:header="false"
+						@cancel="store.render.browser.currentBrowserUid = ''"
+					>
+						<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
+						<a-divider class="mt-2 mb-1" />
+						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
+					</a-drawer>
+				</template>
+			</template>
 
 			<!-- 显示一键安装 -->
 			<a-modal
 				v-if="store.render.state.setup"
 				:visible="true"
 				:footer="false"
-				:closable="false"
-				:mask-closable="false"
+				:closable="true"
 			>
 				<template #title> 初始化软件设置 </template>
 				<Setup></Setup>
@@ -123,6 +142,8 @@ import cloneDeep from 'lodash/cloneDeep';
 import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
+import BrowserOperators from '../components/browsers/BrowserOperators.vue';
+import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
 const { ipcRenderer } = electron;
 
 const version = ref('');
@@ -269,9 +290,18 @@ async function saveStoreToLocal(_store: typeof store) {
 }
 
 function onResize() {
-	const isInMobild = document.documentElement.clientWidth < 1200;
-	store.render.state.mini = isInMobild;
-	store.render.state.responsive = isInMobild ? 'mini' : 'small';
+	const isInMobile = document.documentElement.clientWidth < 1200;
+	store.render.state.mini = isInMobile;
+	store.render.state.responsive = isInMobile ? 'mini' : 'small';
+
+	// 如果小于 700，自动隐藏侧边文字
+	if (document.documentElement.clientWidth < 800) {
+		store.render.setting.showSideBarText = false;
+		store.render.state.mini = true;
+	} else {
+		store.render.setting.showSideBarText = true;
+		store.render.state.mini = false;
+	}
 }
 </script>
 
@@ -352,7 +382,7 @@ function onResize() {
 	position: absolute;
 	background: white;
 	z-index: 999;
-	right: 600px;
+	right: 400px;
 
 	animation-duration: 0.5s;
 	animation-name: slide-in;

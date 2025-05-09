@@ -42,11 +42,12 @@
 			:footer="false"
 			:closable="true"
 			:mask-closable="false"
-			:width="900"
+			width="auto"
 		>
 			<template #title> 批量创建：{{ state.selectedPS?.name }} </template>
 			<PlaywrightScriptTable
 				v-if="state.selectedPS"
+				style="max-width: 800px"
 				:raw-playwright-script="state.selectedPS"
 				@cancel="state.showPlaywrightScriptTable = false"
 				@confirm="multipleCreate"

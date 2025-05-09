@@ -1,50 +1,43 @@
 <template>
-	<a-tooltip content="标签分类">
-		<a-space
-			v-if="readOnly === false || tags.length > 0"
-			class="flex-wrap"
-			:size="1"
+	<a-space
+		v-if="readOnly === false || tags.length > 0"
+		class="flex-wrap"
+		:size="1"
+	>
+		<template
+			v-for="(tag, index) in tags"
+			:key="index"
 		>
-			<template
-				v-for="(tag, index) in tags"
-				:key="index"
+			<a-tag
+				class="tag"
+				:closable="!readOnly"
+				:color="tag.color"
+				:size="props.size"
+				@close="handleClose(tag)"
 			>
 				<a-tooltip
-					v-if="tag.name.length > 20"
+					v-if="tag.name.length > 8"
 					class="tag"
 					:content="tag.name"
+					mini
 				>
-					<a-tag
-						:closable="!readOnly"
-						:color="tag.color"
-						:size="props.size"
-						@close="handleClose(tag)"
-					>
-						{{ `${tag.name.slice(0, 20)}...` }}
-					</a-tag>
+					<span> {{ `${tag.name.slice(0, 8)}...` }} </span>
 				</a-tooltip>
-				<a-tag
-					v-else
-					class="tag"
-					:closable="!readOnly"
-					:color="tag.color"
-					:size="props.size"
-					@close="handleClose(tag)"
-				>
+				<span v-else>
 					{{ tag.name }}
-				</a-tag>
-			</template>
-
-			<a-tag
-				v-if="!readOnly"
-				style="border: 1px gray; border-style: dashed; cursor: pointer"
-				:size="props.size"
-				@click="showModel"
-			>
-				添加 <icon-plus />
+				</span>
 			</a-tag>
-		</a-space>
-	</a-tooltip>
+		</template>
+
+		<a-tag
+			v-if="!readOnly"
+			style="border: 1px gray; border-style: dashed; cursor: pointer"
+			:size="props.size"
+			@click="showModel"
+		>
+			添加 <icon-plus />
+		</a-tag>
+	</a-space>
 
 	<a-modal
 		v-model:visible="state.modalVisible"
@@ -189,5 +182,8 @@ const handleInputConfirm = () => {
 
 .tag {
 	margin: 2px;
+	font-size: 11px;
+	padding: 4px;
+	height: 18px !important;
 }
 </style>

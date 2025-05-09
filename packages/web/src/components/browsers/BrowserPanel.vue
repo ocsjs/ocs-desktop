@@ -3,42 +3,32 @@
 		ref="profileElement"
 		class="overflow-auto profile"
 	>
-		<div class="float-end ps-3 pe-3">
-			<BrowserOperators
-				:browser="instance"
-				tooltip-position="br"
-				icon-class="fs-4"
-			>
-				<template #split>
-					<a-divider direction="vertical" />
-				</template>
-
-				<template #extra>
-					<a-tooltip position="br">
-						<template #content>
-							仅打开浏览器，不执行其他操作。<br />
-							此方法可以防止各种浏览器环境问题：<br />
-							- 无法打开特殊的超星网页<br />
-							- 弹窗自动被关闭等等问题 <br />
-							如果你并没有遇到这些问题，可以不使用此方法，可以直接使用蓝色的启动按钮。
-						</template>
-
-						<a-button
-							size="mini"
-							@click="instance.onlyLaunch()"
-						>
-							<Icon type="web" />
-						</a-button>
-					</a-tooltip>
-				</template>
-			</BrowserOperators>
-		</div>
-
-		<a-divider class="mt-1 mb-1" />
-
 		<a-descriptions :column="1">
 			<a-descriptions-item label="文件名">
-				{{ instance.name }}
+				<template v-if="state.renaming">
+					<a-input
+						id="bp-rename"
+						v-model="instance.name"
+						size="mini"
+						@blur="
+							() => {
+								instance?.rename(instance.name);
+								state.renaming = false;
+							}
+						"
+					></a-input>
+				</template>
+				<template v-else>
+					{{ instance.name }}
+					<a-button
+						type="text"
+						size="mini"
+						class="ms-2"
+						@click="rename"
+					>
+						重命名
+					</a-button>
+				</template>
 			</a-descriptions-item>
 			<a-descriptions-item label="创建时间">
 				{{ datetime(instance.createTime) }}
@@ -52,6 +42,7 @@
 				}}
 				<a-button
 					type="text"
+					size="mini"
 					@click="instance?.location()"
 				>
 					跳转到该目录
@@ -261,7 +252,6 @@ import { reactive, onMounted, nextTick, ref } from 'vue';
 import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSelector.vue';
 import PlaywrightScripts from '../playwright-scripts/PlaywrightScriptList.vue';
 import XTerm from '../XTerm.vue';
-import BrowserOperators from './BrowserOperators.vue';
 const props = defineProps<{
 	browser: BrowserOptions;
 }>();
@@ -272,6 +262,7 @@ const profileElement = ref<HTMLElement>();
 
 const state = reactive({
 	showCode: false,
+	renaming: false,
 	showPlaywrightScriptSelector: false
 });
 
@@ -307,6 +298,13 @@ function clearHistory() {
 	}
 }
 
+function rename() {
+	state.renaming = true;
+	nextTick(() => {
+		profileElement.value?.querySelector<HTMLElement>('#bp-rename')?.focus();
+	});
+}
+
 /** 渲染侧边toc跳转栏 */
 onMounted(() => {
 	nextTick(() => {
@@ -334,7 +332,6 @@ onMounted(() => {
 
 <style scoped lang="less">
 .profile {
-	height: 100%;
 	:deep(.arco-descriptions-item-label) {
 		white-space: nowrap;
 		vertical-align: top;

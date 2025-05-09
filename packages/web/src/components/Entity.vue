@@ -1,49 +1,75 @@
 <template>
-	<a-row
+	<div
 		v-if="instance"
-		class="entity align-items-center"
+		class="entity align-items-center d-flex"
 		:class="{ active: store.render.browser.currentBrowserUid === instance.uid }"
 	>
-		<slot name="prefix"></slot>
-
-		<!-- 图标 -->
-		<a-col
-			v-if="slots.icon"
-			style="cursor: pointer"
-			flex="32px"
+		<div
+			style="cursor: pointer; flex: auto"
 			@click="instance?.select()"
 		>
-			<slot name="icon"></slot>
-		</a-col>
+			<div
+				style="cursor: pointer; flex: auto"
+				class="text-secondary entity-name align-items-center d-flex"
+			>
+				<div
+					v-if="slots.prefix"
+					style="cursor: pointer; flex: 0 0 auto"
+				>
+					<slot name="prefix"></slot>
+				</div>
 
-		<!-- 名字 -->
-		<a-col
-			:flex="typeof widths.name === 'string' ? widths.name : widths.name + 'px'"
-			class="text-secondary entity-name"
-			style="font-size: 12px; cursor: pointer"
-			@click="instance?.select()"
-		>
-			<a-input
-				v-show="instance.renaming"
-				ref="renameInput"
-				v-model="renameValue"
-				size="mini"
-				@click.stop
-				@blur="instance?.rename(renameValue)"
-			></a-input>
-			<span v-show="!instance.renaming">
-				{{ instance.name }}
-			</span>
+				<!-- 图标 -->
+				<span
+					v-if="slots.icon"
+					class="d-inline-flex align-items-center"
+					style="cursor: pointer; padding: 0px 4px; font-size: 16px"
+					@click="instance?.select()"
+				>
+					<slot name="icon"></slot>
+				</span>
 
-			<slot name="name"></slot>
-		</a-col>
+				<!-- 名字 -->
+				<a-dropdown
+					:trigger="['hover']"
+					position="rt"
+				>
+					<span class="ms-2">
+						<a-input
+							v-show="instance.renaming"
+							ref="renameInput"
+							v-model="renameValue"
+							size="mini"
+							@click.stop
+							@blur="instance?.rename(renameValue)"
+						></a-input>
+						<span v-show="!instance.renaming">
+							{{ instance.name }}
+						</span>
+					</span>
+					<template #content>
+						<a-doption @click="instance && (instance.renaming = true)"> <Icon type="text_format" /> 重命名 </a-doption>
+					</template>
+				</a-dropdown>
 
-		<slot name="extra"></slot>
+				<div style="flex: 1 1 auto">
+					<slot name="suffix"></slot>
+				</div>
+			</div>
+
+			<div
+				v-if="slots.extra"
+				class="d-flex align-items-center"
+				style="margin-left: 32px"
+			>
+				<slot name="extra"></slot>
+			</div>
+		</div>
 
 		<!-- 操作按钮 -->
-		<a-col
+		<div
 			v-if="slots.actions"
-			:flex="typeof widths.actions === 'string' ? widths.actions : widths.actions + 'px'"
+			style="flex: 0 0 auto"
 			class="text-secondary text-nowrap d-flex justify-content-end pe-3"
 		>
 			<a-space
@@ -56,8 +82,8 @@
 
 				<slot name="actions"></slot>
 			</a-space>
-		</a-col>
-	</a-row>
+		</div>
+	</div>
 </template>
 
 <script lang="ts" setup>
@@ -66,17 +92,15 @@ import { store } from '../store';
 import { FolderOptions, BrowserOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
+import Icon from './Icon.vue';
 
 const slots = useSlots();
 
 const props = withDefaults(
 	defineProps<{
 		entity: BrowserOptions | FolderOptions<FolderType, Browser | Folder>;
-		widths?: { name?: number | 'auto'; actions?: number | 'auto' };
 	}>(),
-	{
-		widths: () => ({ name: 300, actions: 'auto' })
-	}
+	{}
 );
 
 const renameInput = ref<any>();
@@ -105,13 +129,15 @@ function active() {
 </script>
 <style scoped lang="less">
 .entity-drop-menu {
-	min-width: 150px;
+	min-width: 180px;
 }
 
 .entity-name {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	overflow: hidden;
+	font-size: 14px;
+	font-weight: bold;
 
 	// 禁止选择
 	-moz-user-select: none;

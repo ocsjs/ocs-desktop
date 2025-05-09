@@ -31,12 +31,14 @@
 			>
 				<a-empty class="p-3 m-auto">
 					<div>
-						暂无浏览器，<a-button
+						暂无浏览器，
+						<a-button
 							type="text"
 							size="mini"
 							@click="about"
-							>点击查看使用教程</a-button
 						>
+							点击查看使用教程
+						</a-button>
 					</div>
 				</a-empty>
 			</div>
@@ -52,97 +54,9 @@
 			v-else
 			class="col-12 p-2 pt-1 entities-container"
 		>
-			<FileHeader></FileHeader>
 			<!-- 显示浏览器以及文件夹列表 -->
 			<div class="entities">
-				<template v-for="child of currentSearchedEntities !== undefined ? currentSearchedEntities : currentEntities">
-					<Entity
-						v-if="child.type !== 'browser'"
-						:key="child.uid"
-						class="entity"
-						:entity="child"
-					>
-						<template #icon>
-							<Icon
-								theme="filled"
-								type="folder"
-								style="height: 24px"
-								class="fs-5 ps-1"
-							></Icon>
-						</template>
-
-						<template #actions>
-							<EntityOperator
-								type="folder"
-								:entity="child"
-								:permissions="currentSearchedEntities ? ['location'] : ['rename', 'remove']"
-							></EntityOperator>
-						</template>
-					</Entity>
-				</template>
-
-				<template v-for="child of currentSearchedEntities ? currentSearchedEntities : currentEntities">
-					<Entity
-						v-if="child && child.type === 'browser'"
-						:key="child.uid"
-						class="entity"
-						:entity="child"
-						:widths="{ name: 250, actions: 200 }"
-					>
-						<template #prefix>
-							<!-- 单选框 -->
-							<a-col
-								flex="32px"
-								class="d-flex"
-							>
-								<a-checkbox v-model="child.checked"></a-checkbox>
-							</a-col>
-						</template>
-
-						<template #extra>
-							<!-- 备注 -->
-							<a-col
-								flex="1"
-								class="text-secondary notes"
-							>
-								<a-tooltip
-									content="备注描述"
-									position="tl"
-								>
-									<template #content>
-										<div>备注描述</div>
-										<a-divider class="mt-1 mb-1" />
-										<div>
-											{{ child.notes }}
-										</div>
-									</template>
-									<span> {{ child.notes }} </span>
-								</a-tooltip>
-							</a-col>
-
-							<!-- 标签 -->
-							<a-col flex="1">
-								<Tags
-									:tags="child.tags"
-									:read-only="true"
-									size="small"
-								></Tags>
-							</a-col>
-						</template>
-
-						<template #actions>
-							<BrowserOperators :browser="child">
-								<template #split>
-									<a-divider direction="vertical" />
-								</template>
-							</BrowserOperators>
-							<EntityOperator
-								type="browser"
-								:entity="child"
-							></EntityOperator>
-						</template>
-					</Entity>
-				</template>
+				<BrowserList :entities="currentSearchedEntities ? currentSearchedEntities : currentEntities"></BrowserList>
 			</div>
 		</div>
 	</div>
@@ -150,17 +64,13 @@
 
 <script setup lang="ts">
 import Icon from '../../components/Icon.vue';
-import Entity from '../../components/Entity.vue';
-import Tags from '../../components/Tags.vue';
-import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
 import { resetSearch } from '../../utils/entity';
-import EntityOperator from '../../components/EntityOperator.vue';
 import FileFilters from '../../components/browsers/FileFilters.vue';
 import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
 import { currentEntities, currentSearchedEntities } from '../../fs';
-import FileHeader from '../../components/browsers/FileHeader.vue';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import { about } from '../../utils';
+import BrowserList from '../../components/BrowserList.vue';
 </script>
 
 <style scoped lang="less">
@@ -173,51 +83,6 @@ import { about } from '../../utils';
 	overflow-y: hidden;
 }
 
-.list-container {
-	height: calc(100% - 94px);
-	position: relative;
-	overflow: hidden;
-}
-
-.list {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, 100px);
-}
-
-.browser-profile {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, 1fr);
-}
-
-.add-folder-or-browser {
-	border: 2px dashed #dbdbdb;
-	border-radius: 4px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-
-	&::before {
-		color: #ebebeb;
-		font-size: 64px;
-		content: '+';
-	}
-
-	&:hover {
-		background-color: #f7f7f7;
-	}
-}
-
-.notes {
-	font-size: 12px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	overflow: hidden;
-}
-
-.entity {
-	padding: 4px 0px;
-}
-
 .entities-container {
 	height: calc(100% - 90px);
 }
@@ -225,10 +90,5 @@ import { about } from '../../utils';
 .entities {
 	height: calc(100% - 24px);
 	overflow: overlay;
-}
-
-.filters-btn {
-	padding: 0 4px;
-	margin: 0;
 }
 </style>

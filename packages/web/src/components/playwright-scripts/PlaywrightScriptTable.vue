@@ -52,7 +52,7 @@
 						v-model="state.browserNameFields"
 						size="mini"
 						multiple
-						style="width: 300px; overflow-x: auto; white-space: nowrap"
+						style="width: 200px; overflow-x: auto; white-space: nowrap"
 					>
 						<template
 							v-for="config of arrayLikeConfigs"

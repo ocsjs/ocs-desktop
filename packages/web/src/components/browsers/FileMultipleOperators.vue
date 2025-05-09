@@ -1,80 +1,98 @@
 <template>
 	<a-row class="col-12 p-1 ps-2 pe-2">
 		<a-col flex="auto">
-			<a-space
-				v-if="currentSources.length"
-				:size="0"
-			>
+			<a-space :size="0">
 				<template #split>
 					<a-divider direction="vertical" />
 				</template>
 
 				<a-button
-					v-if="!state.selectedAll"
 					size="mini"
+					:disabled="currentSources.length === 0"
 					@click="
 						() => {
-							state.selectedAll = true;
-							selectAllBrowserOfCurrentFolder();
+							if (currentSources.length) {
+								state.selectedAll = true;
+								selectAllBrowserOfCurrentFolder();
+							}
 						}
 					"
 				>
 					全选
 				</a-button>
+
+				<template v-if="currentCheckedBrowsers.length">
+					<a-tooltip
+						:content="`共选中${currentCheckedBrowsers.length}个文件`"
+						position="rt"
+					>
+						<a-dropdown>
+							<a-button size="mini"> 批量操作 <icon-down /> </a-button>
+							<template #content>
+								<a-doption
+									v-if="state.selectedAll || currentCheckedBrowsers.length"
+									@click="
+										() => {
+											state.selectedAll = false;
+											cancelAllBrowserCheck();
+										}
+									"
+								>
+									取消
+								</a-doption>
+
+								<a-doption
+									class="border-bottom"
+									size="mini"
+									type="text"
+									@click="state.showChecked = true"
+								>
+									查看
+								</a-doption>
+								<a-doption
+									style="width: 100px"
+									@click="copy"
+								>
+									复制
+								</a-doption>
+								<a-doption @click="cut"> 剪切 </a-doption>
+								<a-doption
+									class="border-bottom"
+									:disabled="state.selectBrowsers.length === 0"
+									@click="paste"
+								>
+									粘贴
+								</a-doption>
+
+								<a-doption @click="launchAll"> 批量运行 </a-doption>
+								<a-doption @click="closeAll"> 批量关闭 </a-doption>
+								<a-doption @click="deleteAll"> 批量删除 </a-doption>
+							</template>
+						</a-dropdown>
+					</a-tooltip>
+				</template>
+			</a-space>
+
+			<div
+				v-if="currentFolder.parent"
+				class="d-inline-flex align-items-center"
+			>
+				<!-- 返回上一级 -->
+				<div>
+					<a-divider direction="vertical"></a-divider>
+				</div>
 				<a-button
-					v-if="state.selectedAll || currentCheckedBrowsers.length"
+					type="outline"
 					size="mini"
 					@click="
 						() => {
-							state.selectedAll = false;
-							cancelAllBrowserCheck();
+							currentFolder.flatParents().at(-2)?.select();
 						}
 					"
 				>
-					取消
+					返回上一级 {{}}
 				</a-button>
-
-				<template v-if="currentCheckedBrowsers.length">
-					<span
-						class="text-secondary"
-						style="font-size: 12px"
-					>
-						当前共选中 {{ currentCheckedBrowsers.length }} 个文件
-
-						<a-button
-							size="mini"
-							type="text"
-							@click="state.showChecked = true"
-						>
-							查看
-						</a-button>
-					</span>
-
-					<a-dropdown>
-						<a-button size="mini"> 选择批量操作 <icon-down /> </a-button>
-						<template #content>
-							<a-doption
-								style="width: 100px"
-								@click="copy"
-							>
-								复制
-							</a-doption>
-							<a-doption @click="cut"> 剪切 </a-doption>
-							<a-doption
-								class="border-bottom"
-								:disabled="state.selectBrowsers.length === 0"
-								@click="paste"
-							>
-								粘贴
-							</a-doption>
-
-							<a-doption @click="launchAll"> 批量运行 </a-doption>
-							<a-doption @click="closeAll"> 批量关闭 </a-doption>
-							<a-doption @click="deleteAll"> 批量删除 </a-doption>
-						</template>
-					</a-dropdown>
-				</template>
-			</a-space>
+			</div>
 		</a-col>
 
 		<!-- 文件操作 -->
@@ -83,55 +101,10 @@
 		<a-drawer
 			v-model:visible="state.showChecked"
 			:title="`已选中 ${currentCheckedBrowsers.length} 个文件`"
-			:width="state.windowWidth * 0.5"
+			:width="state.windowWidth * 0.8"
 			:footer="false"
 		>
-			<div>
-				<FileHeader :columns="['checkbox', 'name', 'extra']"></FileHeader>
-				<template
-					v-for="browser of currentCheckedBrowsers"
-					:key="browser.uid"
-				>
-					<EntityVue
-						:entity="browser"
-						:widths="{ name: 250 }"
-					>
-						<template #prefix>
-							<!-- 单选框 -->
-							<a-col
-								flex="32px"
-								class="d-flex"
-							>
-								<a-checkbox v-model="browser.checked"></a-checkbox>
-							</a-col>
-						</template>
-
-						<template #extra>
-							<!-- 备注 -->
-							<a-col
-								flex="1"
-								class="text-secondary notes"
-							>
-								<a-tooltip
-									content="备注描述"
-									position="tl"
-								>
-									<span> {{ browser.notes }} </span>
-								</a-tooltip>
-							</a-col>
-
-							<!-- 标签 -->
-							<a-col flex="1">
-								<Tags
-									:tags="browser.tags"
-									:read-only="true"
-									size="small"
-								></Tags>
-							</a-col>
-						</template>
-					</EntityVue>
-				</template>
-			</div>
+			<BrowserList :entities="currentCheckedBrowsers"> </BrowserList>
 		</a-drawer>
 	</a-row>
 </template>
@@ -141,18 +114,16 @@ import { reactive, computed, h, ref } from 'vue';
 import { currentFolder, currentSearchedEntities } from '../../fs';
 import { Browser } from '../../fs/browser';
 import { root } from '../../fs/folder';
-import FileHeader from './FileHeader.vue';
 import FileOperators from './FileOperators.vue';
 import { BrowserOptions } from '../../fs/interface';
 import { inBrowser } from '../../utils/node';
 import { store } from '../../store';
 import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
-import EntityVue from '../Entity.vue';
-import Tags from '../Tags.vue';
 import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
 import { SyncOutlined } from '@ant-design/icons-vue';
+import BrowserList from '../BrowserList.vue';
 
 const state = reactive({
 	showChecked: false,
