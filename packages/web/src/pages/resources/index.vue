@@ -39,8 +39,8 @@
 					v-for="(file, i) of group.files"
 					:key="i"
 				>
-					<a-row class="mb-2 align-items-center">
-						<a-col flex="48px">
+					<div class="d-flex mb-2 align-items-center">
+						<div style="flex: 0 0 48px">
 							<template v-if="file.icon">
 								<img
 									width="32"
@@ -56,8 +56,8 @@
 									></Icon>
 								</div>
 							</template>
-						</a-col>
-						<a-col flex="auto">
+						</div>
+						<div style="flex: 1 1 auto">
 							<a-space>
 								<!-- 显示名字，主页，描述 -->
 								<a
@@ -81,10 +81,10 @@
 									<template v-else> {{ file.description }} </template>
 								</span>
 							</a-space>
-						</a-col>
-						<a-col
+						</div>
+						<div
 							v-if="fileStatus[file.url]"
-							flex="64px"
+							style="flex: 0 0 64px"
 							class="d-flex justify-content-center"
 						>
 							<a-space>
@@ -123,8 +123,8 @@
 									</template>
 								</template>
 							</a-space>
-						</a-col>
-					</a-row>
+						</div>
+					</div>
 				</template>
 			</a-card>
 		</template>
