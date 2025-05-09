@@ -103,10 +103,12 @@ const props = withDefaults(
 		tags: Tag[];
 		size: 'medium' | 'large' | 'small' | undefined;
 		readOnly?: boolean;
+		defaultColor?: string;
 	}>(),
 	{
 		readOnly: false,
-		size: 'small'
+		size: 'small',
+		defaultColor: '#808080'
 	}
 );
 const emits = defineEmits<{
@@ -127,7 +129,7 @@ const inputRef = ref();
 const state = reactive({
 	modalVisible: false,
 	inputValue: '',
-	color: '#808080'
+	color: props.defaultColor
 });
 
 const handleSearch = (val: string) => {
@@ -168,7 +170,7 @@ const handleInputConfirm = () => {
 	Object.assign(state, {
 		modalVisible: false,
 		inputValue: '',
-		color: ''
+		color: props.defaultColor
 	});
 
 	emits('update:tags', tags);
