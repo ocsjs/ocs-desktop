@@ -321,7 +321,7 @@ export async function launchBrowser({
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');
 
 					// 关闭拓展加载时弹出的首页
-					await waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
+					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 
 					// 打开开发者模式
 					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
@@ -351,15 +351,20 @@ export async function launchBrowser({
  * 安装/更新脚本
  *
  */
-async function initScripts(urls: string[], browser: BrowserContext, page: Page, config?: BrowserConfig) {
+async function initScripts(urls: string[], browser: BrowserContext, config?: BrowserConfig) {
 	console.log('install ', urls);
 	let installCont = 0;
 
-	for (const url of urls) {
-		try {
-			await page.goto(url);
-		} catch {}
-	}
+	// 触发下载
+	await (async () => {
+		for (const url of urls) {
+			const page = await browser.newPage();
+			try {
+				page.goto(url).catch(() => {});
+			} catch {}
+			page.close();
+		}
+	})();
 
 	// 检测脚本是否安装/更新完毕
 	const tryInstall = async () => {
@@ -368,7 +373,7 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page, 
 			if (installPage) {
 				// 置顶页面，防止点击安装失败
 				await installPage.bringToFront();
-				await sleep(500);
+				await sleep(1000);
 				const closed = await installPage.evaluate((config) => {
 					const btn = (document.querySelector('[class*="primary"]') ||
 						document.querySelector('[type*="button"]')) as HTMLElement;
@@ -389,8 +394,6 @@ async function initScripts(urls: string[], browser: BrowserContext, page: Page, 
 				if (!closed) {
 					await installPage.close();
 				}
-
-				await sleep(1000);
 
 				if (installPage.isClosed()) {
 					installCont++;
@@ -447,10 +450,9 @@ async function setupUserScripts(opts: {
 	// 安装用户脚本
 	if (userscripts.length) {
 		await step('正在安装用户脚本。。。');
-		const [page] = browser.pages();
 		// 载入本地脚本
 		try {
-			await initScripts(userscripts, browser, page, opts.config);
+			await initScripts(userscripts, browser, opts.config);
 		} catch (e) {
 			// @ts-ignore
 			console.error(e);
