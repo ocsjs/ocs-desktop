@@ -57,7 +57,7 @@ async function addLocalScript(uri: string, text: string) {
 
 export async function addScriptFromUrl(url: string) {
 	if (store.render.scripts.find((s) => s.url === url)) {
-		Message.warning('当前脚本已安装。');
+		Message.success('当前脚本已安装。');
 		return false;
 	}
 

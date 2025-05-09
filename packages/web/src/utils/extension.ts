@@ -11,8 +11,8 @@ type Extension = ResourceFile & {
 // 下载拓展
 export async function installExtensions(extensions: Extension[], extension: Extension) {
 	if (extensions.filter((e) => e.installed).length > 0) {
-		Message.warning({
-			content: `脚本管理器 ${extension.name} 已经存在，无需重复安装！`,
+		Message.success({
+			content: `脚本管理器 ${extension.name} 已下载`,
 			duration: 10 * 1000
 		});
 	} else {
