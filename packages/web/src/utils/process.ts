@@ -129,29 +129,43 @@ export class Process extends EventEmitter {
 	launch() {
 		return new Promise<void>((resolve, reject) => {
 			// 检查
-			if (this.launchOptions.executablePath) {
-				remote.fs
-					.call('existsSync', this.launchOptions.executablePath)
-					.then((result) => {
-						if (result) {
-							this.status = 'launching';
-
-							this.once('launched', resolve);
-							this.worker?.('launch', {
-								userDataDir: this.browser.cachePath,
-								userscripts: store.render.scripts.filter((s) => s.enable).map((s) => s.url),
-								...this.launchOptions
-							});
-						} else {
-							Message.error('浏览器路径不存在，请在软件设置中修改');
-						}
-					})
-					.catch((err) => {
-						Message.error('浏览器路径读取错误 : ', err);
-					});
-			} else {
-				Message.error('浏览器路径不存在，请在软件设置中修改');
+			if (!this.launchOptions.executablePath) {
+				return Message.error('浏览器路径为空，请在软件设置中修改');
 			}
+
+			remote.fs
+				.call('existsSync', this.launchOptions.executablePath)
+				.then(async (result) => {
+					if (result) {
+						const enabledUserScripts = store.render.scripts.filter((s) => s.enable);
+						for (const s of enabledUserScripts) {
+							if (!s.url.startsWith('http')) {
+								const res = await remote.fs.call('existsSync', s.url);
+								if (!res) {
+									Message.error({
+										content: `本地脚本 ${s.info?.name}：(${s.url})\n不存在，请检查脚本路径`,
+										duration: 10 * 1000
+									});
+									return;
+								}
+							}
+						}
+
+						this.status = 'launching';
+
+						this.once('launched', resolve);
+						this.worker?.('launch', {
+							userDataDir: this.browser.cachePath,
+							userscripts: enabledUserScripts.map((s) => s.url),
+							...this.launchOptions
+						});
+					} else {
+						Message.error('浏览器路径不存在，请在软件设置中修改');
+					}
+				})
+				.catch((err) => {
+					Message.error('浏览器路径读取错误 : ', err);
+				});
 		});
 	}
 
