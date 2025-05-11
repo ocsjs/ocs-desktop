@@ -13,7 +13,7 @@ export const ZJYLoginScript = new PlaywrightScript(
 		}
 	},
 	{
-		name: '新职教云-账号密码登录',
+		name: '职教云-账号密码登录',
 		async run(page, configs) {
 			try {
 				await page.goto('https://zjy2.icve.com.cn/study/index');
