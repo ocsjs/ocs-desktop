@@ -48,7 +48,9 @@
 						</span>
 					</span>
 					<template #content>
-						<a-doption @click="instance && (instance.renaming = true)"> <Icon type="text_format" /> 重命名 </a-doption>
+						<a-doption @click="instance && (instance.renaming = true)">
+							<Icon type="text_format">重命名</Icon>
+						</a-doption>
 					</template>
 				</a-dropdown>
 
@@ -70,14 +72,17 @@
 		<div
 			v-if="slots.actions"
 			style="flex: 0 0 auto"
-			class="text-secondary text-nowrap d-flex justify-content-end pe-3"
+			class="text-secondary text-nowrap d-flex justify-content-end ps-1 pe-2"
 		>
 			<a-space
 				:size="0"
 				class="actions justify-content-end"
 			>
 				<template #split>
-					<a-divider direction="vertical" />
+					<a-divider
+						class="ms-1 me-1"
+						direction="vertical"
+					/>
 				</template>
 
 				<slot name="actions"></slot>
@@ -137,7 +142,7 @@ function active() {
 	white-space: nowrap;
 	overflow: hidden;
 	font-size: 14px;
-	font-weight: bold;
+	color: #474747 !important;
 
 	// 禁止选择
 	-moz-user-select: none;

@@ -20,25 +20,24 @@
 			<template #content>
 				<a-doption style="width: 200px"> </a-doption>
 
-				<a-doption @click="exportData"> 导出数据 </a-doption>
-				<a-doption
-					class="border-bottom"
-					@click="importData"
-				>
-					导入数据
-				</a-doption>
-
-				<a-doption @click="store.render.state.setup = true"> 初始化设置 </a-doption>
+				<a-doption @click="store.render.state.setup = true"> <Icon type="settings">初始化设置</Icon> </a-doption>
 				<a-doption
 					class="border-bottom"
 					@click="checkBrowserCaches"
 				>
-					清除浏览器缓存
+					<Icon type="delete">清除浏览器缓存</Icon>
 				</a-doption>
 
-				<a-doption @click="relaunch"> 重启软件 </a-doption>
-				<a-doption @click="openLog"> 日志目录 </a-doption>
-				<a-doption @click="openDevTools"> 开发者工具 </a-doption>
+				<a-doption @click="exportData"> <Icon type="save">导出数据</Icon> </a-doption>
+				<a-doption
+					class="border-bottom"
+					@click="importData"
+				>
+					<Icon type="upload">导入数据</Icon>
+				</a-doption>
+				<a-doption @click="relaunch"> <Icon type="sync">重启软件</Icon> </a-doption>
+				<a-doption @click="openLog"> <Icon type="folder">日志目录</Icon> </a-doption>
+				<a-doption @click="openDevTools"> <Icon type="code">开发者工具</Icon> </a-doption>
 			</template>
 		</a-dropdown>
 
@@ -67,16 +66,17 @@
 					style="width: 200px"
 					@click="about"
 				>
-					使用教程
+					<Icon type="book">使用教程</Icon>
 				</a-doption>
-				<a-doption @click="allNotify"> 查看通知 </a-doption>
+				<a-doption @click="allNotify"> <Icon type="notes">查看通知</Icon> </a-doption>
 
-				<a-doption @click="showVersionLogs"> 更新日志 </a-doption>
+				<a-doption @click="showVersionLogs"> <Icon type="notes">更新日志</Icon> </a-doption>
 
-				<TitleLink
-					title="软件官网"
-					url="https://docs.ocsjs.com/"
-				/>
+				<TitleLink url="https://docs.ocsjs.com/">
+					<template #title>
+						<Icon type="home">软件官网</Icon>
+					</template>
+				</TitleLink>
 			</template>
 		</a-dropdown>
 	</div>
@@ -96,6 +96,7 @@ import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
 import CommonEditActionDropdown from './CommonEditActionDropdown.vue';
+import Icon from './Icon.vue';
 
 const { shell } = electron;
 

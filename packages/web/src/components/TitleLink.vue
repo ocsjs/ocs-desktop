@@ -1,17 +1,18 @@
 <template>
 	<a-doption @click="open(url)">
-		{{ title }}
+		<slot name="title">
+			{{ title }}
+		</slot>
 	</a-doption>
 </template>
 
 <script setup lang="ts">
 import { electron } from '../utils/node';
 
-interface TitleLinkProps {
+defineProps<{
 	url: string;
-	title: string;
-}
-defineProps<TitleLinkProps>();
+	title?: string;
+}>();
 
 const { shell } = electron;
 

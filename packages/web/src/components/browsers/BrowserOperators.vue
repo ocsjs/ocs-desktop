@@ -8,7 +8,10 @@
 			<slot name="split"></slot>
 		</template>
 		<template v-if="process === undefined || process.status === 'closed'">
-			<a-tooltip :position="tooltipPosition">
+			<a-tooltip
+				:position="tooltipPosition"
+				mini
+			>
 				<template #content>
 					启动浏览器 <br />
 					- 并自动安装脚本 <br />

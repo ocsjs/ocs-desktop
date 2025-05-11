@@ -30,16 +30,25 @@
 				style="height: 50vh"
 			>
 				<a-empty class="p-3 m-auto">
-					<div>
-						暂无浏览器，
+					<div class="mb-3">暂无浏览器</div>
+
+					<a-space>
 						<a-button
-							type="text"
+							type="outline"
 							size="mini"
 							@click="about"
 						>
-							点击查看使用教程
+							<Icon type="book">点击查看使用教程</Icon>
 						</a-button>
-					</div>
+
+						<a-button
+							type="outline"
+							size="mini"
+							@click="newBrowser()"
+						>
+							<Icon type="web">新建浏览器</Icon>
+						</a-button>
+					</a-space>
 				</a-empty>
 			</div>
 		</template>
@@ -71,6 +80,7 @@ import { currentEntities, currentSearchedEntities } from '../../fs';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import { about } from '../../utils';
 import BrowserList from '../../components/BrowserList.vue';
+import { newBrowser } from '../../utils/browser';
 </script>
 
 <style scoped lang="less">

@@ -5,17 +5,13 @@
 				<Icon type="more_horiz"> 更多 </Icon>
 			</a-button>
 			<template #content>
-				<a-doption @click="state.showPlaywrightScriptSelector = true"> 批量创建-自动化脚本浏览器 </a-doption>
+				<a-doption @click="newFolder"> <Icon type="folder">新建文件夹</Icon> </a-doption>
+				<a-doption @click="state.showPlaywrightScriptSelector = true">
+					<Icon type="add"> 批量创建-自动化脚本浏览器</Icon>
+				</a-doption>
 			</template>
 		</a-dropdown>
 
-		<a-button
-			size="mini"
-			type="outline"
-			@click="newFolder"
-		>
-			<Icon type="folder"> 新建文件夹 </Icon>
-		</a-button>
 		<a-button
 			size="mini"
 			type="outline"
@@ -61,21 +57,12 @@
 </template>
 
 <script setup lang="ts">
-import { currentFolder } from '../../fs';
-import { Browser } from '../../fs/browser';
-import { Folder } from '../../fs/folder';
-import { store } from '../../store';
-
-import { resetSearch } from '../../utils/entity';
 import Icon from '../Icon.vue';
-import { inBrowser } from '../../utils/node';
-import { Entity } from '../../fs/entity';
-import { reactive, onMounted } from 'vue';
+import { reactive } from 'vue';
 import { RawPlaywrightScript } from '../playwright-scripts';
 import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSelector.vue';
 import PlaywrightScriptTable from '../playwright-scripts/PlaywrightScriptTable.vue';
-import { remote } from '../../utils/remote';
-import { Message } from '@arco-design/web-vue';
+import { newBrowser, newFolder } from '../../utils/browser';
 
 const state = reactive({
 	showPlaywrightScriptSelector: false,
@@ -83,54 +70,6 @@ const state = reactive({
 	playwrightScripts: [] as RawPlaywrightScript[],
 	selectedPS: undefined as RawPlaywrightScript | undefined
 });
-
-const folder = store.paths.userDataDirsFolder;
-let spe = '\\';
-
-onMounted(async () => {
-	spe = await remote.path.get('sep');
-});
-
-function newFolder() {
-	// 关闭搜索模式
-	resetSearch();
-	const id = Entity.uuid();
-
-	const folder = new Folder({
-		uid: id,
-		type: 'folder',
-		name: '未命名文件夹',
-		children: {},
-		createTime: Date.now(),
-		parent: currentFolder.value.uid,
-		renaming: true
-	});
-	currentFolder.value.children[id] = folder;
-}
-function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywrightScript[]; store?: object }) {
-	if (!store?.render?.setting?.launchOptions?.executablePath) {
-		Message.error('检测到浏览器路径未填写，请在左侧软件设置中设置，然后重新创建浏览器！');
-		return;
-	}
-	// 关闭搜索模式
-	resetSearch();
-	const id = Entity.uuid();
-
-	currentFolder.value.children[id] = new Browser({
-		type: 'browser',
-		uid: id,
-		name: opts?.name || '未命名浏览器',
-		checked: false,
-		createTime: Date.now(),
-		notes: '',
-		renaming: true,
-		parent: currentFolder.value.uid,
-		histories: [{ action: '创建', time: Date.now() }],
-		cachePath: inBrowser ? '' : folder.endsWith(spe) ? folder + id : folder + spe + id,
-		tags: [],
-		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
-	});
-}
 
 function showMultipleCreateTable() {
 	state.showPlaywrightScriptTable = true;

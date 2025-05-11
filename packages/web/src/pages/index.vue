@@ -112,7 +112,7 @@
 				v-if="store.render.state.setup"
 				:visible="true"
 				:footer="false"
-				:closable="true"
+				:closable="false"
 			>
 				<template #title> 初始化软件设置 </template>
 				<Setup></Setup>
@@ -132,7 +132,6 @@ import { closeAllBrowser, showClearBrowserCachesModal } from '../utils/browser';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
-
 import { Modal, Tooltip } from '@arco-design/web-vue';
 import BrowserPanel from '../components/browsers/BrowserPanel.vue';
 import { currentBrowser } from '../fs';
@@ -142,7 +141,6 @@ import cloneDeep from 'lodash/cloneDeep';
 import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
-import BrowserOperators from '../components/browsers/BrowserOperators.vue';
 import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
 const { ipcRenderer } = electron;
 

@@ -10,7 +10,10 @@
 		<div class="d-flex mb-1 align-items-center">
 			<a-space :size="0">
 				<template #split>
-					<a-divider direction="vertical" />
+					<a-divider
+						class="ms-1 me-1"
+						direction="vertical"
+					/>
 				</template>
 
 				<a-tooltip
@@ -47,7 +50,7 @@
 				<a-select
 					v-model="store.render.dashboard.num"
 					size="mini"
-					style="width: 100px"
+					style="width: 96px"
 					:options="[1, 2, 4, 6, 8].map((i) => ({ value: i, label: `显示${i}列` }))"
 				>
 				</a-select>
@@ -55,7 +58,7 @@
 				<a-select
 					v-model="store.render.dashboard.video.aspectRatio"
 					size="mini"
-					style="width: 140px"
+					style="width: 130px"
 					:options="aspectRatio"
 				>
 					<template #prefix> 横纵比 </template>
@@ -64,7 +67,7 @@
 				<a-select
 					v-model="store.app.video_frame_rate"
 					size="mini"
-					style="width: 180px"
+					style="width: 140px"
 					:options="[
 						{ label: '节能', value: 1 },
 						{ label: '流畅', value: 4 },

@@ -4,11 +4,60 @@ import { IconSync } from '@arco-design/web-vue/es/icon';
 import { size, sleep } from '.';
 import { remote } from './remote';
 import { store } from '../store';
-import { electron } from '../utils/node';
+import { electron, inBrowser } from '../utils/node';
 import { processes } from './process';
 import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
+import { Entity } from '../fs/entity';
+import { currentFolder } from '../fs';
+import { RawPlaywrightScript } from '@ocs-desktop/app/lib/src/tasks/remote.register';
+import { resetSearch } from './entity';
 const { shell } = electron;
+
+const folder = store.paths.userDataDirsFolder;
+
+export function newFolder() {
+	// 关闭搜索模式
+	resetSearch();
+	const id = Entity.uuid();
+
+	const folder = new Folder({
+		uid: id,
+		type: 'folder',
+		name: '未命名文件夹',
+		children: {},
+		createTime: Date.now(),
+		parent: currentFolder.value.uid,
+		renaming: true
+	});
+	currentFolder.value.children[id] = folder;
+}
+export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywrightScript[]; store?: object }) {
+	if (!store?.render?.setting?.launchOptions?.executablePath) {
+		Message.error('检测到浏览器路径未填写，请在左侧软件设置中设置，然后重新创建浏览器！');
+		return;
+	}
+	// 关闭搜索模式
+	resetSearch();
+	const id = Entity.uuid();
+
+	const path_sep = remote.path.get('sep');
+
+	currentFolder.value.children[id] = new Browser({
+		type: 'browser',
+		uid: id,
+		name: opts?.name || '未命名浏览器',
+		checked: false,
+		createTime: Date.now(),
+		notes: '',
+		renaming: true,
+		parent: currentFolder.value.uid,
+		histories: [{ action: '创建', time: Date.now() }],
+		cachePath: inBrowser ? '' : folder.endsWith(path_sep) ? folder + id : folder + path_sep + id,
+		tags: [],
+		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
+	});
+}
 
 export async function checkBrowserCaches() {
 	const modal = Modal.info({

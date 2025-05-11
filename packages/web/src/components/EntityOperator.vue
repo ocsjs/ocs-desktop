@@ -15,14 +15,14 @@
 				v-if="hasPermissions('edit')"
 				@click="instance?.select()"
 			>
-				<Icon type="edit" /> 编辑
+				<Icon type="edit">编辑</Icon>
 			</a-doption>
 
 			<a-doption
 				v-if="hasPermissions('rename')"
 				@click="instance && (instance.renaming = true)"
 			>
-				<Icon type="text_format" /> 重命名
+				<Icon type="text_format">重命名</Icon>
 			</a-doption>
 
 			<a-doption
@@ -32,8 +32,9 @@
 				<Icon
 					style="color: red"
 					type="delete"
-				/>
-				删除
+				>
+					删除
+				</Icon>
 			</a-doption>
 
 			<a-doption

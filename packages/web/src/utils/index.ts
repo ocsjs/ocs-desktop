@@ -206,7 +206,10 @@ export async function about() {
 		simple: false,
 		maskClosable: false,
 		footer: false,
-		width: 800,
+		width: 'auto',
+		bodyStyle: {
+			maxWidth: '800px'
+		},
 		content: () =>
 			h(MarkdownText, {
 				content: guide,

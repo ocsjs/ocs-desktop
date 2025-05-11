@@ -6,41 +6,58 @@
 					<a-divider direction="vertical" />
 				</template>
 
-				<a-button
-					size="mini"
-					:disabled="currentSources.length === 0"
-					@click="
-						() => {
-							if (currentSources.length) {
-								state.selectedAll = true;
-								selectAllBrowserOfCurrentFolder();
-							}
-						}
-					"
-				>
-					全选
-				</a-button>
+				<span>
+					<a-tooltip
+						:content="`共有 ${currentSources.length} 个文件`"
+						position="top"
+						mini
+					>
+						<a-button
+							size="mini"
+							:disabled="currentSources.length === 0"
+							@click="
+								() => {
+									if (currentSources.length) {
+										state.selectedAll = true;
+										selectAllBrowserOfCurrentFolder();
+									}
+								}
+							"
+						>
+							全选
+						</a-button>
+					</a-tooltip>
+
+					<a-tooltip
+						:content="`共选中${currentCheckedBrowsers.length}个文件`"
+						position="top"
+						mini
+					>
+						<a-button
+							v-if="state.selectedAll || currentCheckedBrowsers.length"
+							size="mini"
+							class="ms-2"
+							@click="
+								() => {
+									state.selectedAll = false;
+									cancelAllBrowserCheck();
+								}
+							"
+						>
+							取消
+						</a-button>
+					</a-tooltip>
+				</span>
 
 				<template v-if="currentCheckedBrowsers.length">
 					<a-tooltip
 						:content="`共选中${currentCheckedBrowsers.length}个文件`"
-						position="rt"
+						position="top"
+						mini
 					>
 						<a-dropdown>
 							<a-button size="mini"> 批量操作 <icon-down /> </a-button>
 							<template #content>
-								<a-doption
-									v-if="state.selectedAll || currentCheckedBrowsers.length"
-									@click="
-										() => {
-											state.selectedAll = false;
-											cancelAllBrowserCheck();
-										}
-									"
-								>
-									取消
-								</a-doption>
-
 								<a-doption
 									class="border-bottom"
 									size="mini"
