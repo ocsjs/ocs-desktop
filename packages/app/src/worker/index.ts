@@ -93,7 +93,7 @@ export class ScriptWorker {
 
 		/** 添加拓展启动参数 */
 		options.args = formatExtensionArguments(this.extensionPaths);
-
+		const start_time = Date.now();
 		/** 启动浏览器 */
 		try {
 			await launchBrowser({
@@ -140,7 +140,12 @@ export class ScriptWorker {
 					err.message.includes('Target closed') ||
 					err.message.includes('Browser closed')
 				) {
-					console.error('异常关闭，请尝试重启任务。', err.message);
+					// 5秒内异常关闭，可能是浏览器问题
+					if (Date.now() - start_time < 5 * 1000) {
+						console.error('异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器', err.message);
+					} else {
+						console.error('异常关闭，请尝试重启浏览器。', err.message);
+					}
 					this.close();
 				} else {
 					console.error('错误 : ', err.message);

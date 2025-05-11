@@ -17,7 +17,7 @@ export function notify(title: string, msg: any, key: string, options?: NotifyOpt
 		id: key,
 		title,
 		closable: true,
-		content: () => h('span', { title: String(msg) }, StringUtils.max(String(msg), 100)),
+		content: () => h('span', { title: msg?.stack || msg?.message || msg || '' }, StringUtils.max(String(msg), 100)),
 		duration: options?.duration ?? (options?.type === 'error' ? 6000 : 3000),
 		footer: () =>
 			options?.btn ||

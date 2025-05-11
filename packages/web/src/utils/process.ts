@@ -2,10 +2,10 @@ import { ChildProcess } from 'child_process';
 import { remote } from './remote';
 import { store } from '../store';
 import { LaunchOptions } from 'playwright-core';
-import { reactive } from 'vue';
+import { h, reactive } from 'vue';
 import type { ScriptWorker } from '@ocs-desktop/app';
 import { Browser } from '../fs/browser';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 import EventEmitter from 'events';
 import { child_process } from './node';
 import { notify } from './notify';
@@ -71,6 +71,7 @@ export class Process extends EventEmitter {
 			onConsole?.(data.toString());
 		});
 		this.shell.stderr?.on('data', (data: any) => {
+			handleError(data.toString());
 			onConsole?.(data.toString());
 			remote.logger.call('error', String(data));
 			this.logs.push(`${this.browser.name} 错误`, data);
@@ -214,4 +215,36 @@ function createRemoteScriptWorker(shell: ChildProcess) {
 			shell.send({ event, args });
 		}
 	};
+}
+
+function handleError(msg: string) {
+	if (msg.includes('异常启动') && msg.includes('更换其他浏览器')) {
+		// 2025年Edge与playwright不兼容问题
+		if (
+			!store.render.state.read_record?.['edge-2025-open-error-issue'] &&
+			store.render.setting.launchOptions.executablePath.includes('msedge')
+		) {
+			const issue_link =
+				'https://docs.ocsjs.com/docs/issues/2025/#%E5%85%B3%E4%BA%8E%E8%BD%AF%E4%BB%B6%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8%E5%85%B3%E9%97%AD';
+			Modal.warning({
+				title: '提示',
+				maskClosable: false,
+				closable: true,
+				width: 600,
+				okText: '不再提示',
+				content: () =>
+					h('div', [
+						h(
+							'div',
+							'关于浏览器异常关闭，检测到您使用的是 Edge（微软） 浏览器，可能会导致无法启动浏览器，请更换谷歌浏览器进行使用！'
+						),
+						h('div', ['关于Edge异常关闭问题详情：', h('a', { href: issue_link }, issue_link)])
+					]),
+				onOk() {
+					store.render.state.read_record = store.render.state.read_record || {};
+					store.render.state.read_record['edge-2025-open-error-issue'] = true;
+				}
+			});
+		}
+	}
 }

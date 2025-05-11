@@ -78,6 +78,8 @@ export type WebStore = {
 		mini: boolean;
 		responsive: 'mini' | 'small';
 		height: number;
+		/** 已读的提示记录 */
+		read_record: Record<string, boolean>;
 	};
 };
 
@@ -141,7 +143,8 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 				setup: true,
 				mini: false,
 				responsive: 'small',
-				height: document.documentElement.clientHeight
+				height: document.documentElement.clientHeight,
+				read_record: {}
 			}
 		} as WebStore
 	}
