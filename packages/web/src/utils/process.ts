@@ -234,10 +234,11 @@ function handleError(msg: string) {
 				okText: '不再提示',
 				content: () =>
 					h('div', [
-						h(
-							'div',
-							'关于浏览器异常关闭，检测到您使用的是 Edge（微软） 浏览器，可能会导致无法启动浏览器，请更换谷歌浏览器进行使用！'
-						),
+						h('div', [
+							'关于浏览器异常关闭，检测到您使用的是 Edge（微软） 浏览器，可能会导致无法启动浏览器，解决方法：',
+							'1. 尝试重装OCS软件',
+							'2. 尝试更换谷歌浏览器进行使用！'
+						]),
 						h('div', ['关于Edge异常关闭问题详情：', h('a', { href: issue_link }, issue_link)])
 					]),
 				onOk() {
