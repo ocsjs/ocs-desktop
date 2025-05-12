@@ -14,8 +14,6 @@ import { RawPlaywrightScript } from '@ocs-desktop/app/lib/src/tasks/remote.regis
 import { resetSearch } from './entity';
 const { shell } = electron;
 
-const folder = store.paths.userDataDirsFolder;
-
 export function newFolder() {
 	// 关闭搜索模式
 	resetSearch();
@@ -40,6 +38,7 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 	// 关闭搜索模式
 	resetSearch();
 	const id = Entity.uuid();
+	const userDataDirsFolder = store.paths.userDataDirsFolder;
 
 	const path_sep = remote.path.get('sep');
 
@@ -53,7 +52,11 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 		renaming: true,
 		parent: currentFolder.value.uid,
 		histories: [{ action: '创建', time: Date.now() }],
-		cachePath: inBrowser ? '' : folder.endsWith(path_sep) ? folder + id : folder + path_sep + id,
+		cachePath: inBrowser
+			? ''
+			: userDataDirsFolder.endsWith(path_sep)
+			? userDataDirsFolder + id
+			: userDataDirsFolder + path_sep + id,
 		tags: [],
 		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
 	});

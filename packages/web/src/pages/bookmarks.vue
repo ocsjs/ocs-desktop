@@ -106,7 +106,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, reactive } from 'vue';
-import { getRemoteInfos } from '../utils';
+import { OCSApi } from '@ocs-desktop/common/src/api';
 import { Card } from '@arco-design/web-vue';
 import { BookmarkResource } from '../../../common/src/api';
 
@@ -126,7 +126,7 @@ window.setBookmarkLoadingState = (_state) => {
 };
 
 onMounted(async () => {
-	const infos = await getRemoteInfos();
+	const infos = await OCSApi.getInfos();
 
 	document.title = 'OCS - 导航页';
 
