@@ -202,11 +202,11 @@ onMounted(async () => {
 		remote.logger.call('info', 'render store init');
 		setAutoLaunch();
 		setAlwaysOnTop();
-		changeTheme();
+		changeTheme().catch(console.error);
 
 		/** 打开关于软件 */
 		if (store.render.state.first) {
-			about();
+			about().catch(console.error);
 		}
 
 		/** 监听屏幕变化 */
@@ -214,7 +214,7 @@ onMounted(async () => {
 		window.addEventListener('resize', onResize);
 
 		/** 获取最新远程通知 */
-		fetchRemoteNotify(false);
+		fetchRemoteNotify(false).catch(console.error);
 
 		/** 检测浏览器缓存大小，超过10GB则提示 */
 		remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
