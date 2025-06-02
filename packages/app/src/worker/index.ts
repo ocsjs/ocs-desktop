@@ -94,6 +94,24 @@ export class ScriptWorker {
 		/** 添加拓展启动参数 */
 		options.args = formatExtensionArguments(this.extensionPaths);
 		const start_time = Date.now();
+		let err = `浏览器可执行文件不存在：${options.executablePath}`;
+
+		/** 检测谷歌浏览器是否可用 */
+		if (!fs.existsSync(options.executablePath)) {
+			console.error(err);
+			return await this.close();
+		}
+		const folder = fs.readdirSync(path.dirname(options.executablePath)).find((f) => {
+			return fs.readdirSync(path.join(path.dirname(options.executablePath), f)).some((f) => f.endsWith('.manifest'));
+		});
+
+		if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
+			err =
+				'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装';
+			console.error(err);
+			return await this.close();
+		}
+
 		/** 启动浏览器 */
 		try {
 			await launchBrowser({
@@ -217,7 +235,7 @@ export class ScriptWorker {
 	}
 
 	error(...msg: any[]) {
-		console.log(bgRedBright(loggerPrefix()), ...msg);
+		console.error(bgRedBright(loggerPrefix()), ...msg);
 	}
 }
 
@@ -278,7 +296,7 @@ export async function launchBrowser({
 				executablePath,
 				ignoreHTTPSErrors: true,
 				acceptDownloads: true,
-				ignoreDefaultArgs: ['--disable-extensions'],
+				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation', '--no-sandbox'],
 				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args]
 			})
 			.then(async (browser) => {

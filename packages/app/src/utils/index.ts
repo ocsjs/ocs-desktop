@@ -111,3 +111,11 @@ export function moveWindowToTop() {
 export function getCurrentWebContents() {
 	return BrowserWindow.getAllWindows()[0].webContents;
 }
+
+export function sleep(ms: number) {
+	return new Promise((resolve) => {
+		setTimeout(() => {
+			resolve(true);
+		}, ms);
+	});
+}

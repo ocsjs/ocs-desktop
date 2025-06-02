@@ -77,10 +77,14 @@ async function onDiy() {
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');
 		} else {
-			await forceClearBrowserCache(
-				'检测到您更换浏览器路径，正在删除全部浏览器缓存，否则无法运行...',
-				store.paths.userDataDirsFolder
-			);
+			try {
+				await forceClearBrowserCache(
+					'检测到您更换浏览器路径，正在删除全部浏览器缓存，否则无法运行...',
+					store.paths.userDataDirsFolder
+				);
+			} catch (e) {
+				console.error(e);
+			}
 			Message.success('配置浏览器路径成功');
 		}
 	}

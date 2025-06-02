@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ValidBrowser } from '../interface';
 import os from 'os';
+import 'electron';
 
 // 获取可用浏览器路径
 export function getValidBrowsers(): ValidBrowser[] {
@@ -12,11 +13,15 @@ export function getValidBrowsers(): ValidBrowser[] {
 		case 'win32': {
 			return [
 				{
+					name: '软件内置-谷歌浏览器(Chrome)',
+					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
+				},
+				{
 					name: '微软浏览器(Microsoft Edge)',
 					path: resolveBrowserPath('Microsoft\\Edge\\Application\\msedge.exe')
 				},
 				{
-					name: '谷歌浏览器(chrome)',
+					name: '谷歌浏览器(Chrome)',
 					path: resolveBrowserPath('Google\\Chrome\\Application\\chrome.exe')
 				}
 			].filter((b) => b.path) as ValidBrowser[];
@@ -29,6 +34,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 
 function resolveBrowserPath(commonPath: string) {
 	return [
+		join(process.resourcesPath, commonPath),
 		// @ts-ignore
 		join(process.env.ProgramFiles, commonPath),
 		// @ts-ignore

@@ -7,6 +7,8 @@ package-lock.json
 
 **/*/.DS_Store
 
+.chrome-temp/
+
 # tsc
 
 lib/

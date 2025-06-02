@@ -3,6 +3,7 @@ const del = require('del');
 const zip = require('gulp-zip');
 const { execOut } = require('./utils');
 const { readFileSync } = require('fs');
+const chromeInstall = require('./chrome.install').default;
 const { version } = JSON.parse(readFileSync('../packages/app/package.json').toString());
 
 function buildWeb() {
@@ -23,4 +24,4 @@ function packResource() {
 		.pipe(dest('../packages/app/dist'));
 }
 
-exports.default = series(cleanOutput, buildWeb, buildApp, packResource);
+exports.default = series(cleanOutput, buildWeb, chromeInstall, buildApp, packResource);

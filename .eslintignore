@@ -7,3 +7,4 @@ public
 stats.html
 tests/*
 .md
+.chrome-temp/*

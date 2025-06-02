@@ -60,5 +60,14 @@
 				]
 			}
 		]
-	}
+	},
+	"extraResources": [
+		{
+			"from": "../../bin/",
+			"to": "bin",
+			"filter": [
+				"**/*.zip"
+			]
+		}
+	]
 }
