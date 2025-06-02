@@ -171,6 +171,7 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 		browsers.map((b) => b.uid)
 	);
 
+	await sleep(500);
 	modal.close();
 }
 
