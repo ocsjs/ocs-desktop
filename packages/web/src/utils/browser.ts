@@ -176,6 +176,7 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 		Message.error(String(err));
 	}
 
+	await sleep(500);
 	modal.close();
 }
 
