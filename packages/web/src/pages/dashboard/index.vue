@@ -243,7 +243,7 @@ import { store } from '../../store';
 import Tags from '../../components/Tags.vue';
 import { DesktopCapturerSource } from 'electron';
 import { remote } from '../../utils/remote';
-import { Modal, SelectOptionData } from '@arco-design/web-vue';
+import { Modal, SelectOptionData, Message } from '@arco-design/web-vue';
 import EntityOperator from '../../components/EntityOperator.vue';
 
 const state = reactive({
@@ -335,97 +335,104 @@ async function closeVideo() {
  * 刷新视频显示
  */
 async function refreshVideo() {
-	state.loading = true;
+	try {
+		state.loading = true;
 
-	// 将所有浏览器跳转至 webrtc 对接页面
+		// 将所有浏览器跳转至 webrtc 对接页面
 
-	await Promise.all(
-		processes.map(
-			(process) =>
-				new Promise<void>((resolve) => {
-					process.once('webrtc-page-loaded', resolve);
-					process.worker?.('gotoWebRTCPage');
-				})
-		)
-	);
-
-	const processStatus: Map<string, boolean> = new Map();
-	for (const process of processes) {
-		processStatus.set(process.uid, false);
-	}
-
-	let retryCount = 20;
-
-	async function loop() {
-		retryCount--;
-		console.log('looping', retryCount);
-
-		// 抓取屏幕
-		const sources: DesktopCapturerSource[] = await remote.desktopCapturer.call('getSources', { types: ['window'] });
-
-		// 未完成的进程抓取屏幕
 		await Promise.all(
-			processes
-				.filter((p) => processStatus.get(p.uid) === false)
-				.map((process) => {
-					return new Promise<void>((resolve, reject) => {
-						getBrowserVideo(process.uid, sources)
-							.then((res) => {
-								if (!res) {
-									return resolve();
-								}
-
-								process.stream = res.stream;
-
-								process.stream?.getTracks().forEach((track) => {
-									track.applyConstraints({
-										/** 尽量减低帧率不占用高内存 */
-										frameRate: store.app.video_frame_rate ?? 1,
-										/** 横纵比 */
-										aspectRatio:
-											store.render.dashboard.video.aspectRatio === 0
-												? undefined
-												: store.render.dashboard.video.aspectRatio
-									});
-								});
-								process.video = res.video;
-
-								// 挂载视频
-								mountVideo(process);
-
-								processStatus.set(process.uid, true);
-
-								resolve();
-							})
-							.catch((err) => {
-								console.error(err);
-								resolve();
-							});
-					});
-				})
+			processes.map(
+				(process) =>
+					new Promise<void>((resolve) => {
+						process.once('webrtc-page-loaded', resolve);
+						process.worker?.('gotoWebRTCPage');
+					})
+			)
 		);
 
-		// 已完成的进程关闭 webrtc 对接页面
-		await Promise.all(
-			processes
-				.filter((p) => processStatus.get(p.uid) === true)
-				.map(
-					(process) =>
-						new Promise<void>((resolve) => {
-							process.once('webrtc-page-closed', resolve);
-							process.worker?.('closeWebRTCPage');
-						})
-				)
-		);
-
-		// 如果还有未完成的进程，则等待 3s 后再次执行
-		if (processes.filter((p) => processStatus.get(p.uid) === false).length !== 0 && retryCount > 0) {
-			await new Promise((resolve) => setTimeout(resolve, 3000));
-			await loop();
+		const processStatus: Map<string, boolean> = new Map();
+		for (const process of processes) {
+			processStatus.set(process.uid, false);
 		}
-	}
 
-	await loop();
+		let retryCount = 20;
+
+		async function loop() {
+			retryCount--;
+			console.log('looping', retryCount);
+
+			// 抓取屏幕
+			const sources: DesktopCapturerSource[] = await remote.desktopCapturer.call('getSources', { types: ['window'] });
+
+			// 未完成的进程抓取屏幕
+			await Promise.all(
+				processes
+					.filter((p) => processStatus.get(p.uid) === false)
+					.map((process) => {
+						return new Promise<void>((resolve, reject) => {
+							getBrowserVideo(process.uid, sources)
+								.then((res) => {
+									if (!res) {
+										return resolve();
+									}
+
+									process.stream = res.stream;
+
+									process.stream?.getTracks().forEach((track) => {
+										track.applyConstraints({
+											/** 尽量减低帧率不占用高内存 */
+											frameRate: store.app.video_frame_rate ?? 1,
+											/** 横纵比 */
+											aspectRatio:
+												store.render.dashboard.video.aspectRatio === 0
+													? undefined
+													: store.render.dashboard.video.aspectRatio
+										});
+									});
+									process.video = res.video;
+
+									// 挂载视频
+									mountVideo(process);
+
+									processStatus.set(process.uid, true);
+
+									resolve();
+								})
+								.catch((err) => {
+									console.error(err);
+									resolve();
+								});
+						});
+					})
+			);
+
+			// 已完成的进程关闭 webrtc 对接页面
+			await Promise.all(
+				processes
+					.filter((p) => processStatus.get(p.uid) === true)
+					.map(
+						(process) =>
+							new Promise<void>((resolve) => {
+								process.once('webrtc-page-closed', resolve);
+								process.worker?.('closeWebRTCPage');
+							})
+					)
+			);
+
+			// 如果还有未完成的进程，则等待 3s 后再次执行
+			if (processes.filter((p) => processStatus.get(p.uid) === false).length !== 0 && retryCount > 0) {
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+				await loop();
+			}
+		}
+
+		await loop();
+	} catch (e) {
+		Modal.error({
+			content: '获取数据错误，请检查软件是否有录制应用权限：' + e,
+			title: '错误'
+		});
+	}
 
 	state.loading = false;
 }
