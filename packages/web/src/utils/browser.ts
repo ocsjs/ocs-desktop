@@ -166,10 +166,15 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 
 	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser');
 
-	await clearAllBrowserCaches(
-		userDataDirsFolder,
-		browsers.map((b) => b.uid)
-	);
+	try {
+		await clearAllBrowserCaches(
+			userDataDirsFolder,
+			browsers.map((b) => b.uid)
+		);
+	} catch (err) {
+		console.error(err);
+		Message.error(String(err));
+	}
 
 	modal.close();
 }

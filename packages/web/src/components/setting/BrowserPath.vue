@@ -2,7 +2,7 @@
 	<Description label="浏览器路径">
 		<a-dropdown trigger="hover">
 			<a-input
-				v-model="launchOptions.executablePath"
+				v-model="state.tempExecutablePath"
 				size="small"
 				placeholder="输入您的浏览器路径，否则无法正常启动，路径获取教程点击右侧问号查看。"
 				class="w-100"
@@ -37,7 +37,7 @@
 				<a-doption
 					v-for="item of state.validBrowsers"
 					:key="item.path"
-					@click="launchOptions.executablePath = item.path"
+					@click="() => onDiy(item.path)"
 				>
 					{{ item.name }}
 				</a-doption>
@@ -48,18 +48,20 @@
 
 <script setup lang="ts">
 import { store } from '../../store';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 import { remote } from '../../utils/remote';
 import Description from '../Description.vue';
 import Icon from '../Icon.vue';
 import { forceClearBrowserCache } from '../../utils/browser';
 import { onMounted, reactive } from 'vue';
 import { ValidBrowser } from '@ocs-desktop/common/lib/src/interface';
+import { processes } from '../../utils/process';
 
 const launchOptions = store.render.setting.launchOptions;
 
 const state = reactive({
-	validBrowsers: [] as ValidBrowser[]
+	validBrowsers: [] as ValidBrowser[],
+	tempExecutablePath: launchOptions.executablePath || ''
 });
 
 onMounted(async () => {
@@ -70,10 +72,19 @@ onMounted(async () => {
 /**
  * 监听自定义浏览器编辑
  */
-async function onDiy() {
-	if (launchOptions.executablePath) {
-		launchOptions.executablePath = launchOptions.executablePath.trim();
-		const exists = await remote.fs.call('existsSync', launchOptions.executablePath);
+async function onDiy(new_path: string) {
+	if (new_path) {
+		// 判断当前是否有浏览器在运行，如果有提示关闭
+		if (processes.length) {
+			return Modal.warning({
+				title: '警告',
+				content: '检测到有浏览器正在运行，请先关闭所有浏览器，否则无法修改浏览器路径。',
+				okText: '我知道了'
+			});
+		}
+
+		launchOptions.executablePath = new_path.trim();
+		const exists = await remote.fs.call('existsSync', new_path.trim());
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');
 		} else {
