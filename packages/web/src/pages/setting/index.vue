@@ -42,7 +42,10 @@
 						@close="
 							() => {
 								if (store.render.setting.ocs.openSync === false) {
-									Message.info('开启右侧的同步功能才可生效哦。');
+									Message.info({
+										content: '修改全局设置后，开启右侧的同步功能才可生效哦。',
+										duration: 10 * 1000
+									});
 								}
 							}
 						"

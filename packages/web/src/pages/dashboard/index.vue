@@ -243,7 +243,7 @@ import { store } from '../../store';
 import Tags from '../../components/Tags.vue';
 import { DesktopCapturerSource } from 'electron';
 import { remote } from '../../utils/remote';
-import { Modal, SelectOptionData, Message } from '@arco-design/web-vue';
+import { Modal, SelectOptionData } from '@arco-design/web-vue';
 import EntityOperator from '../../components/EntityOperator.vue';
 
 const state = reactive({

@@ -39,7 +39,7 @@
 					:key="item.path"
 					@click="() => onDiy(item.path)"
 				>
-					{{ item.name }}
+					{{ item.name }}{{ item.path === state.tempExecutablePath ? ' (当前)' : '' }}
 				</a-doption>
 			</template>
 		</a-dropdown>
@@ -57,11 +57,9 @@ import { onMounted, reactive } from 'vue';
 import { ValidBrowser } from '@ocs-desktop/common/lib/src/interface';
 import { processes } from '../../utils/process';
 
-const launchOptions = store.render.setting.launchOptions;
-
 const state = reactive({
 	validBrowsers: [] as ValidBrowser[],
-	tempExecutablePath: launchOptions.executablePath || ''
+	tempExecutablePath: store.render.setting.launchOptions.executablePath || ''
 });
 
 onMounted(async () => {
@@ -74,6 +72,9 @@ onMounted(async () => {
  */
 async function onDiy(new_path: string) {
 	if (new_path) {
+		if (new_path === store.render.setting.launchOptions.executablePath) {
+			return;
+		}
 		// 判断当前是否有浏览器在运行，如果有提示关闭
 		if (processes.length) {
 			return Modal.warning({
@@ -82,8 +83,8 @@ async function onDiy(new_path: string) {
 				okText: '我知道了'
 			});
 		}
-
-		launchOptions.executablePath = new_path.trim();
+		state.tempExecutablePath = new_path.trim();
+		store.render.setting.launchOptions.executablePath = new_path.trim();
 		const exists = await remote.fs.call('existsSync', new_path.trim());
 		if (!exists) {
 			Message.error('浏览器路径不存在, 请点击右侧按钮查看教程。');
