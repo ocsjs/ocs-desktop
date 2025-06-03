@@ -27,6 +27,8 @@ jobs:
           pnpm install
       - name: Build
         run: npm run build
+        env:
+          USE_HARD_LINKS: false
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
