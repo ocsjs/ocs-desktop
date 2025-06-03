@@ -49,9 +49,8 @@ function bootstrap() {
 				);
 
 				await app.whenReady();
-				await task('初始化谷歌浏览器', () => initChrome());
-
 				const window = createWindow();
+				await task('初始化谷歌浏览器', () => initChrome(window));
 
 				app.on('quit', (e) => {
 					e.preventDefault();

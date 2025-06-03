@@ -26,7 +26,16 @@
 				]
 			}
 		],
-		"requestedExecutionLevel": "highestAvailable"
+		"requestedExecutionLevel": "highestAvailable",
+		"extraResources": [
+			{
+				"from": "../../bin/",
+				"to": "bin",
+				"filter": [
+					"**/*.zip"
+				]
+			}
+		]
 	},
 	"mac": {
 		"icon": "public/favicon.icns",
@@ -60,14 +69,5 @@
 				]
 			}
 		]
-	},
-	"extraResources": [
-		{
-			"from": "../../bin/",
-			"to": "bin",
-			"filter": [
-				"**/*.zip"
-			]
-		}
-	]
+	}
 }
