@@ -1,7 +1,4 @@
-# customize
-
-pnpm-lock.yaml
-package-lock.json
+# customize 
 
 **/*.zip
 
