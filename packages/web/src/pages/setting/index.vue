@@ -114,6 +114,18 @@
 						@click="changeTheme"
 					/>
 				</Description>
+
+				<Description label="数据加密">
+					<a-tooltip
+						content="启用后，对软件数据（浏览器账号密码，备注，标签等信息）进行加密存储，防止其他软件读取和数据泄露，启用后需要重启软件才能生效"
+					>
+						<a-switch
+							v-model="store.app.data_encryption"
+							size="small"
+							@change="onChangeEncryption"
+						/>
+					</a-tooltip>
+				</Description>
 			</Card>
 
 			<Card title="其他设置">
@@ -189,7 +201,7 @@ import { reactive } from 'vue';
 import { changeTheme } from '../../utils';
 import Icon from '../../components/Icon.vue';
 import { forceClearBrowserCache } from '../../utils/browser';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 import { Folder } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 
@@ -218,6 +230,15 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 	}
 
 	await forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
+}
+
+function onChangeEncryption() {
+	if (store.app.data_encryption) {
+		Modal.info({
+			title: '提示',
+			content: '数据加密功能需要重启软件才能生效'
+		});
+	}
 }
 </script>
 

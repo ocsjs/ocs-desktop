@@ -107,6 +107,9 @@ const methods = {
 	decryptString: (text: string) => {
 		return safeStorage.decryptString(Buffer.from(text, 'base64'));
 	},
+	isEncryptionAvailable: () => {
+		return safeStorage.isEncryptionAvailable();
+	},
 	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[]
 };
 

@@ -42,12 +42,12 @@ export type WebStore = {
 	};
 	setting: {
 		browserType: 'diy' | 'local' | 'setup';
+		/** 是否显示侧边栏文字 */
+		showSideBarText: boolean;
 		/** 浏览器启动参数 */
 		launchOptions: {
 			executablePath: string;
 		};
-		/** 显示侧边栏文字 */
-		showSideBarText: boolean;
 		/** 当前的主题 */
 		theme: {
 			dark: boolean;

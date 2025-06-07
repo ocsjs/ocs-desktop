@@ -23,7 +23,8 @@ export const OriginalAppStore = {
 	},
 	/** 软件设置 */
 	app: {
-		video_frame_rate: 1
+		video_frame_rate: 1,
+		data_encryption: false
 	},
 	/** 窗口设置 */
 	window: {

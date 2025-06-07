@@ -237,17 +237,6 @@ onMounted(async () => {
 			}
 		);
 
-		/**
-		 * 监听 store 变化，自动存储
-		 */
-		watch(
-			store,
-			async (newStore) => {
-				saveStoreToLocal(newStore);
-			},
-			{ deep: true }
-		);
-
 		watch(() => store.window.autoLaunch, setAutoLaunch);
 		watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
 
@@ -273,14 +262,19 @@ async function saveStoreToLocal(_store: typeof store) {
 		if (inBrowser) {
 			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
 		} else {
-			const resolved_store: typeof store = JSON.parse(JSON.stringify(_store));
-			// 加密
-			Reflect.set(
-				resolved_store,
-				'render',
-				await remote.methods.call('encryptString', JSON.stringify(resolved_store.render))
-			);
-			await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolved_store)));
+			if (remote.methods.callSync('isEncryptionAvailable') && _store.app.data_encryption) {
+				const resolved_store: typeof store = JSON.parse(JSON.stringify(_store));
+				// 加密
+				Reflect.set(
+					resolved_store,
+					'render',
+					await remote.methods.call('encryptString', JSON.stringify(resolved_store.render))
+				);
+				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolved_store)));
+			} else {
+				// 不加密
+				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(_store)));
+			}
 		}
 	} catch (e) {
 		console.error(e);
