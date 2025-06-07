@@ -1,9 +1,9 @@
-## [2.8.3](https://github.com/ocsjs/ocs-desktop/compare/2.8.2...2.8.3) (2025-06-03)
+## [2.8.4](https://github.com/ocsjs/ocs-desktop/compare/2.8.3...2.8.4) (2025-06-07)
 
 
-### Performance Improvements
+### Features
 
-* 浏览器路径添加更明显的下拉框提示 ([ebffd24](https://github.com/ocsjs/ocs-desktop/commit/ebffd249550e5d3c9ab1faf31add5be2bea3c36e))
+* 对数据加密功能添加开启按钮，不强制加密 ([3215878](https://github.com/ocsjs/ocs-desktop/commit/3215878298ab70c6a94f3a87fd7d1a07c5dfc10b))
 
 
 
