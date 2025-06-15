@@ -1,9 +1,10 @@
-## [2.8.4](https://github.com/ocsjs/ocs-desktop/compare/2.8.3...2.8.4) (2025-06-07)
+## [2.8.5](https://github.com/ocsjs/ocs-desktop/compare/2.8.4...2.8.5) (2025-06-15)
 
 
-### Features
+### Bug Fixes
 
-* 对数据加密功能添加开启按钮，不强制加密 ([3215878](https://github.com/ocsjs/ocs-desktop/commit/3215878298ab70c6a94f3a87fd7d1a07c5dfc10b))
+* 添加 lock 文本进行版本控制 ([dde388f](https://github.com/ocsjs/ocs-desktop/commit/dde388fc4f186aeab0f3293259148cca790597f8))
+* **script:** 修复存储监听变化自动保存功能 ([498e444](https://github.com/ocsjs/ocs-desktop/commit/498e44444e3cd5cded2de653f2c81e2c1e39dccb))
 
 
 
