@@ -237,6 +237,21 @@ onMounted(async () => {
 			}
 		);
 
+		/**
+		 * 监听 store 变化，自动存储，不要每个变化都存储，MAC版本中每次都会触发权限获取才能存储，可能会导致严重卡顿
+		 */
+		watch(
+			[
+				() => store.render.setting.ocs.openSync,
+				() => store.render.setting.launchOptions.executablePath,
+				() => store.render.setting.browser.enableDialog,
+				() => store.render.setting.browser.forceUpdateScript
+			],
+			async () => {
+				saveStoreToLocal(store);
+			}
+		);
+
 		watch(() => store.window.autoLaunch, setAutoLaunch);
 		watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
 
