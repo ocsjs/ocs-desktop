@@ -387,7 +387,7 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 			try {
 				page.goto(url).catch(() => {});
 			} catch {}
-			page.close();
+			sleep(1000).then(() => page.close());
 		}
 	})();
 
@@ -405,7 +405,11 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 					if (config?.force_update_script) {
 						btn?.click();
 					} else {
-						if (['更新', '安装', '添加'].some((text) => (btn?.textContent || '').trim() === text)) {
+						if (
+							['更新', '安装', '添加', 'install', 'update', 'add'].some(
+								(text) => (btn?.textContent || '').trim().toLocaleLowerCase() === text.trim().toLocaleLowerCase()
+							)
+						) {
 							btn?.click();
 						} else {
 							return false;
@@ -417,7 +421,7 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 				}, config);
 
 				if (!closed) {
-					await installPage.close();
+					await sleep(1000).then(() => installPage.close());
 				}
 
 				if (installPage.isClosed()) {
@@ -474,7 +478,7 @@ async function setupUserScripts(opts: {
 	const warn: string[] = [];
 	// 安装用户脚本
 	if (userscripts.length) {
-		await step('正在安装用户脚本。。。');
+		await step('正在安装用户脚本...（如长时间未完成请尝试重启浏览器 ）');
 		// 载入本地脚本
 		try {
 			await initScripts(userscripts, browser, opts.config);
