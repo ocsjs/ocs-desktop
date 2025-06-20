@@ -405,7 +405,7 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 					if (config?.force_update_script) {
 						btn?.click();
 					} else {
-						if (['更新', '安装', '添加'].some((text) => (btn?.textContent || '').trim() === text)) {
+						if (['更新', '安装', '添加', 'Update', 'Install', 'Add'].some((text) => (btn?.textContent || '').trim() === text)) {
 							btn?.click();
 						} else {
 							return false;
