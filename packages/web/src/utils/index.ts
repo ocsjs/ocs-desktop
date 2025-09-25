@@ -7,6 +7,7 @@ import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
 import { OCSApi } from '@ocs-desktop/common/src/api';
+import axios from 'axios';
 
 const { ipcRenderer } = electron;
 
@@ -128,6 +129,26 @@ export async function fetchRemoteNotify(readAll: boolean) {
 		}
 	} catch (e) {
 		Message.error('最新通知获取失败：' + e);
+	}
+}
+
+/**
+ * 获取远程语言文件
+ */
+export async function fetchRemoteLangs() {
+	try {
+		const infos = await axios.get('https://cdn.ocsjs.com/api/ocs-app-langs.json?t=' + Date.now(), {
+			headers: {
+				'content-type': 'application/json'
+			}
+		});
+
+		try {
+			JSON.parse(JSON.stringify(infos.data));
+			store.render.langs = infos.data;
+		} catch {}
+	} catch (e) {
+		Message.error('获取语言文件失败：' + e);
 	}
 }
 

@@ -70,6 +70,8 @@ export type WebStore = {
 			forceUpdateScript: boolean;
 		};
 	};
+
+	langs: Record<string, string>;
 	state: {
 		/** 是否第一次打开 */
 		first: boolean;
@@ -138,6 +140,7 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 					forceUpdateScript: false
 				}
 			},
+			langs: {},
 			state: {
 				first: true,
 				setup: true,

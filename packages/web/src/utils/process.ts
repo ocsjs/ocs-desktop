@@ -122,7 +122,8 @@ export class Process extends EventEmitter {
 			config: {
 				enable_dialog: store.render.setting.browser.enableDialog,
 				force_update_script: store.render.setting.browser.forceUpdateScript
-			}
+			},
+			langs: store.render.langs as any
 		});
 	}
 

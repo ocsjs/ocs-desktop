@@ -127,7 +127,7 @@ import { RouteRecordRaw, useRouter } from 'vue-router';
 import Title from '../components/Title.vue';
 import { router, routes, CustomRouteType } from '../route';
 import { store } from '../store';
-import { about, changeTheme, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch } from '../utils';
+import { about, changeTheme, fetchRemoteLangs, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch } from '../utils';
 import { closeAllBrowser, showClearBrowserCachesModal } from '../utils/browser';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
@@ -142,6 +142,7 @@ import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
 import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
+import debounce from 'lodash/debounce';
 const { ipcRenderer } = electron;
 
 const version = ref('');
@@ -216,6 +217,8 @@ onMounted(async () => {
 		/** 获取最新远程通知 */
 		fetchRemoteNotify(false).catch(console.error);
 
+		fetchRemoteLangs().catch(console.error);
+
 		/** 检测浏览器缓存大小，超过10GB则提示 */
 		remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
 			if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
@@ -250,6 +253,15 @@ onMounted(async () => {
 			async () => {
 				saveStoreToLocal(store);
 			}
+		);
+
+		// 使用防抖，避免频繁触发存储
+		watch(
+			[() => store.render],
+			debounce(() => {
+				saveStoreToLocal(store).catch(console.error);
+			}, 1000),
+			{ deep: true }
 		);
 
 		watch(() => store.window.autoLaunch, setAutoLaunch);

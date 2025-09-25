@@ -22,6 +22,11 @@ type BrowserConfig = {
 	force_update_script?: boolean;
 };
 
+interface Langs {
+	error_when_browser_version_too_high: string;
+	error_when_browser_launch_failed_too_fast: string;
+}
+
 /** 脚本工作线程 */
 export class ScriptWorker {
 	uid: string = '';
@@ -36,14 +41,15 @@ export class ScriptWorker {
 	/** 浏览器中软件设置的名字 */
 	browserInfo?: BrowserInfo;
 	config?: BrowserConfig;
-
+	langs?: Langs;
 	init({
 		store,
 		uid,
 		cachePath,
 		playwrightScripts,
 		browserInfo,
-		config
+		config,
+		langs
 	}: {
 		store: AppStore;
 		uid: string;
@@ -51,10 +57,12 @@ export class ScriptWorker {
 		playwrightScripts: PS[];
 		browserInfo: BrowserInfo;
 		config: BrowserConfig;
+		langs: Langs;
 	}) {
 		this.debug('正在初始化进程...');
 
 		this.store = store;
+		this.langs = langs;
 
 		this.uid = uid;
 		// 拓展文件夹路径
@@ -109,6 +117,7 @@ export class ScriptWorker {
 			});
 			if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
 				err =
+					this.langs?.error_when_browser_version_too_high ||
 					'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装';
 				console.error(err);
 				return await this.close();
@@ -162,7 +171,11 @@ export class ScriptWorker {
 				) {
 					// 5秒内异常关闭，可能是浏览器问题
 					if (Date.now() - start_time < 5 * 1000) {
-						console.error('异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器', err.message);
+						console.error(
+							this.langs?.error_when_browser_launch_failed_too_fast ??
+								'异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器',
+							err.message
+						);
 					} else {
 						console.error('异常关闭，请尝试重启浏览器。', err.message);
 					}

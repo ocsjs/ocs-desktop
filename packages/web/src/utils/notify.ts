@@ -10,6 +10,7 @@ interface NotifyOptions {
 	btn?: VNodeChild | undefined;
 	copy?: boolean;
 	close?: boolean;
+	max_length?: number;
 }
 
 export function notify(title: string, msg: any, key: string, options?: NotifyOptions) {
@@ -17,7 +18,11 @@ export function notify(title: string, msg: any, key: string, options?: NotifyOpt
 		id: key,
 		title,
 		closable: true,
-		content: () => h('span', { title: msg?.stack || msg?.message || msg || '' }, StringUtils.max(String(msg), 100)),
+		content: () =>
+			h('div', {
+				title: msg?.stack || msg?.message || msg || '',
+				innerHTML: StringUtils.max(String(msg), options?.max_length ?? 999)
+			}),
 		duration: options?.duration ?? (options?.type === 'error' ? 6000 : 3000),
 		footer: () =>
 			options?.btn ||
