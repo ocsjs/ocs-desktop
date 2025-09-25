@@ -3,7 +3,7 @@ name: Build/release
 on:
   push:
     tags:
-      - "*"
+      - '*'
 
 jobs:
   release:
@@ -20,7 +20,7 @@ jobs:
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: '22'
       - name: Npm Install
         run: |
           npm i pnpm -g &&
@@ -33,5 +33,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          body_path: "./CHANGELOG_CURRENT.md"
-          files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
+          body_path: './CHANGELOG_CURRENT.md'
+          files: './packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm'
