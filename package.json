@@ -64,5 +64,8 @@
 		"commitizen": {
 			"path": "./node_modules/cz-conventional-changelog"
 		}
+	},
+	"dependencies": {
+		"@types/minimatch": "^6.0.0"
 	}
 }
