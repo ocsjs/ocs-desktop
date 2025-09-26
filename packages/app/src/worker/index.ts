@@ -368,9 +368,6 @@ export async function launchBrowser({
 				// 处理浏览器初始
 				handleBrowserInit(browser, { enable_dialog: config?.enable_dialog, userDataDir });
 
-				// 监听网络请求
-				browserNetworkRoute(authToken, browser);
-
 				try {
 					/**
 					 * 显示步骤提示
@@ -417,6 +414,10 @@ export async function launchBrowser({
 
 					// 安装用户脚本
 					const warn = await setupUserScripts({ browser, userscripts, step, config });
+
+					// 监听网络请求
+					browserNetworkRoute(authToken, browser);
+
 					// 运行自动化脚本
 					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
 
@@ -634,12 +635,12 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 	browser.route(/ocs-script-actions/, async (route) => {
 		const req = route.request();
 		if (req.method().toLocaleUpperCase() !== 'POST') {
-			return await route.continue();
+			return;
 		}
 		const headerValue = await req.headerValue('auth-token');
 
 		if (headerValue !== authToken) {
-			return await route.continue();
+			return;
 		}
 
 		const { page: targetPageUrl, property, args }: { page: string; property: string; args: any[] } = req.postDataJSON();
@@ -647,12 +648,12 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 		try {
 			const page = browser?.pages().find((p) => p.url().includes(targetPageUrl));
 			if (!page) {
-				return await route.continue();
+				return;
 			}
 
 			const targetFunction: Function = _get(page, property);
 			if (typeof targetFunction !== 'function') {
-				return await route.continue();
+				return;
 			}
 
 			if (property === 'waitForResponse' || property === 'waitForRequest') {
