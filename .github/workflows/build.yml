@@ -20,7 +20,7 @@ jobs:
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '18'
       - name: Npm Install
         run: |
           npm i pnpm -g &&
