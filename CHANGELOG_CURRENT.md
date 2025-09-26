@@ -1,10 +1,14 @@
-## [2.8.12](https://github.com/ocsjs/ocs-desktop/compare/2.8.10...2.8.12) (2025-09-26)
+## [2.8.14](https://github.com/ocsjs/ocs-desktop/compare/2.8.12...2.8.14) (2025-09-26)
 
 
 ### Bug Fixes
 
-* 添加拓展版本检测，版本低于MV2强制退出 ([608e482](https://github.com/ocsjs/ocs-desktop/commit/608e482ace23c914b14751b175da3e9459fb235f))
-* 修复拓展在开启开发者后无法使用的BUG，优化插件安装流程 ([b7b329a](https://github.com/ocsjs/ocs-desktop/commit/b7b329a41fb563f27d7a01439a6f03a659737992))
+* 修复导航页全部图标无法显示的BUG ([fa53c26](https://github.com/ocsjs/ocs-desktop/commit/fa53c26135efeed7b25f2ab5617f29b972dc9e59))
+
+
+### Features
+
+* 添加批量删除浏览器标签功能 ([4ab79a1](https://github.com/ocsjs/ocs-desktop/commit/4ab79a1dc34c6887efd6134580ef3d30e3b069c9))
 
 
 
