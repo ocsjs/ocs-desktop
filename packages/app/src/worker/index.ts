@@ -154,7 +154,13 @@ export class ScriptWorker {
 					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks`
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
-				closeableExtensionHomepages: ['docs.scriptcat.org', 'tampermonkey.net/index.php'],
+				closeableExtensionHomepages: [
+					'docs.scriptcat.org',
+					'docs.scriptcat.org/docs/change',
+					'docs.scriptcat.org/docs/use/open-dev',
+					'tampermonkey.net/index.php',
+					'tampermonkey.net/changelog.php'
+				],
 				authToken: this.store?.server.authToken || '',
 				browserInfo: this.browserInfo,
 				uid: this.uid,
@@ -358,11 +364,12 @@ export async function launchBrowser({
 					// 加载本地导航页
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');
 
-					// 关闭拓展加载时弹出的首页
-					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
-
 					// 打开开发者模式
 					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
+
+					// 必须先打开开发者模式，才能关闭额外拓展页，否则打开开发者模式可能会重启插件，导致出现新的额外页面
+					// 关闭拓展加载时弹出的首页
+					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 
 					// 安装用户脚本
 					const warn = await setupUserScripts({ browser, userscripts, step, config });
@@ -398,9 +405,8 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 		for (const url of urls) {
 			const page = await browser.newPage();
 			try {
-				page.goto(url).catch(() => {});
+				await Promise.race([page.goto(url).catch(() => {}), sleep(3 * 1000).then(() => page.close())]);
 			} catch {}
-			sleep(1000).then(() => page.close());
 		}
 	})();
 
@@ -420,7 +426,9 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 					} else {
 						if (
 							['更新', '安装', '添加', 'install', 'update', 'add'].some(
-								(text) => (btn?.textContent || '').trim().toLocaleLowerCase() === text.trim().toLocaleLowerCase()
+								(text) =>
+									(btn?.textContent || btn?.getAttribute('value') || '').trim().toLocaleLowerCase() ===
+									text.trim().toLocaleLowerCase()
 							)
 						) {
 							btn?.click();
@@ -735,10 +743,17 @@ async function openExtensionDeveloperMode(browser: BrowserContext, edge: boolean
 			const element = await page.waitForSelector('#devMode', {
 				timeout: 1000
 			});
+			// 如果没有开启开发者模式
 			if (
 				await element.evaluate<boolean, HTMLDivElement>((el) => el.getAttribute('aria-pressed')?.toString() === 'false')
 			) {
 				await element.click();
+				// 重新加载拓展，否则需要重启浏览器才能使用
+				const extensions = await page.$$('[id="dev-reload-button"]');
+				for (const ext of extensions) {
+					await ext.click();
+					await page.waitForTimeout(200);
+				}
 			}
 		}
 	} catch {}
