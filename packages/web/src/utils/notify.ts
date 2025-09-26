@@ -18,6 +18,7 @@ export function notify(title: string, msg: any, key: string, options?: NotifyOpt
 		id: key,
 		title,
 		closable: true,
+		style: { width: '400px' },
 		content: () =>
 			h('div', {
 				title: msg?.stack || msg?.message || msg || '',

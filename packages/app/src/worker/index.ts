@@ -23,8 +23,9 @@ type BrowserConfig = {
 };
 
 interface Langs {
-	error_when_browser_version_too_high: string;
-	error_when_browser_launch_failed_too_fast: string;
+	error_when_browser_version_too_high?: string;
+	error_when_browser_launch_failed_too_fast?: string;
+	error_when_extension_version_too_low?: string;
 }
 
 /** 脚本工作线程 */
@@ -42,6 +43,15 @@ export class ScriptWorker {
 	browserInfo?: BrowserInfo;
 	config?: BrowserConfig;
 	langs?: Langs;
+	lang: <T extends string>(key: keyof Langs, def?: T, replace?: Record<string, string>) => string | T;
+
+	constructor() {
+		this.lang = <T extends string>(key: keyof Langs, def?: T, replace?: Record<string, string>): string | T => {
+			const result = _get(this.langs, key, def);
+			return (replace ? result?.replace(/\{\{(\w+)\}\}/g, (_, k) => replace[k] || '') : result) as string | T;
+		};
+	}
+
 	init({
 		store,
 		uid,
@@ -69,6 +79,7 @@ export class ScriptWorker {
 		this.extensionPaths = fs
 			.readdirSync(store.paths.extensionsFolder)
 			.filter((f) => f !== '.DS_Store')
+			.filter((f) => !f.endsWith('.zip'))
 			.map((file) => path.join(store.paths.extensionsFolder, file));
 
 		// 自动化脚本
@@ -104,7 +115,7 @@ export class ScriptWorker {
 		const start_time = Date.now();
 		let err = `浏览器可执行文件不存在：${options.executablePath}`;
 
-		/** 检测谷歌浏览器是否可用 */
+		/** =============================== 检测谷歌浏览器是否可用 =============================== */
 		if (!fs.existsSync(options.executablePath)) {
 			console.error(err);
 			return await this.close();
@@ -116,13 +127,42 @@ export class ScriptWorker {
 				return fs.statSync(file).isDirectory() && fs.readdirSync(file).some((f) => f.endsWith('.manifest'));
 			});
 			if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
-				err =
-					this.langs?.error_when_browser_version_too_high ||
-					'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装';
+				err = this.lang(
+					'error_when_browser_version_too_high',
+					'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
+				);
 				console.error(err);
 				return await this.close();
 			}
 		}
+
+		/** =============================== 检测拓展是否可用 =============================== */
+		for (const extensionPath of this.extensionPaths) {
+			if (!fs.existsSync(extensionPath)) {
+				console.error(`拓展不存在：${extensionPath}`);
+				return await this.close();
+			}
+
+			if (!fs.existsSync(path.join(extensionPath, 'manifest.json'))) {
+				console.error(`拓展格式不正确，缺少manifest.json：${extensionPath}`);
+				return await this.close();
+			}
+
+			const manifest = JSON.parse(fs.readFileSync(path.join(extensionPath, 'manifest.json'), 'utf-8'));
+			// 检查是否为 MV2 拓展，如果是则报错
+			if (_get(manifest, 'manifest_version', 2) < 3) {
+				const name = getExtensionName(extensionPath);
+				console.error(
+					this.lang(
+						'error_when_extension_version_too_low',
+						`该拓展版本较低：{{name}}，请尝试前往软件左侧-应用中心-卸载并重新安装。`,
+						{ name }
+					)
+				);
+				return await this.close();
+			}
+		}
+
 		/** 启动浏览器 */
 		try {
 			await launchBrowser({
@@ -178,19 +218,23 @@ export class ScriptWorker {
 					// 5秒内异常关闭，可能是浏览器问题
 					if (Date.now() - start_time < 5 * 1000) {
 						console.error(
-							this.langs?.error_when_browser_launch_failed_too_fast ??
+							this.lang(
+								'error_when_browser_launch_failed_too_fast',
 								'异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器',
-							err.message
+								{
+									error: err.message.substring(0, 500)
+								}
+							)
 						);
 					} else {
-						console.error('异常关闭，请尝试重启浏览器。', err.message);
+						console.error('异常关闭，请尝试重启浏览器。', err.message.substring(0, 500));
 					}
 					this.close();
 				} else {
-					console.error('错误 : ', err.message);
+					console.error('错误 : ', err.message.substring(0, 500));
 				}
 			} else {
-				console.error('未知错误 : ', err);
+				console.error('未知错误 : ', String(err).substring(0, 500));
 			}
 		}
 
@@ -760,4 +804,11 @@ async function openExtensionDeveloperMode(browser: BrowserContext, edge: boolean
 	await page.waitForTimeout(500);
 	console.log('开发者模式已打开');
 	await page.close();
+}
+function getExtensionName(filepath: string) {
+	return filepath.toLocaleLowerCase().includes('tampermonkey')
+		? '油猴'
+		: filepath.toLocaleLowerCase().includes('scriptcat')
+		? '脚本猫'
+		: path.basename(filepath);
 }
