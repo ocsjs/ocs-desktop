@@ -19,11 +19,7 @@
 		"target": [
 			{
 				"target": "nsis",
-				"arch": [
-					"x64",
-					"ia32",
-					"arm64"
-				]
+				"arch": ["x64", "ia32", "arm64"]
 			}
 		],
 		"requestedExecutionLevel": "highestAvailable",
@@ -31,9 +27,7 @@
 			{
 				"from": "../../bin/",
 				"to": "bin",
-				"filter": [
-					"**/*.zip"
-				]
+				"filter": ["**/*.zip"]
 			}
 		]
 	},
@@ -43,17 +37,18 @@
 		"target": [
 			{
 				"target": "zip",
-				"arch": [
-					"x64",
-					"arm64"
-				]
+				"arch": ["x64", "arm64"]
 			},
 			{
 				"target": "dmg",
-				"arch": [
-					"x64",
-					"arm64"
-				]
+				"arch": ["x64", "arm64"]
+			}
+		],
+		"extraResources": [
+			{
+				"from": "../../bin/",
+				"to": "bin",
+				"filter": ["**/*.zip"]
 			}
 		]
 	},
@@ -63,10 +58,14 @@
 		"target": [
 			{
 				"target": "AppImage",
-				"arch": [
-					"x64",
-					"arm64"
-				]
+				"arch": ["x64", "arm64"]
+			}
+		],
+		"extraResources": [
+			{
+				"from": "../../bin/",
+				"to": "bin",
+				"filter": ["**/*.zip"]
 			}
 		]
 	}
