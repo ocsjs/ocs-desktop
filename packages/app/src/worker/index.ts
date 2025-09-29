@@ -26,6 +26,7 @@ interface Langs {
 	error_when_browser_version_too_high?: string;
 	error_when_browser_launch_failed_too_fast?: string;
 	error_when_extension_version_too_low?: string;
+	error_when_playwright_selector_timeout?: string;
 }
 
 /** 脚本工作线程 */
@@ -42,15 +43,21 @@ export class ScriptWorker {
 	/** 浏览器中软件设置的名字 */
 	browserInfo?: BrowserInfo;
 	config?: BrowserConfig;
-	langs?: Langs;
-	lang: <T extends string>(key: keyof Langs, def?: T, replace?: Record<string, string>) => string | T;
-
-	constructor() {
-		this.lang = <T extends string>(key: keyof Langs, def?: T, replace?: Record<string, string>): string | T => {
-			const result = _get(this.langs, key, def);
-			return (replace ? result?.replace(/\{\{(\w+)\}\}/g, (_, k) => replace[k] || '') : result) as string | T;
-		};
-	}
+	static langs?: Langs;
+	static lang: (key: keyof Langs, def?: string, replace?: Record<string, string>) => string = (key, def, replace) => {
+		const result = _get(ScriptWorker.langs, key, def);
+		return (replace ? result?.replace(/\{\{(\w+)\}\}/g, (_, k) => replace[k] || '') : result) as string;
+	};
+	static getTransformedErrorMessage = (error: string, extra_placeholder?: Record<string, string>) => {
+		if (error.match(/Timeout .+ exceeded/)) {
+			return ScriptWorker.lang(
+				'error_when_playwright_selector_timeout',
+				'页面元素查找超时，请检查元素是否存在/可见或选择器是否正确。',
+				{ error: error, ...extra_placeholder }
+			);
+		}
+		return error;
+	};
 
 	init({
 		store,
@@ -72,7 +79,7 @@ export class ScriptWorker {
 		this.debug('正在初始化进程...');
 
 		this.store = store;
-		this.langs = langs;
+		ScriptWorker.langs = langs;
 
 		this.uid = uid;
 		// 拓展文件夹路径
@@ -127,7 +134,7 @@ export class ScriptWorker {
 				return fs.statSync(file).isDirectory() && fs.readdirSync(file).some((f) => f.endsWith('.manifest'));
 			});
 			if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
-				err = this.lang(
+				err = ScriptWorker.lang(
 					'error_when_browser_version_too_high',
 					'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
 				);
@@ -153,7 +160,7 @@ export class ScriptWorker {
 			if (_get(manifest, 'manifest_version', 2) < 3) {
 				const name = getExtensionName(extensionPath);
 				console.error(
-					this.lang(
+					ScriptWorker.lang(
 						'error_when_extension_version_too_low',
 						`该拓展版本较低：{{name}}，请尝试前往软件左侧-应用中心-卸载并重新安装。`,
 						{ name }
@@ -218,7 +225,7 @@ export class ScriptWorker {
 					// 5秒内异常关闭，可能是浏览器问题
 					if (Date.now() - start_time < 5 * 1000) {
 						console.error(
-							this.lang(
+							ScriptWorker.lang(
 								'error_when_browser_launch_failed_too_fast',
 								'异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器',
 								{
@@ -550,7 +557,7 @@ async function setupUserScripts(opts: {
 			await initScripts(userscripts, browser, opts.config);
 		} catch (e) {
 			// @ts-ignore
-			console.error(e);
+			console.error('脚本安装失败：', e.message);
 			// await html('脚本载入失败，请手动更新，或者忽略。' + e.message);
 		}
 	} else {
@@ -579,8 +586,10 @@ async function runPlaywrightScripts(opts: {
 
 			for (const script of PlaywrightScripts) {
 				if (script.name === ps.name) {
-					script.on('script-data', console.log);
-					script.on('script-error', console.error);
+					script.on('script-data', (...msg) => console.log(...msg));
+					script.on('script-error', (...msg) =>
+						console.error('自动化脚本错误：', ...msg.map((m) => ScriptWorker.getTransformedErrorMessage(m)))
+					);
 					try {
 						await script.run(await browser.newPage(), configs, {
 							ocrApiUrl: `http://localhost:${serverPort}/ocr`,
@@ -589,7 +598,10 @@ async function runPlaywrightScripts(opts: {
 							detTargetKey: 'det_target'
 						});
 					} catch (err) {
-						console.error(err);
+						console.error(
+							'自动化脚本错误：',
+							ScriptWorker.getTransformedErrorMessage(err instanceof Error ? err.message : String(err))
+						);
 					}
 					break;
 				}
@@ -702,8 +714,15 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 			}
 		} catch (err) {
 			await route.continue();
-			console.error(err);
-			console.error('软件辅助执行失败：', { targetPageUrl, property, args });
+			console.error(
+				'脚本软件辅助失败：',
+				ScriptWorker.getTransformedErrorMessage(err instanceof Error ? err.message : String(err), {
+					url: targetPageUrl,
+					property:
+						property === 'click' ? '点击' : property === 'fill' ? '填写' : property === 'check' ? '选中' : property,
+					args: JSON.stringify(args)
+				})
+			);
 		}
 	});
 }
