@@ -1,6 +1,6 @@
 import { ChildProcess } from 'child_process';
 import { remote } from './remote';
-import { store } from '../store';
+import { lang, store } from '../store';
 import { LaunchOptions } from 'playwright-core';
 import { h, reactive } from 'vue';
 import type { ScriptWorker } from '@ocs-desktop/app';
@@ -144,11 +144,20 @@ export class Process extends EventEmitter {
 							if (!s.url.startsWith('http')) {
 								const res = await remote.fs.call('existsSync', s.url);
 								if (!res) {
-									Message.error({
-										content: `本地脚本 ${s.info?.name}：(${s.url})\n不存在，请检查脚本路径`,
-										duration: 10 * 1000
-									});
-									return;
+									notify(
+										'本地脚本不存在',
+										lang(
+											'error_when_script_not_found',
+											`本地脚本 ${s.info?.name}：(${s.url})\n不存在，请检查脚本路径`,
+											{ name: s.info?.name || '', url: s.url }
+										),
+										'process_launch_error_' + s.url,
+										{
+											duration: 60 * 1000,
+											type: 'warning',
+											copy: true
+										}
+									);
 								}
 							}
 						}
