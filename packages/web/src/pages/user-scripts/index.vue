@@ -370,14 +370,11 @@ import { store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
 import Icon from '../../components/Icon.vue';
 import { addScriptFromFile, addScriptFromUrl, openScriptSource } from '../../utils/user-scripts';
-import { electron } from '../../utils/node';
 import { Input, Modal, Message } from '@arco-design/web-vue';
 import ScriptList from '../../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../../types/user.script';
 import CommonSelector from '../../components/CommonSelector.vue';
 import { remote } from '../../utils/remote';
-
-const { shell } = electron;
 
 /** 搜索列表 */
 const engineSearchList = ref<
