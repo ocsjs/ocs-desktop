@@ -1,9 +1,9 @@
 <template>
 	<div class="p-3">
-		<div class="text-secondary markdown mb-2">
-			以下是官方提供的资源软件，你可以安装以下使你的浏览器具备更多的功能。<br />
-			<code>用户脚本管理器</code> 只能安装一个，否则可能造成脚本之间的冲突。
-		</div>
+		<div
+			class="text-secondary markdown mb-2"
+			v-html="lang('notice_resources_page_usage', '')"
+		></div>
 
 		<div class="mb-2">
 			<a-space>
@@ -136,7 +136,7 @@ import { ref, reactive, onMounted, h } from 'vue';
 import { OCSApi, ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
-import { store } from '../../store/index';
+import { lang, store } from '../../store/index';
 import { Message, Modal } from '@arco-design/web-vue';
 import { child_process, electron } from '../../utils/node';
 import { remote } from '../../utils/remote';

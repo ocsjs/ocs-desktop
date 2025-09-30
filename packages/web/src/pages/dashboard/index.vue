@@ -1,11 +1,9 @@
 <template>
 	<div class="col-12 p-2 m-auto">
-		<div class="text-secondary markdown mb-2">
-			<div>
-				浏览器多开的数量取决于电脑的配置，自行根据实际情况尝试。建议全部浏览器加载完成后再开启监控。<br />
-				监控需要占用内存和CPU，配置不好的建议不要监控。
-			</div>
-		</div>
+		<div
+			class="text-secondary markdown mb-2"
+			v-html="lang('notice_resources_page_usage', '')"
+		></div>
 
 		<div class="d-flex mb-1 align-items-center">
 			<a-space :size="0">
@@ -238,7 +236,7 @@
 import { onDeactivated, watch, reactive, computed, onActivated, onMounted } from 'vue';
 import { Process, processes } from '../../utils/process';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
-import { store } from '../../store';
+import { lang, store } from '../../store';
 
 import Tags from '../../components/Tags.vue';
 import { DesktopCapturerSource } from 'electron';

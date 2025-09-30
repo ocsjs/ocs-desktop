@@ -186,8 +186,8 @@ export const openedFiles = reactive(new Map<string, File>());
 
 export function lang(key: string, def?: string, params?: Record<string, any>) {
 	let text = store.render.langs[key] || key;
-	if (!text && def) {
-		text = def;
+	if (!text) {
+		text = def || '';
 	}
 	if (params) {
 		Object.keys(params).forEach((k) => {

@@ -8,13 +8,10 @@
 				key="web"
 				title="脚本列表"
 			>
-				<div class="text-secondary markdown mb-2">
-					在<code>浏览器列表</code>中启动浏览器后将会 <code>自动</code>
-					<code>加载/更新</code>
-					以下脚本到浏览器，如果不想开启自动加载/更新，可以关闭。<br />
-					如果想 <code>彻底删除</code>浏览器里面的脚本，请打开相应的浏览器，
-					在右上角浏览器拓展中找到脚本管理器，然后进入管理器中删除
-				</div>
+				<div
+					class="text-secondary markdown mb-2"
+					v-html="lang('notice_user_scripts_page_usage', '')"
+				></div>
 
 				<div class="mb-2">
 					<a-space>
@@ -366,7 +363,7 @@
 <script setup lang="ts">
 import { ref, h, reactive, onMounted } from 'vue';
 import { config } from '../../config';
-import { store, StoreUserScript } from '../../store';
+import { lang, store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
 import Icon from '../../components/Icon.vue';
 import { addScriptFromFile, addScriptFromUrl, openScriptSource } from '../../utils/user-scripts';
