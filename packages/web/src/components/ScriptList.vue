@@ -14,15 +14,41 @@
 				v-if="script.info"
 				class="col-12"
 			>
-				<div class="user-script-name">
-					<a-tooltip content="打开脚本源站">
-						<a
-							target="_blank"
-							:href="script.info.url"
-						>
-							<span>{{ script.info.name }}</span>
-						</a>
-					</a-tooltip>
+				<div
+					class="row"
+					style="align-items: flex-start"
+				>
+					<div
+						style="flex: 1"
+						class="user-script-name"
+					>
+						<div>
+							<a-tooltip content="打开脚本源站">
+								<a
+									target="_blank"
+									:href="script.info.url"
+									style="text-decoration: none"
+								>
+									<slot
+										name="script-name-prefix"
+										:script="script"
+									></slot>
+									<span>{{ script.info.name }}</span>
+								</a>
+							</a-tooltip>
+						</div>
+					</div>
+
+					<div
+						style="flex: 0"
+						class="user-script-actions"
+					>
+						<slot
+							name="actions"
+							:script="script"
+							:already-installed="isAlreadyInstalled(script)"
+						/>
+					</div>
 				</div>
 				<div
 					class="user-script-descriptions"
@@ -52,8 +78,8 @@
 					{{ script.info.description }}
 				</div>
 
-				<div class="row">
-					<div class="col-8">
+				<div class="row flex-wrap gap-1 gap-lg-0">
+					<div class="col-12 col-lg-8">
 						<div class="user-script-infos">
 							<a-space size="mini">
 								<slot
@@ -61,51 +87,54 @@
 									name="infos"
 								></slot>
 
-								<a-tooltip content="当前版本">
+								<a-tooltip content="最新版本">
 									<a-tag color="red">
 										v<b>{{ script.info.version }}</b>
 									</a-tag>
 								</a-tooltip>
 
-								<a-tooltip content="今日安装">
+								<a-tooltip
+									v-if="getUrlVersion(script.info.code_url)"
+									content="当前版本"
+								>
 									<a-tag color="blue">
-										⬇️<b>{{ script.info.daily_installs }}</b>
+										v<b>{{ getUrlVersion(script.info.code_url) }}</b>
 									</a-tag>
 								</a-tooltip>
 
-								<a-tooltip content="总安装">
+								<a-tooltip :content="`今日安装 - ${script.info.daily_installs}`">
+									<a-tag color="blue">
+										⬇️<b>{{ unit(script.info.daily_installs) }}</b>
+									</a-tag>
+								</a-tooltip>
+
+								<a-tooltip :content="`总安装 - ${script.info.total_installs}`">
 									<a-tag color="green">
-										📦<b>{{ script.info.total_installs }}</b>
+										📦<b>{{ unit(script.info.total_installs) }}</b>
 									</a-tag>
 								</a-tooltip>
 
-								<a-tooltip content="评分">
+								<a-tooltip content="评分，满分5分">
 									<a-tag color="orange">
-										⭐<b>{{ script.info.ratings ? script.info.ratings.toFixed(1) : '无' }}</b>
+										⭐<b>{{ script.info.ratings ? script.info.ratings.toFixed(2) : '无' }}</b>
 									</a-tag>
 								</a-tooltip>
 
-								<a-tag
+								<a-tooltip
 									v-if="script.info.create_time > 0"
-									title="创建时间"
+									:content="`创建时间 ${new Date(script.info.create_time).toLocaleString('zh-cn')}`"
 								>
-									{{ new Date(script.info.create_time).toLocaleDateString() }} 创建
-								</a-tag>
-								<a-tag
+									<a-tag> {{ new Date(script.info.create_time).toLocaleDateString('zh-cn') }} 创建 </a-tag>
+								</a-tooltip>
+
+								<a-tooltip
 									v-if="script.info.create_time > 0"
-									title="更新时间"
+									:content="`更新时间 ${new Date(script.info.update_time).toLocaleString('zh-cn')}`"
 								>
-									{{ getElapsedTime(script.info.create_time) }} 前更新
-								</a-tag>
+									<a-tag> {{ getElapsedTime(script.info.update_time) }} 前更新 </a-tag>
+								</a-tooltip>
 							</a-space>
 						</div>
-					</div>
-					<div class="col-4 user-script-actions">
-						<slot
-							name="actions"
-							:script="script"
-							:already-installed="isAlreadyInstalled(script)"
-						/>
 					</div>
 				</div>
 			</div>
@@ -180,6 +209,26 @@ function getElapsedTime(t: number) {
  */
 function isAlreadyInstalled(sc: StoreUserScript) {
 	return store.render.scripts.find((s) => s.id === sc.id) !== undefined;
+}
+
+function unit(num: number) {
+	if (num === 0) return '无';
+	const mapping = [
+		['亿', 100000000],
+		['万', 10000],
+		['', 1]
+	] as [string, number][];
+
+	const index = mapping.map((i) => Math.floor(num / i[1])).findIndex((i) => i > 0);
+
+	return !mapping[index][0] ? num : (num / mapping[index][1]).toFixed(2) + ' ' + mapping[index][0];
+}
+
+function getUrlVersion(url: string) {
+	if (!url) return '';
+
+	const match = url.match(/version=([\d.]+)/);
+	return match ? match[1] : '';
 }
 </script>
 

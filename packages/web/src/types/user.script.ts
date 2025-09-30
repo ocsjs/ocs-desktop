@@ -51,6 +51,7 @@ export interface ScriptCatUserScript {
 	avatar: string;
 	user_id: number;
 	score: number;
+	score_num?: number;
 	script: {
 		meta: string;
 		meta_json: Record<string, string[]>;
