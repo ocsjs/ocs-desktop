@@ -49,6 +49,7 @@ export class ScriptWorker {
 		const result = _get(ScriptWorker.langs, key, def);
 		return (replace ? result?.replace(/\{\{(\w+)\}\}/g, (_, k) => replace[k] || '') : result) as string;
 	};
+
 	static getTransformedErrorMessage = (error: string, extra_placeholder?: Record<string, string>) => {
 		if (error.match(/Timeout .+ exceeded/)) {
 			return ScriptWorker.lang(

@@ -140,17 +140,12 @@
 											v-if="script.info?.url"
 											label="脚本主页"
 										>
-											<template v-if="script.info.url.startsWith('http')">
-												<a :href="script.info!.url "> {{ script.info!.url }} </a>
-											</template>
-											<template v-else>
-												<div
-													style="text-decoration: underline; cursor: pointer"
-													@click="shell.showItemInFolder(script.info!.url)"
-												>
-													{{ script.info?.url }}
-												</div>
-											</template>
+											<a
+												href="javascript:void(0)"
+												@click="openScriptSource(script)"
+											>
+												{{ script.info!.url }}
+											</a>
 										</a-descriptions-item>
 										<a-descriptions-item label="脚本链接"> {{ script.info?.code_url || '' }}</a-descriptions-item>
 									</a-descriptions>
@@ -374,7 +369,7 @@ import { config } from '../../config';
 import { store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
 import Icon from '../../components/Icon.vue';
-import { addScriptFromFile, addScriptFromUrl } from '../../utils/user-scripts';
+import { addScriptFromFile, addScriptFromUrl, openScriptSource } from '../../utils/user-scripts';
 import { electron } from '../../utils/node';
 import { Input, Modal, Message } from '@arco-design/web-vue';
 import ScriptList from '../../components/ScriptList.vue';

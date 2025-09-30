@@ -26,8 +26,9 @@
 							<a-tooltip content="打开脚本源站">
 								<a
 									target="_blank"
-									:href="script.info.url"
+									href="javascript:void(0)"
 									style="text-decoration: none"
+									@click="openScriptSource(script)"
 								>
 									<slot
 										name="script-name-prefix"
@@ -161,6 +162,7 @@ import { ref, toRefs } from 'vue';
 import { StoreUserScript } from '../store';
 import { store } from '../store/index';
 import Icon from './Icon.vue';
+import { openScriptSource } from '../utils/user-scripts';
 
 interface ScriptListProps {
 	scripts: StoreUserScript[];

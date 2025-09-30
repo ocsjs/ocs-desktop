@@ -1,6 +1,7 @@
 import { Message } from '@arco-design/web-vue';
 import { remote } from './remote';
-import { store } from '../store';
+import { store, StoreUserScript } from '../store';
+import { electron } from './node';
 
 /**
  * 添加并且解析本地脚本
@@ -121,5 +122,15 @@ function getMetadataFromScript(text: string) {
 			name: getMetadata('name')[0],
 			version: getMetadata('version')[0]
 		};
+	}
+}
+
+export function openScriptSource(script: StoreUserScript) {
+	if (script.info) {
+		if (script.info.url.startsWith('http')) {
+			window.open(script.info.url, '_blank');
+		} else {
+			electron.shell.openPath(script.info.url);
+		}
 	}
 }
