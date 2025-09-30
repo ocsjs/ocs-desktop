@@ -23,6 +23,7 @@ type BrowserConfig = {
 };
 
 interface Langs {
+	error_when_executable_not_found?: string;
 	error_when_browser_version_too_high?: string;
 	error_when_browser_launch_failed_too_fast?: string;
 	error_when_extension_version_too_low?: string;
@@ -120,11 +121,16 @@ export class ScriptWorker {
 		/** 添加拓展启动参数 */
 		options.args = formatExtensionArguments(this.extensionPaths);
 		const start_time = Date.now();
-		let err = `浏览器可执行文件不存在：${options.executablePath}`;
 
 		/** =============================== 检测谷歌浏览器是否可用 =============================== */
 		if (!fs.existsSync(options.executablePath)) {
-			console.error(err);
+			console.error(
+				ScriptWorker.lang(
+					'error_when_executable_not_found',
+					`浏览器可执行文件不存在，请在设置中更换浏览器路径。：${options.executablePath}`,
+					{ executablePath: options.executablePath }
+				)
+			);
 			return await this.close();
 		}
 
@@ -134,11 +140,12 @@ export class ScriptWorker {
 				return fs.statSync(file).isDirectory() && fs.readdirSync(file).some((f) => f.endsWith('.manifest'));
 			});
 			if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
-				err = ScriptWorker.lang(
-					'error_when_browser_version_too_high',
-					'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
+				console.error(
+					ScriptWorker.lang(
+						'error_when_browser_version_too_high',
+						'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
+					)
 				);
-				console.error(err);
 				return await this.close();
 			}
 		}
