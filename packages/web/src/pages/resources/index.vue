@@ -34,8 +34,13 @@
 			</a-space>
 		</div>
 
-		<template v-if="resourceGroups.length === 0">
-			<a-empty description="暂无资源" />
+		<template v-if="state.loading">
+			<a-row class="text-center mt-5">
+				<a-col> <icon-loading spin /> 加载资源中... </a-col>
+			</a-row>
+		</template>
+		<template v-else-if="resourceGroups.length === 0">
+			<a-empty description="暂无资源，请尝试重启软件重新加载" />
 		</template>
 
 		<template
@@ -145,13 +150,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { OCSApi, ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
+import { ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
 import { lang, store } from '../../store/index';
 import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
+import { getRemoteInfos } from '../../utils';
 
 const { ipcRenderer } = electron;
 
@@ -164,29 +170,39 @@ const fileStatus = reactive<FileState>({});
 const downloadingExtensionsFiles = ref<ResourceFile[]>([]);
 
 const state = reactive({
+	loading: true,
 	modal: {
 		other_extensions_add: false
 	}
 });
 
 onMounted(() => {
-	OCSApi.getInfos().then(async (result) => {
-		resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
+	state.loading = true;
+	getRemoteInfos()
+		.then(async (result) => {
+			resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
 
-		// 加载状态
-		for (const group of result.resourceGroups) {
-			for (const file of group.files) {
-				fileStatus[file.url] = {
-					exists: resourceLoader.isZipFile(file)
-						? await resourceLoader.isZipFileExists(group.name, file)
-						: await resourceLoader.isExists(group.name, file),
-					downloading: false,
-					unzipping: false,
-					downloadRate: 0
-				};
+			// 加载状态
+			for (const group of result.resourceGroups) {
+				for (const file of group.files) {
+					fileStatus[file.url] = {
+						exists: resourceLoader.isZipFile(file)
+							? await resourceLoader.isZipFileExists(group.name, file)
+							: await resourceLoader.isExists(group.name, file),
+						downloading: false,
+						unzipping: false,
+						downloadRate: 0
+					};
+				}
 			}
-		}
-	});
+		})
+		.catch((err) => {
+			// @ts-ignore
+			Message.error('加载资源失败 ' + err.message);
+		})
+		.finally(() => {
+			state.loading = false;
+		});
 });
 
 async function download(group_name: string, file: ResourceFile) {

@@ -8,6 +8,7 @@ import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
 import { OCSApi } from '@ocs-desktop/common/src/api';
 import axios from 'axios';
+import { Infos } from '@ocs-desktop/common';
 
 const { ipcRenderer } = electron;
 
@@ -155,9 +156,13 @@ export async function fetchRemoteLangs() {
 /**
  * 获取 infos.json
  */
-
+let temp_infos: Infos | undefined = undefined;
 export async function getRemoteInfos() {
-	return await OCSApi.getInfos();
+	if (temp_infos) {
+		return temp_infos;
+	}
+	temp_infos = await OCSApi.getInfos();
+	return temp_infos;
 }
 
 /** 下载文件到指定路径 */
