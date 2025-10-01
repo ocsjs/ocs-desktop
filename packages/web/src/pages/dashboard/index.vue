@@ -2,7 +2,7 @@
 	<div class="col-12 p-2 m-auto">
 		<div
 			class="text-secondary markdown mb-2"
-			v-html="lang('notice_resources_page_usage', '')"
+			v-html="lang('notice_dashboard_monitor_page_usage', '')"
 		></div>
 
 		<div class="d-flex mb-1 align-items-center">
