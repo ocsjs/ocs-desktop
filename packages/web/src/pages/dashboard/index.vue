@@ -115,8 +115,11 @@
 					<div class="browser">
 						<!-- 头部操作按钮 -->
 						<div class="browser-title">
-							<a-row>
-								<a-col flex="100px">
+							<a-row
+								style="overflow: overlay"
+								class="flex-nowrap"
+							>
+								<a-col flex="auto">
 									<span
 										class="text-secondary"
 										style="font-size: 12px"
@@ -125,7 +128,7 @@
 									</span>
 								</a-col>
 								<a-col
-									flex="auto"
+									flex="120px"
 									class="d-flex align-content-center justify-content-end text-end"
 								>
 									<a-space

@@ -41,7 +41,7 @@
 				v-if="hasPermissions('location')"
 				@click="instance?.location()"
 			>
-				<Icon type="location_on" /> 跳转到文件所在位置
+				<Icon type="location_on"> 跳转到文件所在位置 </Icon>
 			</a-doption>
 		</template>
 	</a-dropdown>

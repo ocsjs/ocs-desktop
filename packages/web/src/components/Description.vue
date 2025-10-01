@@ -1,7 +1,7 @@
 <template>
 	<a-row class="row flex-nowrap mb-2">
 		<a-col
-			flex="200px"
+			flex="160px"
 			class="desc-label"
 		>
 			{{ label }} :
