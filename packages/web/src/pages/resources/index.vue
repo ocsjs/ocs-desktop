@@ -5,6 +5,18 @@
 			v-html="lang('notice_resources_page_usage', '')"
 		></div>
 
+		<a-modal
+			v-model:visible="state.modal.other_extensions_add"
+			title="其他拓展加载方法"
+			:footer="false"
+			:closable="true"
+		>
+			<div
+				class="text-secondary mb-2"
+				v-html="lang('notice_resources_page_other_extensions_add', '')"
+			></div>
+		</a-modal>
+
 		<div class="mb-2">
 			<a-space>
 				<a-button
@@ -15,7 +27,7 @@
 				</a-button>
 				<a-button
 					size="mini"
-					@click="showHowToLoadOtherExtension"
+					@click="() => (state.modal.other_extensions_add = !state.modal.other_extensions_add)"
 				>
 					<a-space> <icon-question-circle /> 如何加载其他拓展？ </a-space>
 				</a-button>
@@ -132,12 +144,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, h } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { OCSApi, ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
 import { lang, store } from '../../store/index';
-import { Message, Modal } from '@arco-design/web-vue';
+import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
 
@@ -150,6 +162,12 @@ const fileStatus = reactive<FileState>({});
 
 // 正在下载的脚本管理器文件
 const downloadingExtensionsFiles = ref<ResourceFile[]>([]);
+
+const state = reactive({
+	modal: {
+		other_extensions_add: false
+	}
+});
 
 onMounted(() => {
 	OCSApi.getInfos().then(async (result) => {
@@ -237,21 +255,6 @@ async function remove(group_name: string, file: ResourceFile) {
 		// @ts-ignore
 		Message.error('删除错误 ' + err.message);
 	}
-}
-
-function showHowToLoadOtherExtension() {
-	Modal.info({
-		content: () =>
-			h('div', [
-				'加载原理；浏览器启动时会默认加载资源文件夹中 extensions 下面的所有文件夹拓展。',
-				h('br'),
-				' 所以步骤如下：',
-				h('br'),
-				'1. 浏览器中打开拓展管理，查看需要安装到软件的拓展ID，找到本地对应的拓展文件夹（指的是文件夹里面有 manifest.json 文件的才算一个拓展文件夹，这里不过多阐述查找办法，请百度）',
-				h('br'),
-				'2. 将拓展文件复制粘贴到左侧按钮显示的文件夹里的 extensions 文件夹即可。'
-			])
-	});
 }
 
 function openDownloadFolder() {
