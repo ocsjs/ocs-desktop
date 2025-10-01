@@ -71,7 +71,6 @@ export class Process extends EventEmitter {
 			onConsole?.(data.toString());
 		});
 		this.shell.stderr?.on('data', (data: any) => {
-			handleError(data.toString());
 			onConsole?.(data.toString());
 			remote.logger.call('error', String(data));
 			this.logs.push(`${this.browser.name} 错误`, data);
@@ -129,7 +128,7 @@ export class Process extends EventEmitter {
 
 	/** 启动文件 */
 	launch() {
-		return new Promise<void>((resolve, reject) => {
+		return new Promise<void | number | null>((resolve, reject) => {
 			// 检查
 			if (!this.launchOptions.executablePath) {
 				return Message.error('浏览器路径为空，请在软件设置中修改');
@@ -165,6 +164,9 @@ export class Process extends EventEmitter {
 						this.status = 'launching';
 
 						this.once('launched', resolve);
+						this.shell?.once('exit', (code) => {
+							resolve(code);
+						});
 						this.worker?.('launch', {
 							userDataDir: this.browser.cachePath,
 							userscripts: enabledUserScripts.map((s) => s.url),
@@ -225,37 +227,4 @@ function createRemoteScriptWorker(shell: ChildProcess) {
 			shell.send({ event, args });
 		}
 	};
-}
-
-function handleError(msg: string) {
-	if (msg.includes('异常启动') && msg.includes('更换其他浏览器')) {
-		// 2025年Edge与playwright不兼容问题
-		if (
-			!store.render.state.read_record?.['edge-2025-open-error-issue'] &&
-			store.render.setting.launchOptions.executablePath.includes('msedge')
-		) {
-			const issue_link =
-				'https://docs.ocsjs.com/docs/issues/2025/#%E5%85%B3%E4%BA%8E%E8%BD%AF%E4%BB%B6%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8%E5%85%B3%E9%97%AD';
-			Modal.warning({
-				title: '提示',
-				maskClosable: false,
-				closable: true,
-				width: 600,
-				okText: '不再提示',
-				content: () =>
-					h('div', [
-						h('div', [
-							'关于浏览器异常关闭，检测到您使用的是 Edge（微软） 浏览器，可能会导致无法启动浏览器，解决方法：',
-							'1. 尝试重装OCS软件',
-							'2. 尝试更换谷歌浏览器进行使用！'
-						]),
-						h('div', ['关于Edge异常关闭问题详情：', h('a', { href: issue_link }, issue_link)])
-					]),
-				onOk() {
-					store.render.state.read_record = store.render.state.read_record || {};
-					store.render.state.read_record['edge-2025-open-error-issue'] = true;
-				}
-			});
-		}
-	}
 }
