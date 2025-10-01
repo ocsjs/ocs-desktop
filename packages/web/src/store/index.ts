@@ -46,6 +46,7 @@ export type WebStore = {
 		showSideBarText: boolean;
 		/** 浏览器启动参数 */
 		launchOptions: {
+			custom: boolean;
 			executablePath: string;
 		};
 		/** 当前的主题 */
@@ -124,6 +125,7 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(
 				browserType: 'diy',
 				showSideBarText: true,
 				launchOptions: {
+					custom: false,
 					executablePath: ''
 				},
 				theme: {

@@ -13,7 +13,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 		case 'win32': {
 			return [
 				{
-					name: '软件内置-谷歌浏览器(Chrome)',
+					name: '软件内置浏览器-谷歌(Chrome)',
 					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
 				},
 				{

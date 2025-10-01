@@ -1,59 +1,88 @@
 <template>
 	<Description label="浏览器路径">
-		<a-dropdown
-			trigger="hover"
-			position="bl"
-		>
-			<span class="d-flex align-items-center w-100">
-				<a-button
-					class="me-1"
-					size="small"
-				>
-					{{ state.validBrowsers.length }} 个可用路径 <icon-down
-				/></a-button>
-				<a-input
-					v-model="state.tempExecutablePath"
-					size="small"
-					placeholder="输入您的浏览器路径，否则无法正常启动，路径获取教程点击右侧问号查看。"
-					class="w-100"
-					@change="onDiy"
-				>
-					<template #suffix>
-						<a-popover>
-							<template #title>
-								<b>浏览器路径获取方式</b>
-							</template>
-							<template #content>
-								<div>
-									<b>- 谷歌浏览器</b> : 打开谷歌浏览器 <br />
-									在地址栏输入
-									<b>chrome://version</b> 并回车， 找到 <b>可执行文件路径</b> 复制粘贴即可
-								</div>
-								<div>
-									<b>- Edge浏览器</b> : 打开Edge浏览器<br />
-									在地址栏输入
-									<b>edge://version</b> 并回车， 找到 <b>可执行文件路径</b> 复制粘贴即可
-								</div>
-							</template>
-
-							<Icon
-								type="help_outline"
-								style="cursor: pointer"
-							/>
-						</a-popover>
+		<div class="d-flex align-items-center flex-wrap gap-2 w-100">
+			<div>
+				<a-tooltip position="rt">
+					<template #content>
+						<div v-html="lang('setting_browser_path_custom_tip', '')"></div>
 					</template>
-				</a-input>
-			</span>
-			<template #content>
-				<a-doption
-					v-for="item of state.validBrowsers"
-					:key="item.path"
-					@click="() => onDiy(item.path)"
-				>
-					{{ item.name }}{{ item.path === state.tempExecutablePath ? ' (当前)' : '' }}
-				</a-doption>
-			</template>
-		</a-dropdown>
+
+					<a-switch
+						v-model="store.render.setting.launchOptions.custom"
+						style="width: 84px"
+					>
+						<template #checked>自定义</template>
+						<template #unchecked>自定义</template>
+					</a-switch>
+				</a-tooltip>
+			</div>
+			<a-dropdown
+				v-if="store.render.setting.launchOptions.custom"
+				trigger="hover"
+				position="bl"
+			>
+				<span class="d-flex align-items-center w-100">
+					<a-button
+						class="me-1"
+						size="small"
+					>
+						{{ state.validBrowsers.length }} 个可用路径 <icon-down
+					/></a-button>
+					<a-input
+						v-model="state.tempExecutablePath"
+						size="small"
+						placeholder="输入您的浏览器路径，否则无法正常启动，路径获取教程点击右侧问号查看。"
+						class="w-100"
+						@change="onDiy"
+					>
+						<template #suffix>
+							<a-popover>
+								<template #title>
+									<b>浏览器路径获取方式</b>
+								</template>
+								<template #content>
+									<div>
+										<b>- 谷歌浏览器</b> : 打开谷歌浏览器 <br />
+										在地址栏输入
+										<b>chrome://version</b> 并回车， 找到 <b>可执行文件路径</b> 复制粘贴即可
+									</div>
+									<div>
+										<b>- Edge浏览器</b> : 打开Edge浏览器<br />
+										在地址栏输入
+										<b>edge://version</b> 并回车， 找到 <b>可执行文件路径</b> 复制粘贴即可
+									</div>
+								</template>
+
+								<Icon
+									type="help_outline"
+									style="cursor: pointer"
+								/>
+							</a-popover>
+						</template>
+					</a-input>
+				</span>
+				<template #content>
+					<a-doption
+						v-for="item of state.validBrowsers"
+						:key="item.path"
+						@click="() => onDiy(item.path)"
+					>
+						{{ item.name }}{{ item.path === state.tempExecutablePath ? ' (当前)' : '' }}
+					</a-doption>
+				</template>
+			</a-dropdown>
+			<div
+				v-else
+				class="w-100"
+			>
+				<a-input
+					:default-value="state.tempExecutablePath"
+					disabled
+					size="small"
+					class="w-100"
+				></a-input>
+			</div>
+		</div>
 	</Description>
 </template>
 
@@ -67,6 +96,7 @@ import { forceClearBrowserCache } from '../../utils/browser';
 import { onMounted, reactive } from 'vue';
 import { ValidBrowser } from '@ocs-desktop/common/lib/src/interface';
 import { processes } from '../../utils/process';
+import { lang } from '../../store/index';
 
 const state = reactive({
 	validBrowsers: [] as ValidBrowser[],
