@@ -485,7 +485,7 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 						btn?.click();
 					} else {
 						if (
-							['更新', '安装', '添加', '降级', 'install', 'update', 'add'].some(
+							['更新', '安装', '添加', '降级', 'install', 'update', 'add', 'downgrade'].some(
 								(text) =>
 									(btn?.textContent || btn?.getAttribute('value') || '').trim().toLocaleLowerCase() ===
 									text.trim().toLocaleLowerCase()

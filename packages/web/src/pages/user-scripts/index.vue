@@ -639,7 +639,15 @@ async function updateAllInfo() {
 					const info = await engine.infoGetter(script.info);
 					console.log(info);
 					if (!script.info) return;
+
+					const current_script_version = getUrlVersion(script.info.code_url);
 					script.info = engine.transformToCommonByInfo(script.info, info);
+					if (current_script_version) {
+						// 如果当前脚本有版本号，则把版本号加回去
+						const url = new URL(script.info.code_url);
+						url.searchParams.set('version', current_script_version);
+						script.info.code_url = decodeURIComponent(url.toString());
+					}
 					state.script_status[script.id] = 'done';
 					// 一秒后删除状态
 					setTimeout(() => {

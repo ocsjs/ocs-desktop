@@ -141,7 +141,7 @@ export class Process extends EventEmitter {
 						const enabledUserScripts = store.render.scripts.filter((s) => s.enable);
 						for (const s of enabledUserScripts) {
 							if (!s.url.startsWith('http')) {
-								const res = await remote.fs.call('existsSync', s.url);
+								const res = await remote.fs.call('existsSync', s.info?.code_url || s.url);
 								if (!res) {
 									notify(
 										'本地脚本不存在',
@@ -169,7 +169,7 @@ export class Process extends EventEmitter {
 						});
 						this.worker?.('launch', {
 							userDataDir: this.browser.cachePath,
-							userscripts: enabledUserScripts.map((s) => s.url),
+							userscripts: enabledUserScripts.map((s) => s.info?.code_url || s.url),
 							...this.launchOptions
 						});
 					} else {
