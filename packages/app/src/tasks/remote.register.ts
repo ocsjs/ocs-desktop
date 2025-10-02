@@ -15,6 +15,7 @@ import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
 import { scripts } from '../scripts';
 import { PlaywrightScript } from '../scripts/script';
+import { getBrowserMajorVersion } from '../utils/browser';
 
 export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
 
@@ -97,6 +98,7 @@ const methods = {
 	zip: zip,
 	unzip: unzip,
 	getValidBrowsers: getValidBrowsers,
+	getBrowserMajorVersion: getBrowserMajorVersion,
 	systemProcesses: () => si.processes(),
 	exportExcel: exportExcel,
 	statisticFolderSize: statisticFolderSize,

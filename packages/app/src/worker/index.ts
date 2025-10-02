@@ -8,6 +8,7 @@ import { scripts as PlaywrightScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
 import _get from 'lodash/get';
 import child_process from 'child_process';
+import { getBrowserMajorVersion } from '../utils/browser';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
@@ -136,11 +137,9 @@ export class ScriptWorker {
 		}
 
 		if (process.platform === 'win32') {
-			const folder = fs.readdirSync(path.dirname(options.executablePath)).find((f) => {
-				const file = path.join(path.dirname(options.executablePath), f);
-				return fs.statSync(file).isDirectory() && fs.readdirSync(file).some((f) => f.endsWith('.manifest'));
-			});
-			if (folder && folder.split('.').length > 1 && parseInt(folder.split('.')[0]) >= 137) {
+			const major = getBrowserMajorVersion(options.executablePath);
+			console.log('major', major);
+			if (major && major > 137) {
 				console.error(
 					ScriptWorker.lang(
 						'error_when_browser_version_too_high',
