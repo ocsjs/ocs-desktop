@@ -45,6 +45,8 @@ export async function downloadFile(fileURL: string, outputURL: string, rateHandl
 	data.pipe(writer);
 	await finished(writer);
 	rateHandler(100, totalLength, totalLength);
+
+	return outputURL;
 }
 
 /**

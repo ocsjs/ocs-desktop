@@ -49,7 +49,10 @@ export class Browser extends Entity implements BrowserOptions {
 		const reactiveProcess = Process.from(this.uid);
 		if (reactiveProcess) {
 			await reactiveProcess.init(console.log);
-			await reactiveProcess.launch();
+			const code = await reactiveProcess.launch();
+			if (typeof code === 'number') {
+				return code;
+			}
 		}
 
 		this.histories.unshift({ action: '运行', time: Date.now() });

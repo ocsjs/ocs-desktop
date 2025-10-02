@@ -73,6 +73,7 @@ export class ResourceLoader {
 		}
 		// 下载
 		await remote.methods.call('download', 'download-file-' + file.id, url, downloadPath);
+		return downloadPath;
 	}
 
 	/** 解压资源 */
@@ -94,6 +95,7 @@ export class ResourceLoader {
 		await remote.methods.call('unzip', targetPath, to);
 		// 删除压缩包
 		await remote.fs.call('unlinkSync', targetPath);
+		return to;
 	}
 
 	/** 删除资源 */

@@ -156,7 +156,7 @@ export async function fetchRemoteLangs() {
 /**
  * 获取 infos.json
  */
-let temp_infos: Infos | undefined = undefined;
+let temp_infos: Infos | undefined;
 export async function getRemoteInfos() {
 	if (temp_infos) {
 		return temp_infos;
@@ -186,14 +186,12 @@ export async function download({
 	ipcRenderer.on('download', listener);
 	try {
 		// 下载
-		await remote.methods.call('download', 'download-file-' + name, url, dest);
+		return await remote.methods.call('download', 'download-file-' + name, url, dest);
 	} catch (err) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
 	}
 	ipcRenderer.removeListener('download', listener);
-
-	return dest;
 }
 
 function installListener(name: string, channel: string, rate: number, chunkLength: number, totalLength: number) {

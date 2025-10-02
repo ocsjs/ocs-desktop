@@ -1,173 +1,125 @@
 <template>
-	<template v-if="state.finish">
-		<a-result
-			status="success"
-			title="初始化完成"
-		>
-			<template #subtitle> 软件初始化已完成，您可以点击右上方的新建浏览器，进行浏览器多开（分身）体验。 </template>
-			<template #extra>
-				<a-button
-					type="primary"
-					@click="confirm"
-				>
-					确定
-				</a-button>
-			</template>
-		</a-result>
-	</template>
-
-	<a-row
-		v-else
-		:gutter="[24, 24]"
-	>
-		<a-col
-			class="text-secondary"
-			style="font-size: 12px"
-		>
-			<div>
-				初始化您的软件设置，如果不满意官方提供的设置，可稍后自行在软件左侧的各栏中手动设置，设置完成后即可创建浏览器进行网课学习。
-			</div>
-			<div>如果想重新打开此窗口： 左上角 -> 工具 -> 初始化设置</div>
-		</a-col>
-
-		<template v-if="state.loading">
-			<a-col class="text-center">
-				<icon-loading />
-			</a-col>
-		</template>
-		<template v-else-if="state.error">
-			<a-empty description="资源请求错误，请稍后重试。" />
-		</template>
-		<template v-else-if="state.downloading">
-			<a-col class="text-center"> <icon-loading /> {{ state.downloading }} </a-col>
+	<a-row :gutter="[24, 24]">
+		<template v-if="state.error">
+			<a-empty :description="`初始化错误，可能是网络请求错误请稍后重试。${state.error}`" />
 		</template>
 		<template v-else>
-			<a-col>
-				<a-row class="flex-nowrap align-items-center">
-					<a-col flex="100px">
-						<a-tooltip>
-							<template #content>
-								<div>OCS软件需要使用浏览器进行操作，系统会自动检测您电脑上存在的浏览器</div>
-								<div>如果没有，请稍后在软件左侧的设置中，设置具体路径。</div>
+			<a-col class="text-center">
+				<a-steps
+					direction="vertical"
+					:current="state.current_step"
+				>
+					<template
+						v-for="(step, index) in state.steps"
+						:key="index"
+					>
+						<a-step
+							v-show="!step.hidden"
+							:title="step[0]"
+							:status="step.status"
+						>
+							<template
+								v-if="step.status"
+								#icon
+							>
+								<icon-check
+									v-if="step.status === 'finish'"
+									style="color: green"
+								/>
+								<icon-close v-else-if="step.status === 'error'" />
+								<icon-loading v-else-if="step.status === 'process'" />
 							</template>
-							<Icon type="help_outline" />
-						</a-tooltip>
-						<span> 浏览器 </span>
-					</a-col>
-					<a-col flex="auto">
-						<a-row :gutter="[0, 12]">
-							<a-col>
-								<a-select
-									v-model="state.browser"
-									placeholder="未检测到可用浏览器，请稍后在左侧软件设置中设置。"
-									:disabled="state.resource.browsers.length === 0"
+
+							<template #description>
+								<div
+									v-if="step.error"
+									class="text-danger"
 								>
-									<a-option
-										v-for="browser of state.resource.browsers"
-										:key="browser.name"
-										:value="browser.name"
-										:label="browser.name"
-									></a-option>
-								</a-select>
-							</a-col>
-						</a-row>
-					</a-col>
-				</a-row>
-			</a-col>
-			<a-col>
-				<a-row class="flex-nowrap align-items-center">
-					<a-col flex="100px">
-						<a-tooltip content="浏览器打开后可用使用脚本管理器进行脚本的：安装，运行，删除 等操作">
-							<Icon type="help_outline" />
-						</a-tooltip>
-						<span> 脚本管理器 </span>
-					</a-col>
-					<a-col flex="auto">
-						<a-select v-model="state.selectedExtension">
-							<a-option
-								v-for="extension of state.resource.extensions"
-								:key="extension.name"
-								:label="extension.name"
-							></a-option>
-						</a-select>
-					</a-col>
-				</a-row>
-			</a-col>
-			<a-col>
-				<a-row class="flex-nowrap align-items-center">
-					<a-col flex="100px">
-						<a-tooltip content="安装网课脚本进行课程的观看和学习">
-							<Icon type="help_outline" />
-						</a-tooltip>
-						<span> 网课脚本 </span>
-					</a-col>
-					<a-col flex="auto">
-						<a-select v-model="state.selectedUserScript">
-							<a-option
-								v-for="userScript of state.resource.userScripts"
-								:key="userScript.name"
-								:label="userScript.name"
-							></a-option>
-						</a-select>
-					</a-col>
-				</a-row>
+									{{ step.error }}
+								</div>
+								<div
+									v-else-if="step.description"
+									style="white-space: pre-wrap; text-align: left; font-size: 12px"
+								>
+									{{ step.description }}
+								</div>
+							</template>
+							{{ step.title }}
+						</a-step>
+					</template>
+				</a-steps>
 			</a-col>
 		</template>
-
-		<a-col class="text-center mt-5">
+		<a-col class="text-center mt-2">
 			<a-space :size="24">
-				<a-button
-					size="small"
-					:disabled="!!state.downloading"
-					@click="notNow"
-				>
-					稍等手动设置
-				</a-button>
-				<a-button
-					type="primary"
-					size="small"
-					:disabled="state.error || !!state.downloading"
-					@click="setup"
-				>
-					一键初始化
-				</a-button>
+				<template v-if="state.current_step === state.steps.length">
+					<a-button
+						type="primary"
+						size="small"
+						@click="store.render.state.setup = false"
+					>
+						完成！
+					</a-button>
+				</template>
+				<template v-else-if="state.current_step === -1">
+					<a-button
+						size="small"
+						@click="notNow"
+					>
+						稍后手动设置
+					</a-button>
+					<a-button
+						type="primary"
+						size="small"
+						@click="setup"
+					>
+						一键初始化
+					</a-button>
+				</template>
+				<template v-else>
+					<a-button
+						size="small"
+						:disabled="true"
+					>
+						<icon-loading /> 初始化中...
+					</a-button>
+				</template>
 			</a-space>
 		</a-col>
 	</a-row>
 </template>
 
 <script setup lang="ts">
-import { store } from '../store';
-import { getRemoteInfos } from '../utils';
+import { lang, store } from '../store';
+import { download, getRemoteInfos, sleep } from '../utils';
 import { remote } from '../utils/remote';
 import { onMounted, reactive } from 'vue';
-import Icon from './Icon.vue';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 import { installExtensions } from '../utils/extension';
 import { addScriptFromUrl } from '../utils/user-scripts';
-import { ValidBrowser } from '@ocs-desktop/common/lib/src/interface';
 import { ResourceLoader } from '../utils/resources.loader';
 import { ResourceFile } from '@ocs-desktop/common/src/api';
+import { root } from '../fs/folder';
+import { newBrowser } from '../utils/browser';
+import { Browser } from '../fs/browser';
+import { Infos } from '../../../common/lib/src/api';
+import { child_process } from '../utils/node';
+import _get from 'lodash/get';
 
 type Extension = ResourceFile & { installed?: boolean };
+type Step = {
+	title: string;
+	description?: string;
+	error?: string;
+	status?: 'wait' | 'process' | 'finish' | 'error';
+	hidden?: boolean;
+	action: (step: Step) => any;
+};
 
 const state = reactive({
-	resource: {
-		browsers: [] as ValidBrowser[],
-		extensions: [] as Extension[],
-		userScripts: [] as ResourceFile[]
-	},
-	browser: '',
-	downloadPath: '',
-	// 选中的拓展
-	selectedExtension: '',
-	// 选中的脚本
-	selectedUserScript: '',
-	loading: false,
-	error: false,
-	downloading: '',
-	// 初始化完成
-	finish: false
+	error: '',
+	current_step: -1,
+	steps: [] as Step[]
 });
 
 /** 资源加载器 */
@@ -176,94 +128,360 @@ const resourceLoader = new ResourceLoader({
 });
 
 onMounted(async () => {
-	state.loading = true;
-	try {
-		const infos = await getRemoteInfos();
-
-		state.downloadPath = await remote.path.call('join', store.paths.downloadFolder);
-
-		state.resource.browsers = await remote.methods.call('getValidBrowsers');
-
-		if (store.render.setting.launchOptions.executablePath) {
-			// 检测有效的浏览器路径
-			const name = '软件中已设置的浏览器';
-			state.resource.browsers.unshift({
-				name: name,
-				path: store.render.setting.launchOptions.executablePath
-			});
-			state.browser = name;
-		} else {
-			// 检测有效的浏览器路径
-			if (state.resource.browsers.length) {
-				state.browser = state.resource.browsers[0].name;
-			}
-		}
-
-		// 获取最新的拓展和用户脚本信息
-		state.resource.extensions = infos.resourceGroups.find((group) => group.name === 'extensions')?.files || [];
-		state.resource.userScripts = infos.resourceGroups.find((group) => group.name === 'userjs')?.files || [];
-
-		for (const extension of state.resource.extensions) {
-			extension.installed = await resourceLoader.isZipFileExists('extensions', extension);
-		}
-		// 初始选中的信息
-		state.selectedExtension = state.resource.extensions[0].name;
-		state.selectedUserScript = state.resource.userScripts[0].name;
-	} catch (err) {
-		state.error = true;
-		console.error(err);
-		Message.error(String(err));
-	} finally {
-		state.loading = false;
-	}
+	prepare();
 });
-
-async function downloadExtension(extension: Extension) {
-	state.downloading = `正在下载脚本管理器 : ${extension.name} ...`;
-	await installExtensions(state.resource.extensions, extension);
-}
-
-async function downloadScript(userScript: ResourceFile) {
-	state.downloading = `正在下载脚本 : ${userScript.name} ...`;
-	await addScriptFromUrl(userScript.url);
-}
 
 function notNow() {
 	store.render.state.setup = false;
 }
 
-async function setup() {
-	const browser = state.resource.browsers.find((e) => e.name === state.browser);
-	const extension = state.resource.extensions.find((e) => e.name === state.selectedExtension);
-	const userScript = state.resource.userScripts.find((e) => e.name === state.selectedUserScript);
-
+function prepare() {
 	try {
-		if (browser) {
-			store.render.setting.launchOptions.executablePath = browser.path;
-		}
-		if (userScript) {
-			await downloadScript(userScript);
-		}
-		if (extension) {
-			await downloadExtension(extension);
-		}
-		state.finish = true;
+		let infos: Infos | undefined;
+		state.steps = [];
+		state.current_step = -1;
 
-		Message.success('初始化完成');
+		state.steps.push({
+			title: '等待初始化...',
+			description: lang('setup_modal_notice', ''),
+			async action(step) {}
+		});
+
+		state.steps.push({
+			title: '初始化浏览器',
+			async action(step) {
+				step.description = '正在检测可用浏览器...';
+
+				// 检测有效的浏览器路径
+				const browsers = [
+					{
+						name: '默认设置浏览器',
+						path: store.render.setting.launchOptions.executablePath || ''
+					},
+					...(await remote.methods.call('getValidBrowsers'))
+				].filter((b) => b.path && remote.fs.callSync('existsSync', b.path));
+
+				const versions = await Promise.all(
+					browsers.map((browser) => remote.methods.call('getBrowserMajorVersion', browser.path))
+				);
+				console.log(versions);
+				// =========================== 可用 ===========================
+				if (versions.some((v) => v && v <= 137)) {
+					step.description = `共检测到 ${browsers.length} 个可用浏览器`;
+					const valid_version_browser = browsers.find((_, i) => versions[i] && versions[i] <= 137);
+					if (!valid_version_browser) {
+						step.error = '未检测到可用浏览器，请稍后在左侧软件设置中设置。';
+					} else {
+						store.render.setting.launchOptions.executablePath = valid_version_browser.path;
+						step.description += `\n设置浏览器路径为： ${valid_version_browser.name} - ${valid_version_browser.path}`;
+					}
+					return;
+				}
+
+				// =========================== 安装新版本 ===========================
+				if (process.platform !== 'win32') {
+					step.error = lang(
+						'setup_error_un_support_platform_when_auto_download_new_version',
+						'当前系统不支持自动更新软件，请手动前往官网下载最新软件并安装和启动。'
+					);
+					return;
+				}
+				infos = await getRemoteInfos();
+				console.log(infos);
+
+				const win32_download_url = infos?.versions[0].app_downloads?.win32;
+				if (!win32_download_url) {
+					step.error = lang(
+						'setup_error_no_windows_download_url_when_auto_download_new_version',
+						'未找到 Windows 版本的下载地址，请前往官网下载最新软件并安装和启动。'
+					);
+					return;
+				}
+
+				const dest = await remote.path.call(
+					'join',
+					store.paths.downloadFolder,
+					win32_download_url.split('/').pop() || 'ocs-desktop-latest.exe'
+				);
+
+				step.description = lang(
+					'setup_error_auto_download_new_version_when_no_valid_browser',
+					'无可用的浏览器，正在下载并更新软件至最新版本： ' + infos?.versions[0]?.tag,
+					{ version: infos?.versions[0]?.tag || '' }
+				);
+				try {
+					const result = await new Promise<string | boolean | undefined>((resolve, reject) => {
+						Modal.confirm({
+							title: '警告',
+							content: '当前浏览器版本过高，点击确认将自动下载最新版本软件，下载后将有内置浏览器可用。',
+							maskClosable: false,
+							closable: false,
+							cancelText: '取消',
+							okText: '一键下载并安装',
+							onCancel(e) {
+								reject(new Error('用户取消下载，请自行更新，然后配置浏览器路径'));
+							},
+							async onOk() {
+								const existsSync = await remote.fs.call('existsSync', dest);
+								if (existsSync) {
+									resolve(true);
+									return;
+								}
+
+								step.description += '\n正在下载最新版本软件：' + win32_download_url;
+								const fp = await download({
+									name: '最新软件下载',
+									dest: dest,
+									url: win32_download_url
+								});
+								step.description += '\n下载完成，即将开始安装，请安装后重新初始化设置。';
+								resolve(fp);
+							}
+						});
+					});
+					if (result === true) {
+						step.error = '检测到最新软件版本已下载，正在打开安装程序中，请安装后重启软件并初始化设置。';
+						console.log(dest);
+						await new Promise<void>((resolve, reject) => {
+							Modal.confirm({
+								title: '警告',
+								content: step.error || '',
+								maskClosable: false,
+								closable: false,
+								cancelText: '取消',
+								okText: '一键安装',
+								onCancel(e) {
+									reject(new Error('你已取消安装，请自行更新软件或者重新初始化。'));
+								},
+								async onOk() {
+									child_process.execFileSync(`"${dest}"`, { shell: true, windowsHide: false });
+									resolve();
+								}
+							});
+						});
+					} else if (typeof result === 'string') {
+						step.description += '\n最新版本软件下载完成，即将启动安装程序...';
+						store.render.state.setup = false;
+						await new Promise<void>((resolve, reject) => {
+							Modal.info({
+								title: '提示',
+								content: '最新版本软件下载完成，点击确定启动安装程序，请安装后重新初始化设置。',
+								maskClosable: false,
+								closable: false,
+								okText: '确认安装',
+								onOk(e) {
+									child_process.execFileSync(`"${result}"`, { shell: true, windowsHide: false });
+									resolve();
+								}
+							});
+						});
+					} else {
+						throw new Error('未知错误，请稍后重试，或者手动更新软件');
+					}
+				} catch (error) {
+					console.error(error);
+					step.error = error;
+				}
+			}
+		});
+
+		state.steps.push({
+			title: '初始化浏览器拓展',
+			async action(step) {
+				step.description = '正在获取远程资源信息...';
+				infos = await getRemoteInfos();
+				// 获取最新的拓展和用户脚本信息
+				const extensions = (infos.resourceGroups.find((group) => group.name === 'extensions')?.files ||
+					[]) as Extension[];
+				for (const extension of extensions) {
+					extension.installed = await resourceLoader.isZipFileExists('extensions', extension);
+				}
+				const installed_extension = extensions.find((e) => e.installed);
+
+				const install_new = async () => {
+					const default_extension = extensions[0];
+					if (!default_extension) {
+						step.error = '未检测到可用脚本管理器拓展，请尝试重启软件。';
+						return;
+					}
+					step.description += `\n共检测到 ${extensions.length} 个脚本管理器拓展，正在安装...`;
+					const default_extension_filepath = await installExtensions(extensions, default_extension, {
+						force_install: true
+					});
+					if (!default_extension_filepath) {
+						step.error = '脚本管理器安装失败，请稍后重试，或者稍后在左侧应用中心手动安装。';
+						return;
+					}
+					step.description += `\n已安装脚本管理器：${default_extension.name} - ${default_extension.url}`;
+				};
+
+				if (!installed_extension) {
+					return install_new();
+				}
+
+				const manifest = JSON.parse(
+					String(
+						await remote.fs.call(
+							'readFileSync',
+							await remote.path.call(
+								'join',
+								await resourceLoader.getUnzippedPath('extensions', installed_extension),
+								'manifest.json'
+							),
+							'utf-8'
+						)
+					)
+				);
+				// 检查是否为 MV2 拓展，如果是则报错
+				if (_get(manifest, 'manifest_version', 2) < 3) {
+					step.description = lang(
+						'setup_error_auto_download_new_extension_when_version_too_low',
+						'当前拓展 {{name}} 版本较低，需要更新拓展到最新MV3版本',
+						{ name: installed_extension.name }
+					);
+					try {
+						await new Promise<void>((resolve, reject) => {
+							Modal.confirm({
+								title: '警告',
+								content: step.description || '',
+								maskClosable: false,
+								closable: false,
+								cancelText: '取消',
+								okText: '一键更新',
+								onCancel(e) {
+									reject(new Error('你已取消更新，请自行在左侧应用中心更新拓展或者重新初始化。'));
+								},
+								async onOk() {
+									await install_new();
+									resolve();
+								}
+							});
+						});
+					} catch (err) {
+						step.error = err;
+						return;
+					}
+					return;
+				}
+				step.description = `已安装脚本管理器：${installed_extension.name} - ${installed_extension.url}`;
+			}
+		});
+
+		state.steps.push({
+			title: '初始化脚本',
+			async action(step) {
+				const userScripts = infos?.resourceGroups.find((group) => group.name === 'userjs')?.files || [];
+				const default_user_script = userScripts[0];
+				if (!default_user_script) {
+					step.error = '未检测到可用脚本，请稍后在左侧软件设置中设置。';
+					return;
+				}
+				step.description = `共检测到 ${userScripts.length} 个用户脚本，正在安装...`;
+				await addScriptFromUrl(default_user_script.url);
+				step.description = `已安装用户脚本：${default_user_script.name} - ${default_user_script.url}`;
+			}
+		});
+
+		state.steps.push({
+			title: '新建浏览器',
+			action(step) {
+				const children = root().listChildren();
+				if (children.length !== 0) {
+					step.description = '已存在浏览器，无需重复创建。';
+					return;
+				}
+				const name = '未命名浏览器';
+				newBrowser({
+					name: name
+				});
+
+				step.description = `已创建浏览器：${name}，可稍后在左侧软件设置中修改名称`;
+			}
+		});
+
+		state.steps.push({
+			title: '浏览器启动测试',
+			async action(step) {
+				const children = root().listChildren();
+				if (children.length === 0) {
+					step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
+					return;
+				}
+
+				const browser = children[0];
+				const instance = Browser.from(browser.uid);
+				if (!instance) {
+					step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
+					return;
+				}
+
+				try {
+					const code = await instance.launch();
+					if (typeof code === 'number') {
+						step.error = '浏览器启动测试失败，请查看右侧详细错误信息。';
+						return;
+					} else {
+						step.description = '浏览器启动测试成功，即将自动关闭';
+						instance.close();
+					}
+				} catch (err) {
+					step.error = '浏览器启动测试失败：' + err;
+				}
+			}
+		});
+
+		state.steps.push({
+			title: '初始化完成',
+			async action(step) {
+				step.description = lang('setup_finish_notice', '');
+			}
+		});
 	} catch (err) {
-		Message.error('安装失败，请稍后重试，或者手动设置 : ' + err);
+		state.error = String(err);
+		console.error(err);
+		Message.error(String(err));
 	}
-
-	store.render.state.setup = false;
-
-	setTimeout(() => {
-		confirm();
-	}, 10 * 1000);
 }
 
-function confirm() {
-	state.downloading = '';
+async function setup() {
+	if (state.steps.length > 0) {
+		prepare();
+	}
+	state.current_step = 0;
+	try {
+		for (const step of state.steps) {
+			step.status = 'wait';
+			step.description = '';
+			step.error = '';
+		}
+		let error = false;
+		for (const step of state.steps) {
+			if (error) {
+				step.hidden = true;
+				continue;
+			}
+			step.status = 'process';
+			await step.action(step);
+			if (step.error) {
+				step.status = 'error';
+				error = true;
+			} else {
+				step.status = 'finish';
+			}
+			state.current_step += 1;
+			await sleep(200);
+		}
+		Message.success('初始化完成');
+	} catch (err) {
+		state.error = String(err);
+		console.error(err);
+		Message.error('安装失败，请稍后重试，或者手动设置 : ' + err);
+	}
 }
 </script>
 
-<style scoped lang="less"></style>
+<style scoped lang="less">
+:deep(.arco-steps-vertical .arco-steps-item:not(:last-child)) {
+	min-height: 42px;
+}
+</style>

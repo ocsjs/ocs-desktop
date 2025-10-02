@@ -44,6 +44,11 @@ export interface UpdateInformationResource {
 	tag: string;
 	description: Record<'feat' | 'fix' | 'other', string[]>;
 	url: string;
+	app_downloads?: {
+		win32?: string;
+		darwin?: string;
+		linux?: string;
+	};
 }
 
 /** 官方书签信息 */
