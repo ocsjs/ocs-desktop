@@ -184,7 +184,7 @@ function exportData() {
 				.call('showSaveDialog', {
 					title: '选择导出位置',
 					buttonLabel: '导出',
-					defaultPath: `config-${date(Date.now())}`
+					defaultPath: `OCS软件数据导出_-${date(Date.now())}`
 				})
 				.then(async ({ canceled, filePath }) => {
 					if (canceled === false && filePath) {
