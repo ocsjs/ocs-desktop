@@ -168,6 +168,33 @@
 						</template>
 
 						<template #actions="{ script }">
+							<a-button
+								v-if="
+									!script.isLocalScript &&
+									!script.isInternetLinkScript &&
+									['greasyfork', 'scriptcat'].includes(getSourceType(script))
+								"
+								size="mini"
+								type="outline"
+								class="user-script-action"
+								style="background: white"
+								:disabled="state.versionSelector.loading"
+								@click="showScriptVersionList(script)"
+							>
+								<template v-if="state.versionSelector.currentScriptId === script.id && state.versionSelector.loading">
+									<icon-loading />
+								</template>
+								<template v-else>
+									<a-tooltip>
+										<template #content>
+											切换脚本版本，启动浏览器后会强制安装此版本<br />
+											如果选择最新版本，那么每次都会同步最新版本
+										</template>
+										<span> <icon-swap /> 版本 </span>
+									</a-tooltip>
+								</template>
+							</a-button>
+
 							<a-tooltip>
 								<template #content>
 									<div style="color: white; font-weight: bold">
@@ -200,44 +227,7 @@
 									<template #checked> 自动安装 </template>
 									<template #unchecked> 自动安装 </template>
 								</a-switch>
-
-								<!-- <a-button
-									size="mini"
-									:type="script.enable ? 'outline' : undefined"
-									class="user-script-action"
-									style="background: white"
-									@click="script.enable = !script.enable"
-								>
-									<Icon :type="script.enable ? 'pause' : 'download'" />
-								</a-button> -->
 							</a-tooltip>
-
-							<a-button
-								v-if="
-									!script.isLocalScript &&
-									!script.isInternetLinkScript &&
-									['greasyfork', 'scriptcat'].includes(getSourceType(script))
-								"
-								size="mini"
-								type="outline"
-								class="user-script-action"
-								style="background: white"
-								:disabled="state.versionSelector.loading"
-								@click="showScriptVersionList(script)"
-							>
-								<template v-if="state.versionSelector.currentScriptId === script.id && state.versionSelector.loading">
-									<icon-loading />
-								</template>
-								<template v-else>
-									<a-tooltip>
-										<template #content>
-											切换脚本版本，启动浏览器后会强制安装此版本<br />
-											如果选择最新版本，那么每次都会同步最新版本
-										</template>
-										<span> <icon-swap /> 版本 </span>
-									</a-tooltip>
-								</template>
-							</a-button>
 
 							<a-tooltip content="移除脚本">
 								<a-popconfirm @ok="onRemoveScript(script)">
