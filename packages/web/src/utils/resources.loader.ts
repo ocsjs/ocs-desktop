@@ -123,6 +123,8 @@ export class ResourceLoader {
 		for (const groupname of groupnames.filter((g) => g !== '.DS_Store')) {
 			const folder = await remote.path.call('join', this.resourceRootPath, groupname);
 			if (await remote.fs.call('existsSync', folder)) {
+				const isDirectory = await remote.methods.callSync('isDirectory', folder);
+				if (!isDirectory) continue;
 				try {
 					// @ts-ignore
 					const filenames: string[] = await remote.fs.call('readdirSync', folder);
