@@ -47,7 +47,13 @@ export async function startupServer() {
 	app.get('/browser', (req, res) => {
 		const render = getDecryptedRenderData();
 		// 如果开启了同步配置，就返回，否则返回空对象
-		res.json(render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {});
+		const data = render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {};
+		res.json(data);
+	});
+
+	app.get('/is-browser-config-sync', (req, res) => {
+		const render = getDecryptedRenderData();
+		res.write(String(render.setting.ocs.openSync));
 	});
 
 	/** 脚本操作 */
