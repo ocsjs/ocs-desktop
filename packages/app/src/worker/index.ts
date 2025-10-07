@@ -8,7 +8,7 @@ import { scripts as PlaywrightScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
 import _get from 'lodash/get';
 import child_process from 'child_process';
-import { getBrowserMajorVersion } from '../utils/browser';
+import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
@@ -86,11 +86,7 @@ export class ScriptWorker {
 
 		this.uid = uid;
 		// 拓展文件夹路径
-		this.extensionPaths = fs
-			.readdirSync(store.paths.extensionsFolder)
-			.filter((f) => f !== '.DS_Store')
-			.filter((f) => !f.endsWith('.zip'))
-			.map((file) => path.join(store.paths.extensionsFolder, file));
+		this.extensionPaths = getExtensionPaths(store.paths.extensionsFolder);
 
 		// 自动化脚本
 		this.playwrightScripts = playwrightScripts;
@@ -484,7 +480,7 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 						btn?.click();
 					} else {
 						if (
-							['更新', '安装', '添加', '降级', 'install', 'update', 'add', 'downgrade'].some(
+							['更新', '安装', '添加', '降级', 'Install Script', 'install', 'update', 'add', 'downgrade'].some(
 								(text) =>
 									(btn?.textContent || btn?.getAttribute('value') || '').trim().toLocaleLowerCase() ===
 									text.trim().toLocaleLowerCase()
@@ -651,6 +647,14 @@ async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; cl
 }
 
 function browserNetworkRoute(authToken: string, browser: BrowserContext) {
+	browser.route(/ocs-environment/, async (route) => {
+		await route.fulfill({
+			status: 200,
+			body: JSON.stringify({
+				environment: 'playwright'
+			})
+		});
+	});
 	browser.route(/ocs-script-actions/, async (route) => {
 		const req = route.request();
 		if (req.method().toLocaleUpperCase() !== 'POST') {
@@ -769,6 +773,11 @@ function handleBrowserInit(browser: BrowserContext, config: { enable_dialog?: bo
 
 		// 修改下载逻辑
 		page.on('download', async (download) => {
+			// 不处理脚本安装
+			if (download.url().endsWith('.user.js')) {
+				return;
+			}
+
 			download.cancel();
 			// 调用电脑本地浏览器进行文件下载
 			openUrl(download.url());

@@ -1,10 +1,31 @@
 <template>
-	<a-row :gutter="[24, 24]">
-		<template v-if="state.error">
-			<a-empty :description="`初始化错误，可能是网络请求错误请稍后重试。${state.error}`" />
-		</template>
-		<template v-else>
-			<a-col class="text-center">
+	<a-modal
+		:visible="props.visible"
+		:footer="false"
+		:closable="false"
+		@close="
+			() => {
+				emits('update:visible', false);
+			}
+		"
+	>
+		<template #title> {{ props.title }} </template>
+		<a-row :gutter="[24, 24]">
+			<a-col v-if="!Environment.infos.value">
+				<template v-if="Environment.loading">
+					<div class="text-center">
+						<a-spin />
+						<div class="mt-2">正在初始化资源，请稍后...</div>
+					</div>
+				</template>
+				<template v-else>
+					<div class="text-center text-danger">未能获取到远程资源信息，请检查网络后重试，或者稍后手动设置。</div>
+				</template>
+			</a-col>
+			<a-col
+				v-else
+				class="text-center"
+			>
 				<a-steps
 					direction="vertical"
 					:current="state.current_step"
@@ -49,64 +70,65 @@
 					</template>
 				</a-steps>
 			</a-col>
-		</template>
-		<a-col class="text-center mt-2">
-			<a-space :size="24">
-				<template v-if="state.current_step === state.steps.length">
-					<a-button
-						type="primary"
-						size="small"
-						@click="store.render.state.setup = false"
-					>
-						完成！
-					</a-button>
-				</template>
-				<template v-else-if="state.current_step === -1">
-					<a-button
-						size="small"
-						@click="notNow"
-					>
-						稍后手动设置
-					</a-button>
-					<a-button
-						type="primary"
-						size="small"
-						@click="setup"
-					>
-						一键初始化
-					</a-button>
-				</template>
-				<template v-else>
-					<a-button
-						size="small"
-						:disabled="true"
-					>
-						<icon-loading /> 初始化中...
-					</a-button>
-				</template>
-			</a-space>
-		</a-col>
-	</a-row>
+			<a-col class="text-center mt-2">
+				<a-space :size="24">
+					<template v-if="state.current_step === state.steps.length">
+						<a-button
+							type="primary"
+							size="small"
+							@click="
+								() => {
+									emits('finish');
+									emits('update:visible', false);
+								}
+							"
+						>
+							完成！
+						</a-button>
+					</template>
+					<template v-else-if="state.current_step === -1 || state.steps.find((s) => s.status === 'error')">
+						<a-button
+							size="small"
+							@click="notNow"
+						>
+							{{ props.cancelText }}
+						</a-button>
+						<a-button
+							type="primary"
+							size="small"
+							@click="setup"
+						>
+							{{ props.confirmText }}
+						</a-button>
+					</template>
+					<template v-else>
+						<a-button
+							size="small"
+							:disabled="true"
+						>
+							<icon-loading /> 初始化中...
+						</a-button>
+					</template>
+				</a-space>
+			</a-col>
+		</a-row>
+	</a-modal>
 </template>
 
 <script setup lang="ts">
 import { lang, store } from '../store';
-import { download, getRemoteInfos, sleep } from '../utils';
+import { download, sleep } from '../utils';
 import { remote } from '../utils/remote';
-import { onMounted, reactive } from 'vue';
+import { reactive, watch, nextTick, onMounted } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { installExtensions } from '../utils/extension';
 import { addScriptFromUrl } from '../utils/user-scripts';
-import { ResourceLoader } from '../utils/resources.loader';
-import { ResourceFile } from '@ocs-desktop/common/src/api';
 import { root } from '../fs/folder';
 import { newBrowser } from '../utils/browser';
 import { Browser } from '../fs/browser';
-import { Infos } from '../../../common/lib/src/api';
 import { child_process } from '../utils/node';
-import _get from 'lodash/get';
+import { Environment } from '../utils/environment';
 
-type Extension = ResourceFile & { installed?: boolean };
 type Step = {
 	title: string;
 	description?: string;
@@ -117,27 +139,54 @@ type Step = {
 };
 
 const state = reactive({
-	error: '',
 	current_step: -1,
 	steps: [] as Step[]
 });
 
-/** 资源加载器 */
-const resourceLoader = new ResourceLoader({
-	resourceRootPath: store.paths.downloadFolder
-});
+const props = withDefaults(
+	defineProps<{
+		visible: boolean;
+		confirmText: string;
+		cancelText: string;
+		title: string;
+		createNewBrowser?: boolean;
+	}>(),
+	{
+		visible: false,
+		confirmText: '一键初始化',
+		cancelText: '稍后手动设置',
+		title: '初始化软件设置',
+		createNewBrowser: true
+	}
+);
+
+const emits = defineEmits<{
+	(e: 'finish'): void;
+	(e: 'error', err: string): void;
+	(e: 'update:visible', data: any): void;
+}>();
 
 onMounted(async () => {
+	await Environment.init();
 	prepare();
 });
 
+watch(
+	() => props.visible,
+	() => {
+		nextTick(async () => {
+			await Environment.init();
+			prepare();
+		});
+	}
+);
+
 function notNow() {
-	store.render.state.setup = false;
+	emits('update:visible', false);
 }
 
 function prepare() {
 	try {
-		let infos: Infos | undefined;
 		state.steps = [];
 		state.current_step = -1;
 
@@ -152,29 +201,10 @@ function prepare() {
 			async action(step) {
 				step.description = '正在检测可用浏览器...';
 
-				// 检测有效的浏览器路径
-				const browsers = [
-					{
-						name: '默认设置浏览器',
-						path: store.render.setting.launchOptions.executablePath || ''
-					},
-					...(await remote.methods.call('getValidBrowsers'))
-				].filter((b) => b.path && remote.fs.callSync('existsSync', b.path));
-
-				const versions = await Promise.all(
-					browsers.map((browser) => remote.methods.call('getBrowserMajorVersion', browser.path))
-				);
-				console.log(versions);
-				// =========================== 可用 ===========================
-				if (versions.some((v) => v && v <= 137)) {
-					step.description = `共检测到 ${browsers.length} 个可用浏览器`;
-					const valid_version_browser = browsers.find((_, i) => versions[i] && versions[i] <= 137);
-					if (!valid_version_browser) {
-						step.error = '未检测到可用浏览器，请稍后在左侧软件设置中设置。';
-					} else {
-						store.render.setting.launchOptions.executablePath = valid_version_browser.path;
-						step.description += `\n设置浏览器路径为： ${valid_version_browser.name} - ${valid_version_browser.path}`;
-					}
+				const valid_version_browser = await Environment.getSupportedBrowser();
+				if (valid_version_browser) {
+					store.render.setting.launchOptions.executablePath = valid_version_browser.path;
+					step.description += `\n设置浏览器路径为： ${valid_version_browser.name} - ${valid_version_browser.path}`;
 					return;
 				}
 
@@ -186,9 +216,9 @@ function prepare() {
 					);
 					return;
 				}
-				infos = await getRemoteInfos();
-				console.log(infos);
 
+				const infos = await Environment.getRemoteInfos();
+				console.log(infos);
 				const win32_download_url = infos?.versions[0].app_downloads?.win32;
 				if (!win32_download_url) {
 					step.error = lang(
@@ -254,14 +284,15 @@ function prepare() {
 									reject(new Error('你已取消安装，请自行更新软件或者重新初始化。'));
 								},
 								async onOk() {
+									// 关闭软件
+									step.error = '安装程序已启动，请安装后重启软件并初始化设置。';
 									child_process.execFileSync(`"${dest}"`, { shell: true, windowsHide: false });
-									resolve();
 								}
 							});
 						});
 					} else if (typeof result === 'string') {
 						step.description += '\n最新版本软件下载完成，即将启动安装程序...';
-						store.render.state.setup = false;
+						emits('update:visible', false);
 						await new Promise<void>((resolve, reject) => {
 							Modal.info({
 								title: '提示',
@@ -270,8 +301,9 @@ function prepare() {
 								closable: false,
 								okText: '确认安装',
 								onOk(e) {
+									// 关闭软件
+									step.error = '安装程序已启动，请安装后重启软件并初始化设置。';
 									child_process.execFileSync(`"${result}"`, { shell: true, windowsHide: false });
-									resolve();
 								}
 							});
 						});
@@ -289,14 +321,8 @@ function prepare() {
 			title: '初始化浏览器拓展',
 			async action(step) {
 				step.description = '正在获取远程资源信息...';
-				infos = await getRemoteInfos();
 				// 获取最新的拓展和用户脚本信息
-				const extensions = (infos.resourceGroups.find((group) => group.name === 'extensions')?.files ||
-					[]) as Extension[];
-				for (const extension of extensions) {
-					extension.installed = await resourceLoader.isZipFileExists('extensions', extension);
-				}
-				const installed_extension = extensions.find((e) => e.installed);
+				const extensions = await Environment.getExtensions();
 
 				const install_new = async () => {
 					const default_extension = extensions[0];
@@ -315,29 +341,18 @@ function prepare() {
 					step.description += `\n已安装脚本管理器：${default_extension.name} - ${default_extension.url}`;
 				};
 
-				if (!installed_extension) {
+				// 如果全部都没安装则安装第一个
+				if (!extensions.every((ext) => ext.installed)) {
 					return install_new();
 				}
+				// 如果版本不支持
+				const supported_extension = await Environment.getSupportedExtension();
 
-				const manifest = JSON.parse(
-					String(
-						await remote.fs.call(
-							'readFileSync',
-							await remote.path.call(
-								'join',
-								await resourceLoader.getUnzippedPath('extensions', installed_extension),
-								'manifest.json'
-							),
-							'utf-8'
-						)
-					)
-				);
 				// 检查是否为 MV2 拓展，如果是则报错
-				if (_get(manifest, 'manifest_version', 2) < 3) {
+				if (!supported_extension) {
 					step.description = lang(
 						'setup_error_auto_download_new_extension_when_version_too_low',
-						'当前拓展 {{name}} 版本较低，需要更新拓展到最新MV3版本',
-						{ name: installed_extension.name }
+						'当前脚本管理器版本较低，需要更新拓展到最新MV3版本'
 					);
 					try {
 						await new Promise<void>((resolve, reject) => {
@@ -363,83 +378,84 @@ function prepare() {
 					}
 					return;
 				}
-				step.description = `已安装脚本管理器：${installed_extension.name} - ${installed_extension.url}`;
+				step.description = `已安装脚本管理器：${supported_extension.name} - ${supported_extension.url}`;
 			}
 		});
 
 		state.steps.push({
 			title: '初始化脚本',
 			async action(step) {
-				const userScripts = infos?.resourceGroups.find((group) => group.name === 'userjs')?.files || [];
-				const default_user_script = userScripts[0];
+				const default_user_script = await Environment.getValidUserScript();
 				if (!default_user_script) {
 					step.error = '未检测到可用脚本，请稍后在左侧软件设置中设置。';
 					return;
 				}
-				step.description = `共检测到 ${userScripts.length} 个用户脚本，正在安装...`;
+				step.description = `正在安装默认脚本：` + default_user_script.name;
 				await addScriptFromUrl(default_user_script.url);
 				step.description = `已安装用户脚本：${default_user_script.name} - ${default_user_script.url}`;
 			}
 		});
 
-		state.steps.push({
-			title: '新建浏览器',
-			action(step) {
-				const children = root().listChildren();
-				if (children.length !== 0) {
-					step.description = '已存在浏览器，无需重复创建。';
-					return;
-				}
-				const name = '未命名浏览器';
-				newBrowser({
-					name: name
-				});
-
-				step.description = `已创建浏览器：${name}，可稍后在左侧软件设置中修改名称`;
-			}
-		});
-
-		state.steps.push({
-			title: '浏览器启动测试',
-			async action(step) {
-				const children = root().listChildren();
-				if (children.length === 0) {
-					step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
-					return;
-				}
-
-				const browser = children[0];
-				const instance = Browser.from(browser.uid);
-				if (!instance) {
-					step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
-					return;
-				}
-
-				try {
-					const code = await instance.launch();
-					if (typeof code === 'number') {
-						step.error = '浏览器启动测试失败，请查看右侧详细错误信息。';
+		if (props.createNewBrowser) {
+			state.steps.push({
+				title: '新建浏览器',
+				action(step) {
+					const children = root().listChildren();
+					if (children.length !== 0) {
+						step.description = '已存在浏览器，无需重复创建。';
 						return;
-					} else {
-						step.description = '浏览器启动测试成功，即将自动关闭';
-						instance.close();
 					}
-				} catch (err) {
-					step.error = '浏览器启动测试失败：' + err;
-				}
-			}
-		});
+					const name = '未命名浏览器';
+					newBrowser({
+						name: name
+					});
 
-		state.steps.push({
-			title: '初始化完成',
-			async action(step) {
-				step.description = lang('setup_finish_notice', '');
-			}
-		});
+					step.description = `已创建浏览器：${name}，可稍后在左侧软件设置中修改名称`;
+				}
+			});
+
+			state.steps.push({
+				title: '浏览器启动测试',
+				async action(step) {
+					const children = root().listChildren();
+					if (children.length === 0) {
+						step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
+						return;
+					}
+
+					const browser = children[0];
+					const instance = Browser.from(browser.uid);
+					if (!instance) {
+						step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
+						return;
+					}
+
+					try {
+						const code = await instance.launch();
+						if (typeof code === 'number') {
+							step.error = '浏览器启动测试失败，请查看右侧详细错误信息。';
+							return;
+						} else {
+							step.description = '浏览器启动测试成功，即将自动关闭';
+							instance.close();
+						}
+					} catch (err) {
+						step.error = '浏览器启动测试失败：' + err;
+					}
+				}
+			});
+
+			state.steps.push({
+				title: '初始化完成',
+				async action(step) {
+					step.description = lang('setup_finish_notice', '');
+				}
+			});
+		}
 	} catch (err) {
-		state.error = String(err);
 		console.error(err);
 		Message.error(String(err));
+		emits('error', String(err));
 	}
 }
 
@@ -471,11 +487,13 @@ async function setup() {
 			state.current_step += 1;
 			await sleep(200);
 		}
-		Message.success('初始化完成');
+		if (state.steps.every((s) => s.status === 'finish')) {
+			Message.success('初始化完成！');
+		}
 	} catch (err) {
-		state.error = String(err);
 		console.error(err);
 		Message.error('安装失败，请稍后重试，或者手动设置 : ' + err);
+		emits('error', String(err));
 	}
 }
 </script>

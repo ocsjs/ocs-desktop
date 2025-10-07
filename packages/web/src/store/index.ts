@@ -187,7 +187,7 @@ export const files = reactive<File[]>([]);
 export const openedFiles = reactive(new Map<string, File>());
 
 export function lang(key: string, def?: string, params?: Record<string, any>) {
-	let text = store.render.langs[key] || key;
+	let text = store.render.langs[key];
 	if (!text) {
 		text = def || '';
 	}

@@ -149,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onActivated } from 'vue';
 import { ResourceFile, ResourceGroup } from '@ocs-desktop/common/src/api';
 import { resourceLoader } from '../../utils/resources.loader';
 import Icon from '../../components/Icon.vue';
@@ -176,7 +176,7 @@ const state = reactive({
 	}
 });
 
-onMounted(() => {
+onActivated(() => {
 	state.loading = true;
 	getRemoteInfos()
 		.then(async (result) => {

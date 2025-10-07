@@ -169,7 +169,10 @@ export class Process extends EventEmitter {
 						});
 						this.worker?.('launch', {
 							userDataDir: this.browser.cachePath,
-							userscripts: enabledUserScripts.map((s) => s.info?.code_url || s.url),
+							// 这里要加密编码，防止路径中有中文等特殊字符，会无法安装脚本
+							userscripts: enabledUserScripts.map(
+								(s) => (s.isLocalScript ? 'file://' : '') + (s.info?.code_url || s.url)
+							),
 							...this.launchOptions
 						});
 					} else {

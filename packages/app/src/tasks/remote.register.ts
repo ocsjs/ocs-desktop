@@ -15,7 +15,7 @@ import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
 import { scripts } from '../scripts';
 import { PlaywrightScript } from '../scripts/script';
-import { getBrowserMajorVersion } from '../utils/browser';
+import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 
 export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
 
@@ -99,6 +99,7 @@ const methods = {
 	unzip: unzip,
 	getValidBrowsers: getValidBrowsers,
 	getBrowserMajorVersion: getBrowserMajorVersion,
+	getExtensionPaths: getExtensionPaths,
 	systemProcesses: () => si.processes(),
 	exportExcel: exportExcel,
 	statisticFolderSize: statisticFolderSize,
@@ -112,6 +113,7 @@ const methods = {
 	isEncryptionAvailable: () => {
 		return safeStorage.isEncryptionAvailable();
 	},
+	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[]
 };
 

@@ -15,20 +15,24 @@
 
 				<div class="mb-2">
 					<a-space>
-						<a-button
-							size="mini"
-							type="outline"
-							@click="addScriptFromFile"
-						>
-							+ 添加本地脚本
-						</a-button>
-						<a-button
-							size="mini"
-							type="outline"
-							@click="addScriptFromURL"
-						>
-							+ 使用网络链接添加脚本
-						</a-button>
+						<a-tooltip content="从本地文件添加脚本，必须是以 .user.js 结尾的文件">
+							<a-button
+								size="mini"
+								type="outline"
+								@click="addScriptFromFile"
+							>
+								+ 添加本地脚本
+							</a-button>
+						</a-tooltip>
+						<a-tooltip content="使用网络链接添加脚本，通常以 http 开头，并以 .user.js 结尾的链接">
+							<a-button
+								size="mini"
+								type="outline"
+								@click="addScriptFromURL"
+							>
+								+ 添加网络脚本
+							</a-button>
+						</a-tooltip>
 						<a-button
 							size="mini"
 							type="outline"
@@ -38,7 +42,7 @@
 							搜索网络脚本
 						</a-button>
 						<a-dropdown trigger="hover">
-							<a-button size="mini"> <icon-more /> 快捷操作 </a-button>
+							<a-button size="mini"> <icon-apps class="me-1" /> 快捷操作 </a-button>
 
 							<template #content>
 								<a-doption

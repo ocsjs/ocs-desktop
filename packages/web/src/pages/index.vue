@@ -108,15 +108,10 @@
 			</template>
 
 			<!-- 显示一键安装 -->
-			<a-modal
+			<Setup
 				v-if="store.render.state.setup"
-				:visible="true"
-				:footer="false"
-				:closable="false"
-			>
-				<template #title> 初始化软件设置 </template>
-				<Setup></Setup>
-			</a-modal>
+				v-model:visible="store.render.state.setup"
+			></Setup>
 		</CommonEditActionDropdown>
 	</a-config-provider>
 </template>

@@ -17,3 +17,11 @@ export function getBrowserMajorVersion(executablePath: string) {
 		return parseInt(manifest.split('.')[0]);
 	}
 }
+
+export function getExtensionPaths(extensionsFolder: string) {
+	return fs
+		.readdirSync(extensionsFolder)
+		.filter((f) => f !== '.DS_Store')
+		.filter((f) => !f.endsWith('.zip'))
+		.map((file) => path.join(extensionsFolder, file));
+}
