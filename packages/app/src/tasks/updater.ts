@@ -35,9 +35,6 @@ export async function updateApp(newVersion: UpdateInformationResource) {
 	const dest = join(appPath, `../app-${tag}.zip`);
 	/** 解压路径 */
 	const unzipDest = join(appPath, './');
-	/** 删除app */
-	rmSync(unzipDest, { recursive: true, force: true });
-
 	/** 添加日志 */
 	writeFileSync(logPath, JSON.stringify(Object.assign(newVersion, { dest, unzipDest }), null, 4));
 
@@ -48,6 +45,12 @@ export async function updateApp(newVersion: UpdateInformationResource) {
 		await downloadFile(url, dest, (rate: any, totalLength: any, chunkLength: any) => {
 			getCurrentWebContents().send('update-download', rate, totalLength, chunkLength);
 		});
+
+		/**
+		 * 先下载后删除， 防止下载失败导致程序无法启动
+		 */
+		/** 删除app */
+		rmSync(unzipDest, { recursive: true, force: true });
 
 		/** 解压缩 */
 		const zip = new AdmZip(dest);
