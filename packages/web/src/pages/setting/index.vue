@@ -14,22 +14,28 @@
 					</div>
 					<div v-show="state.loading === true && state.err === ''"><icon-loading /> 正在获取最新OCS配置</div>
 
-					<a-tooltip content="同步：不需要在浏览器里面设置OCS配置， 直接在软件设置就能同步到所有浏览器中">
-						<a-button
-							v-if="state.loading === false && state.err === ''"
-							@click="state.show = true"
-						>
-							点击配置
-						</a-button>
-						<a-divider
-							class="mt-2 mb-2"
-							direction="vertical"
-						/>
+					<a-tooltip
+						:content="
+							lang('setting_browser_ocs_config_sync_tip', '开启后，修改OCS配置后会同步到全部由OCS桌面端启动的浏览器中')
+						"
+					>
 						<a-switch v-model="store.render.setting.ocs.openSync">
-							<template #checked> 同步到全部浏览器中 </template>
-							<template #unchecked> 同步到全部浏览器中 </template>
+							<template #checked> 同步配置 </template>
+							<template #unchecked> 同步配置 </template>
 						</a-switch>
 					</a-tooltip>
+
+					<a-divider
+						class="mt-2 mb-2"
+						direction="vertical"
+					/>
+
+					<a-button
+						v-if="state.loading === false && state.err === ''"
+						@click="state.show = true"
+					>
+						点击配置
+					</a-button>
 
 					<a-modal
 						v-model:visible="state.show"
@@ -193,7 +199,7 @@
 import Card from '../../components/Card.vue';
 import Description from '../../components/Description.vue';
 import Path from '../../components/Path.vue';
-import { store } from '../../store';
+import { lang, store } from '../../store';
 import { remote } from '../../utils/remote';
 import BrowserPath from '../../components/setting/BrowserPath.vue';
 import OCSConfigs from '../../components/OCSConfigs.vue';

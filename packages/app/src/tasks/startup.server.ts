@@ -53,7 +53,7 @@ export async function startupServer() {
 
 	app.get('/is-browser-config-sync', (req, res) => {
 		const render = getDecryptedRenderData();
-		res.write(String(render.setting.ocs.openSync));
+		res.end(String(render.setting.ocs.openSync));
 	});
 
 	/** 脚本操作 */
