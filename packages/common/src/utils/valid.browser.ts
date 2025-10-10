@@ -11,7 +11,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 			return [
 				{
 					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
+					path: resolveBrowserPath('bin\\chrome\\chrome\\Google Chrome for Testing')
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
@@ -35,7 +35,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 			return [
 				{
 					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
+					path: resolveBrowserPath('bin\\chrome\\chrome\\Google Chrome for Testing')
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
