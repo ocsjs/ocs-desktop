@@ -11,7 +11,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 			return [
 				{
 					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin\\chrome\\chrome\\Google Chrome for Testing')
+					path: resolveBrowserPath('bin/chrome/chrome/Google Chrome for Testing')
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
@@ -35,7 +35,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 			return [
 				{
 					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin\\chrome\\chrome\\Google Chrome for Testing')
+					path: resolveBrowserPath('bin/chrome/chrome/Google Chrome for Testing')
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
@@ -45,11 +45,15 @@ export function getValidBrowsers(): ValidBrowser[] {
 function resolveBrowserPath(commonPath: string) {
 	return [
 		join(process.resourcesPath, commonPath),
-		// @ts-ignore
-		join(process.env.ProgramFiles, commonPath),
-		// @ts-ignore
-		join(process.env['ProgramFiles(x86)'], commonPath),
-		join('C:\\Program Files', commonPath),
-		join('C:\\Program Files (x86)', commonPath)
+		...(process.platform === 'win32'
+			? [
+					// @ts-ignore
+					join(process.env.ProgramFiles, commonPath),
+					// @ts-ignore
+					join(process.env['ProgramFiles(x86)'], commonPath),
+					join('C:\\Program Files', commonPath),
+					join('C:\\Program Files (x86)', commonPath)
+			  ]
+			: [])
 	].find((p) => existsSync(p));
 }
