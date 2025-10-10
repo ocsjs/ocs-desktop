@@ -8,7 +8,12 @@ import 'electron';
 export function getValidBrowsers(): ValidBrowser[] {
 	switch (os.platform()) {
 		case 'darwin': {
-			return [];
+			return [
+				{
+					name: '软件内置浏览器-谷歌(Chrome)',
+					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
+				}
+			].filter((b) => b.path) as ValidBrowser[];
 		}
 		case 'win32': {
 			return [
@@ -27,7 +32,12 @@ export function getValidBrowsers(): ValidBrowser[] {
 			].filter((b) => b.path) as ValidBrowser[];
 		}
 		default: {
-			return [];
+			return [
+				{
+					name: '软件内置浏览器-谷歌(Chrome)',
+					path: resolveBrowserPath('bin\\chrome\\chrome\\chrome.exe')
+				}
+			].filter((b) => b.path) as ValidBrowser[];
 		}
 	}
 }
