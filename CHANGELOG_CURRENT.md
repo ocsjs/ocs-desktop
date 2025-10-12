@@ -1,9 +1,10 @@
-## [2.9.6](https://github.com/ocsjs/ocs-desktop/compare/2.9.5...2.9.6) (2025-10-10)
+## [2.9.8](https://github.com/ocsjs/ocs-desktop/compare/2.9.6...2.9.8) (2025-10-12)
 
 
 ### Bug Fixes
 
-* 持续修复mac和linux版本无法读取到内置浏览器的BUG ([97e7489](https://github.com/ocsjs/ocs-desktop/commit/97e7489913a3aa3da2d0fd9e2613cacfb121f663))
+* 修复英文环境下无法安装脚本的BUG ([2abb065](https://github.com/ocsjs/ocs-desktop/commit/2abb065ea9f30e2d960dc4a43d448813cc046622))
+* 修复MAC无法解析本地浏览器版本，以及解压内置浏览器错误的BUG ([17e039b](https://github.com/ocsjs/ocs-desktop/commit/17e039bf02a0d1bbf19ce194b1ded0804657c1b7))
 
 
 
