@@ -209,21 +209,22 @@ function prepare() {
 				}
 
 				// =========================== 安装新版本 ===========================
-				if (process.platform !== 'win32') {
+				if (process.platform !== 'win32' && process.platform !== 'darwin') {
 					step.error = lang(
 						'setup_error_un_support_platform_when_auto_download_new_version',
-						'当前系统不支持自动更新软件，请手动前往官网下载最新软件并安装和启动。'
+						'当前系统不支持自动更新软件，请前往官网 https://docs.ocsjs.com \n手动下载最新软件并安装和启动。'
 					);
 					return;
 				}
 
 				const infos = await Environment.getRemoteInfos();
 				console.log(infos);
-				const win32_download_url = infos?.versions[0].app_downloads?.win32;
-				if (!win32_download_url) {
+				const app_download_url = infos?.versions[0].app_downloads?.[process.platform];
+				if (!app_download_url) {
 					step.error = lang(
 						'setup_error_no_windows_download_url_when_auto_download_new_version',
-						'未找到 Windows 版本的下载地址，请前往官网下载最新软件并安装和启动。'
+						`未找到 ${process.platform} 版本的下载地址，请前往官网 https://docs.ocsjs.com \n手动下载最新软件并安装和启动。`,
+						{ platform: process.platform }
 					);
 					return;
 				}
@@ -231,7 +232,8 @@ function prepare() {
 				const dest = await remote.path.call(
 					'join',
 					store.paths.downloadFolder,
-					win32_download_url.split('/').pop() || 'ocs-desktop-latest.exe'
+					app_download_url.split('/').pop() ||
+						(process.platform === 'win32' ? 'ocs-desktop-installer.exe' : 'ocs-desktop-installer.dmg')
 				);
 
 				step.description = lang(
@@ -258,11 +260,11 @@ function prepare() {
 									return;
 								}
 
-								step.description += '\n正在下载最新版本软件：' + win32_download_url;
+								step.description += '\n正在下载最新版本软件：' + app_download_url;
 								const fp = await download({
 									name: '最新软件下载',
 									dest: dest,
-									url: win32_download_url
+									url: app_download_url
 								});
 								step.description += '\n下载完成，即将开始安装，请安装后重新初始化设置。';
 								resolve(fp);

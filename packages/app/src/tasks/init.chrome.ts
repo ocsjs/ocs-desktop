@@ -4,12 +4,14 @@ import fs from 'fs';
 import { sleep, unzip } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
+import child_process from 'child_process';
 const logger = Logger('chrome-init');
 
 export async function initChrome(win: BrowserWindow) {
 	try {
 		// 解压浏览器内核
 		const chromePath = path.join(process.resourcesPath, 'bin', 'chrome');
+		logger.log('chromePath', chromePath);
 		if (!fs.existsSync(chromePath)) {
 			logger.error(`内置浏览器目录不存在: ${chromePath}`);
 			return;
@@ -20,7 +22,7 @@ export async function initChrome(win: BrowserWindow) {
 				? 'chrome.exe'
 				: process.platform === 'linux'
 				? 'chrome'
-				: 'Google Chrome for Testing';
+				: 'Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
 
 		if (fs.existsSync(path.join(chromePath, 'chrome', chrome_filename))) {
 			logger.log(`内置浏览器已存在，无需初始化`);
@@ -36,12 +38,20 @@ export async function initChrome(win: BrowserWindow) {
 			signal: ab.signal
 		});
 		try {
-			await unzip(path.join(chromePath, 'chrome.zip'), path.join(chromePath, 'chrome_temp'));
-			const chrome_file = await glob('**/*/' + chrome_filename, {
-				nodir: true,
+			if (process.platform === 'darwin') {
+				child_process.execSync('unzip -o ./chrome.zip -d ./chrome_temp', { cwd: chromePath });
+			} else {
+				await unzip(path.join(chromePath, 'chrome.zip'), path.join(chromePath, 'chrome_temp'));
+			}
+			const searchPattern =
+				process.platform === 'darwin' ? '**/*/' + 'Google Chrome for Testing.app' : '**/*/' + chrome_filename;
+
+			const chrome_file = await glob(searchPattern, {
+				nodir: process.platform !== 'darwin', // macOS 查找目录
 				absolute: true,
 				cwd: path.join(chromePath, 'chrome_temp')
 			});
+			logger.log('chrome_file', chrome_file);
 			if (!chrome_file || chrome_file.length === 0) {
 				throw new Error('浏览器压缩包数据错误');
 			}

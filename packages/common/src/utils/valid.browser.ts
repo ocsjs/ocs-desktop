@@ -11,7 +11,9 @@ export function getValidBrowsers(): ValidBrowser[] {
 			return [
 				{
 					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin/chrome/chrome/Google Chrome for Testing')
+					path: resolveBrowserPath(
+						'bin/chrome/chrome/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'
+					)
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
@@ -32,12 +34,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 			].filter((b) => b.path) as ValidBrowser[];
 		}
 		default: {
-			return [
-				{
-					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin/chrome/chrome/Google Chrome for Testing')
-				}
-			].filter((b) => b.path) as ValidBrowser[];
+			return [];
 		}
 	}
 }

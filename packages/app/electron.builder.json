@@ -42,6 +42,10 @@
 			{
 				"target": "dmg",
 				"arch": ["x64", "arm64"]
+			},
+			{
+				"target": "pkg",
+				"arch": ["x64", "arm64"]
 			}
 		],
 		"extraResources": [

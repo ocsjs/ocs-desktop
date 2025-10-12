@@ -37,7 +37,7 @@
 		"playwright-core": "^1.52.0",
 		"semver": "^7.3.5",
 		"systeminformation": "^5.17.10",
-		"unzipper": "^0.10.14",
+		"unzipper": "^0.12.3",
 		"xlsx": "^0.17.5"
 	},
 	"repository": {
