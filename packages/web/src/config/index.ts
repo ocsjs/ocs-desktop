@@ -3,11 +3,6 @@ import { RouteRecordRaw } from 'vue-router';
 
 import page from '@/pages/index.vue';
 import bookmarks from '@/pages/bookmarks.vue';
-import setting from '@/pages/setting/index.vue';
-import browsers from '@/pages/browsers/index.vue';
-import dashboard from '@/pages/dashboard/index.vue';
-import userScripts from '@/pages/user-scripts/index.vue';
-import resources from '@/pages/resources/index.vue';
 import { GreasyForkUserScript, ScriptCatUserScript, CommonUserScript } from '../types/user.script';
 import { remote } from '../utils/remote';
 import { ScriptSearchEngine } from '../types/search';
@@ -32,7 +27,7 @@ export const config = reactive({
 				{
 					name: 'browsers',
 					path: 'browsers',
-					component: shallowRef(browsers),
+					component: () => import('@/pages/browsers/index.vue'),
 					meta: {
 						icon: 'view_list',
 						title: '浏览器列表'
@@ -41,7 +36,7 @@ export const config = reactive({
 				{
 					name: 'user-scripts',
 					path: 'user-scripts',
-					component: shallowRef(userScripts),
+					component: () => import('@/pages/user-scripts/index.vue'),
 					meta: {
 						icon: 'code',
 						title: '脚本列表'
@@ -50,7 +45,7 @@ export const config = reactive({
 				{
 					name: 'resources',
 					path: 'resources',
-					component: shallowRef(resources),
+					component: () => import('@/pages/resources/index.vue'),
 					meta: {
 						icon: 'widgets',
 						title: '应用中心'
@@ -59,7 +54,7 @@ export const config = reactive({
 				{
 					name: 'dashboard',
 					path: 'dashboard',
-					component: shallowRef(dashboard),
+					component: () => import('@/pages/dashboard/index.vue'),
 					meta: {
 						icon: 'image',
 						title: '监控列表'
@@ -68,7 +63,7 @@ export const config = reactive({
 				{
 					name: 'setting',
 					path: 'setting',
-					component: shallowRef(setting),
+					component: () => import('@/pages/setting/index.vue'),
 					meta: {
 						icon: 'settings',
 						title: '软件设置'
