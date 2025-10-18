@@ -192,11 +192,12 @@ async function updateEnvironmentDetect() {
 }
 
 .entities-container {
-	height: calc(100% - 90px);
+	height: calc(100% - 80px);
+	padding-bottom: 0px !important;
 }
 
 .entities {
-	height: calc(100% - 24px);
+	height: 100%;
 	overflow: overlay;
 }
 </style>
