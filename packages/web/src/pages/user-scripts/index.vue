@@ -38,8 +38,7 @@
 							type="outline"
 							@click="state.activeKey = 'search'"
 						>
-							<Icon type="search"></Icon>
-							搜索网络脚本
+							<Icon type="search">搜索网络脚本</Icon>
 						</a-button>
 						<a-dropdown trigger="hover">
 							<a-button size="mini"> <icon-apps class="me-1" /> 快捷操作 </a-button>

@@ -1,7 +1,9 @@
 <template>
+	<!-- see https://fonts.google.com/icons -->
 	<component
 		:is="slots.default ? Space : span"
 		class="d-inline-flex"
+		size="mini"
 	>
 		<span
 			:style="{ color, fontSize: size ? size + 'px' : 'inherit' }"
