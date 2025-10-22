@@ -271,26 +271,30 @@ export class ScriptWorker {
 			await page
 				.evaluate((uid) => {
 					document.title = uid;
-					document.body.innerHTML = `正在获取图像中，请勿操作。`;
+					document.body.innerHTML = `正在获取图像中，请勿操作...`;
 				}, this.uid)
 				.catch(console.error);
 
 			setTimeout(() => {
 				send('webrtc-page-loaded');
-			}, 100);
+			}, 200);
 		}
 	}
 
 	/** 关闭特殊图像共享浏览器窗口 */
 	async closeWebRTCPage() {
-		const pages = this.browser?.pages() || [];
-		for (const page of pages) {
-			const title = await page.title();
-			if (title === this.uid) {
-				await page.close();
+		try {
+			const pages = this.browser?.pages() || [];
+			for (const page of pages) {
+				const title = await page.title();
+				if (title === this.uid) {
+					await page.close();
+				}
 			}
-		}
-		send('webrtc-page-closed');
+		} catch {}
+		setTimeout(() => {
+			send('webrtc-page-closed');
+		}, 200);
 	}
 
 	kill() {

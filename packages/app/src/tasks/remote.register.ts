@@ -114,7 +114,10 @@ const methods = {
 		return safeStorage.isEncryptionAvailable();
 	},
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
-	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[]
+	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[],
+	captureDesktopScreen: () => {
+		return desktopCapturer.getSources({ types: ['window'] });
+	}
 };
 
 /**

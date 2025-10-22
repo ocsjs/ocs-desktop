@@ -1,4 +1,4 @@
-import { BrowserWindow, App, Dialog, WebContents, DesktopCapturer } from 'electron';
+import { BrowserWindow, App, Dialog, WebContents } from 'electron';
 import { notify } from './notify';
 import type { RemoteMethods } from '@ocs-desktop/app';
 import type fs from 'fs';
@@ -108,9 +108,7 @@ export const remote = {
 	methods: registerRemote<RemoteMethods>('methods'),
 	// 日志
 	// eslint-disable-next-line no-undef
-	logger: registerRemote<Console>('logger'),
-	// 截屏录像
-	desktopCapturer: registerRemote<DesktopCapturer>('desktopCapturer')
+	logger: registerRemote<Console>('logger')
 };
 
 function errorFilter(str: string) {

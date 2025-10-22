@@ -12,6 +12,8 @@
 				state.validUserScript === undefined
 			"
 		>
+			<!-- ====================== 环境修复部分 ====================== -->
+
 			<template #icon>
 				<div class="shadow">
 					<a-alert
@@ -61,6 +63,8 @@
 					}
 				"
 			></Setup>
+
+			<!-- ====================== 浏览器列表内容部分 ======================-->
 
 			<div class="col-12 p-1 ps-2 pe-2 operations">
 				<!-- 路径栏 -->

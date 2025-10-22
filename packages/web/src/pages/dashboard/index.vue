@@ -240,12 +240,11 @@ import { onDeactivated, watch, reactive, computed, onActivated, onMounted } from
 import { Process, processes } from '../../utils/process';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
 import { lang, store } from '../../store';
-
 import Tags from '../../components/Tags.vue';
-import { DesktopCapturerSource } from 'electron';
 import { remote } from '../../utils/remote';
 import { Modal, SelectOptionData } from '@arco-design/web-vue';
 import EntityOperator from '../../components/EntityOperator.vue';
+import type { DesktopCapturerSource } from 'electron';
 
 const state = reactive({
 	show: false,
@@ -363,7 +362,8 @@ async function refreshVideo() {
 			console.log('looping', retryCount);
 
 			// 抓取屏幕
-			const sources: DesktopCapturerSource[] = await remote.desktopCapturer.call('getSources', { types: ['window'] });
+			const sources: DesktopCapturerSource[] = await remote.methods.call('captureDesktopScreen');
+			console.log('sources', sources);
 
 			// 未完成的进程抓取屏幕
 			await Promise.all(
@@ -439,33 +439,32 @@ async function refreshVideo() {
 }
 
 async function getBrowserVideo(uid: string, sources: DesktopCapturerSource[]) {
-	for (const source of sources) {
-		if (RegExp(uid).test(source.name)) {
-			try {
-				const stream = await navigator.mediaDevices.getUserMedia({
-					audio: false,
-					video: {
-						// @ts-ignore
-						mandatory: {
-							chromeMediaSource: 'desktop',
-							chromeMediaSourceId: source.id
-						}
-					}
-				});
+	const source = sources.find((s) => RegExp(uid).test(s.name));
+	if (!source) {
+		return;
+	}
 
-				const video = document.createElement('video');
-				video.srcObject = stream;
-				video.style.display = 'block';
-				video.style.width = '100%';
-				video.poster = source.thumbnail.toDataURL();
-
-				video.onloadedmetadata = (e) => video.play();
-
-				return { video, stream };
-			} catch (e) {
-				console.log(e);
+	try {
+		const stream = await navigator.mediaDevices.getUserMedia({
+			audio: false,
+			video: {
+				// @ts-ignore
+				mandatory: {
+					chromeMediaSource: 'desktop',
+					chromeMediaSourceId: source.id
+				}
 			}
-		}
+		});
+
+		const video = document.createElement('video');
+		video.srcObject = stream;
+		video.style.display = 'block';
+		video.style.width = '100%';
+		video.poster = source.thumbnail.toDataURL();
+		video.onloadedmetadata = (e) => video.play();
+		return { video, stream };
+	} catch (e) {
+		console.log(e);
 	}
 }
 //   挂载视频
