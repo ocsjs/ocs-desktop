@@ -29,6 +29,7 @@ interface Langs {
 	error_when_browser_launch_failed_too_fast?: string;
 	error_when_extension_version_too_low?: string;
 	error_when_playwright_selector_timeout?: string;
+	webrtc_page_loading_notice?: string;
 }
 
 /** 脚本工作线程 */
@@ -271,7 +272,7 @@ export class ScriptWorker {
 			await page
 				.evaluate((uid) => {
 					document.title = uid;
-					document.body.innerHTML = `正在获取图像中，请勿操作...`;
+					document.body.innerHTML = ScriptWorker.lang('webrtc_page_loading_notice', `正在获取图像中，请勿操作...`);
 				}, this.uid)
 				.catch(console.error);
 
