@@ -17,7 +17,7 @@
 		"chalk": "4.1.0",
 		"colorpicker-v3": "^2.10.2",
 		"dayjs": "^1.10.7",
-		"easy-us": "^0.0.11",
+		"easy-us": "^0.0.31",
 		"events": "^3.3.0",
 		"markdown-it": "^13.0.1",
 		"markdown-it-anchor": "^8.6.7",
