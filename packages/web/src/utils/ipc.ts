@@ -1,7 +1,6 @@
 import { UpdateInformationResource } from '@ocs-desktop/common';
 import { store } from '../store';
 import { electron } from '../utils/node';
-import { closeAllBrowser } from './browser';
 import { notify } from './notify';
 import { Modal } from '@arco-design/web-vue';
 import { h } from 'vue';
@@ -9,8 +8,6 @@ import { remote } from './remote';
 const { ipcRenderer } = electron;
 
 export function activeIpcRenderListener() {
-	ipcRenderer.on('close', () => closeAllBrowser(true));
-
 	/** 如果正在更新的话，获取更新进度 */
 	ipcRenderer.on('update-download', (e, rate, totalLength, chunkLength) => {
 		notify(

@@ -150,7 +150,7 @@ const state = reactive({
 });
 
 // 监听软件关闭
-onUnmounted(() => closeAllBrowser(false));
+onUnmounted(() => closeAllBrowser());
 
 onMounted(async () => {
 	try {
@@ -270,8 +270,22 @@ onMounted(async () => {
 	}
 });
 
-ipcRenderer.on('close', () => {
-	saveStoreToLocal(store);
+/**
+ * 全局唯一关闭处理地方
+ */
+ipcRenderer.on('close', async () => {
+	console.log('关闭浏览器中...');
+	const res = await closeAllBrowser();
+	if (res === false) {
+		console.log('有浏览器拒绝关闭，取消退出');
+		return;
+	}
+	console.log('保存数据中...');
+	const m = Modal.info({ content: '正在保存数据...', closable: false, maskClosable: false, footer: false });
+	await saveStoreToLocal(store);
+	m.close();
+	console.log('数据已保存');
+	remote.app.call('exit', 0);
 });
 
 function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {

@@ -180,42 +180,45 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 	modal.close();
 }
 
-export async function closeAllBrowser(quit: boolean) {
+/**
+ * @returns 是否同意关闭软件
+ */
+export async function closeAllBrowser() {
 	if (processes.length) {
-		Modal.warning({
-			content: '还有浏览器正在运行，您确定关闭软件吗？',
-			title: '警告',
-			maskClosable: true,
-			closable: true,
-			alignCenter: true,
-			hideCancel: false,
-			onOk: async () => {
-				const m = Modal.info({ content: '正在关闭所有浏览器...', closable: false, maskClosable: false, footer: false });
+		return new Promise<boolean>((resolve, reject) => {
+			Modal.warning({
+				content: '还有浏览器正在运行，您确定关闭软件吗？',
+				title: '警告',
+				maskClosable: true,
+				closable: true,
+				alignCenter: true,
+				hideCancel: false,
+				onOk: async () => {
+					const m = Modal.info({
+						content: '正在关闭所有浏览器...',
+						closable: false,
+						maskClosable: false,
+						footer: false
+					});
 
-				const close = () => {
-					if (quit) {
-						remote.app.call('exit');
+					// 最久5秒后关闭
+					const timeout = setTimeout(close, 5000);
+					try {
+						for (const process of processes) {
+							await process.close();
+							await sleep(100);
+						}
+					} catch (err) {
+						Message.error(String(err));
 					}
+					clearTimeout(timeout);
 					m.close();
-				};
-
-				// 最久5秒后关闭
-				const timeout = setTimeout(close, 5000);
-				try {
-					for (const process of processes) {
-						await process.close();
-						await sleep(100);
-					}
-				} catch (err) {
-					Message.error(String(err));
+					resolve(true);
+				},
+				onCancel() {
+					resolve(false);
 				}
-				clearTimeout(timeout);
-				close();
-			}
+			});
 		});
-	} else {
-		if (quit) {
-			remote.app.call('exit');
-		}
 	}
 }
