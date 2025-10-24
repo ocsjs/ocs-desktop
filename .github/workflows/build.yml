@@ -30,6 +30,9 @@ jobs:
         env:
           USE_HARD_LINKS: false
 
+      - name: Build Change Logs
+        run: npm run changelog:current
+
       - name: Fetch Change logs
         run: |
           if [ -f "CHANGELOG_CURRENT.md" ]; then
@@ -99,4 +102,4 @@ jobs:
 
       - name: 上传到腾讯云 COS
         run: |
-          coscmd upload -r app/download/${{ env.VERSION }}/ /
+          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/
