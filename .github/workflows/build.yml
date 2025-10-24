@@ -6,7 +6,7 @@ on:
       - "*"
 
 jobs:
-  release:
+  release_to_tencent_cloud:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -39,12 +39,6 @@ jobs:
         env:
           USE_HARD_LINKS: false
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
-
       - name: 安装腾讯云 CLI
         run: pip install coscmd
 
@@ -56,9 +50,8 @@ jobs:
         #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
         run: |
           coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --exclude "**/*/chrome.zip"
-  release_change_log:
+  release:
     runs-on: ubuntu-latest
-    needs: release
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -132,3 +125,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: "./release.txt"
+          files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
