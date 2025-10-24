@@ -14,6 +14,14 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
+      - name: Set Env
+        run: |
+          echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
+          VERSION=$(jq -r .version package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/$VERSION/" >> $GITHUB_ENV
+        shell: bash
+
       - name: Check out Git repository
         uses: actions/checkout@v4
 
