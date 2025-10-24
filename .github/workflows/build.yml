@@ -53,8 +53,9 @@ jobs:
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
 
       - name: 上传到腾讯云 COS
+        #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
         run: |
-          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm
+          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --exclude "**/*/chrome.zip"
   release_change_log:
     runs-on: ubuntu-latest
     needs: release
