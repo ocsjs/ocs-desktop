@@ -49,7 +49,7 @@ jobs:
       - name: 上传到腾讯云 COS
         #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
         run: |
-          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --exclude "**/*/chrome.zip"
+          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
   release:
     runs-on: ubuntu-latest
     steps:
@@ -88,7 +88,7 @@ jobs:
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
           VERSION=$(jq -r .version package.json)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/$VERSION/" >> $GITHUB_ENV
+          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/" >> $GITHUB_ENV
         shell: bash
 
       - name: Generate release.txt
