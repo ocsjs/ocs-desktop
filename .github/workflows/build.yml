@@ -26,48 +26,18 @@ jobs:
           npm i pnpm -g &&
           pnpm install
 
+      - name: Build Change Logs
+        run: npm run changelog:current
+
       - name: Set Env
         run: |
           echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
           VERSION=$(jq -r .version package.json)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/$VERSION/" >> $GITHUB_ENV
+          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/" >> $GITHUB_ENV
         shell: bash
-
-      - name: Build
-        run: npm run build
-        env:
-          USE_HARD_LINKS: false
-
-      - name: 安装腾讯云 CLI
-        run: pip install coscmd
-
-      - name: 配置腾讯云 COS 认证
-        run: |
-          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
-
-      - name: 上传到腾讯云 COS
-        #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
-        run: |
-          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-      - name: Npm Install
-        run: |
-          npm i pnpm -g &&
-          pnpm install
-      - name: Build Change Logs
-        run: npm run changelog:current
-
       - name: Fetch Change logs
+        if: runner.os == 'Linux'
         run: |
           if [ -f "CHANGELOG_CURRENT.md" ]; then
             CHANGE_LOGS=$(awk '/^## v/{if(flag) exit; flag=1} flag' CHANGELOG_CURRENT.md)
@@ -83,15 +53,8 @@ jobs:
             echo "CHANGELOG_CURRENT.md file not found"
           fi
         shell: bash
-      - name: Set Env
-        run: |
-          echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
-          VERSION=$(jq -r .version package.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/" >> $GITHUB_ENV
-        shell: bash
-
       - name: Generate release.txt
+        if: runner.os == 'Linux'
         run: |
           if [ -z "$CHANGE_LOGS" ]; then
             echo "No change logs found, using default message"
@@ -120,9 +83,25 @@ jobs:
           Created at ${{ env.BUILDTIME }}.
           EOF
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Build
+        run: npm run build
+        env:
+          USE_HARD_LINKS: false
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: "./release.txt"
           files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
+
+      - name: 安装腾讯云 CLI
+        run: pip install coscmd
+
+      - name: 配置腾讯云 COS 认证
+        run: |
+          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
+
+      - name: 上传到腾讯云 COS
+        #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
+        run: |
+          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
