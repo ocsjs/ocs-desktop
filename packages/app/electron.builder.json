@@ -16,12 +16,10 @@
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{
-				"target": "nsis",
-				"arch": ["x64", "ia32", "arm64"]
+				"target": "nsis"
 			},
 			{
-				"target": "zip",
-				"arch": ["x64", "ia32", "arm64"]
+				"target": "zip"
 			}
 		],
 		"requestedExecutionLevel": "highestAvailable",
@@ -38,12 +36,10 @@
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{
-				"target": "zip",
-				"arch": ["x64", "arm64"]
+				"target": "zip"
 			},
 			{
-				"target": "dmg",
-				"arch": ["x64", "arm64"]
+				"target": "dmg"
 			}
 		],
 		"extraResources": [
@@ -59,8 +55,7 @@
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{
-				"target": "AppImage",
-				"arch": ["x64", "arm64"]
+				"target": "AppImage"
 			}
 		],
 		"extraResources": [

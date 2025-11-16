@@ -7,20 +7,44 @@ on:
 
 jobs:
   release_to_tencent_cloud:
-    runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          # Windows 构建
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: windows-11-arm
+            platform: win
+            arch: arm64
+            
+          # macOS 构建
+          - os: macos-13
+            platform: mac
+            arch: x64
+          - os: macos-latest
+            platform: mac
+            arch: arm64
+            
+          # Linux 构建
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: ubuntu-22.04-arm
+            platform: linux
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
-          node-version: "18"
+          node-version: "24"
+          
       - name: Npm Install
         run: |
           npm i pnpm -g &&
@@ -35,9 +59,12 @@ jobs:
           VERSION=$(jq -r .version package.json)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/$VERSION/" >> $GITHUB_ENV
+          echo "PLATFORM=${{ matrix.platform }}" >> $GITHUB_ENV
+          echo "ARCH=${{ matrix.arch }}" >> $GITHUB_ENV
         shell: bash
+        
       - name: Fetch Change logs
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.arch == 'x64'
         run: |
           if [ -f "CHANGELOG_CURRENT.md" ]; then
             CHANGE_LOGS=$(awk '/^## v/{if(flag) exit; flag=1} flag' CHANGELOG_CURRENT.md)
@@ -53,8 +80,9 @@ jobs:
             echo "CHANGELOG_CURRENT.md file not found"
           fi
         shell: bash
+        
       - name: Generate release.txt
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.arch == 'x64'
         run: |
           if [ -z "$CHANGE_LOGS" ]; then
             echo "No change logs found, using default message"
@@ -71,7 +99,7 @@ jobs:
           ### Windows (不支持Win7)
           - [64位(常用)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-x64.exe) | [64位(压缩包版本)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-x64.zip) | [ARM64(不常用)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-arm64.exe)
           ### macOS
-          - [M系列芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-x64.dmg) | [Intel芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-arm64.dmg)
+          - [M系列芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-arm64.dmg) | [Intel芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-x64.dmg)
 
           ### Linux
           - [AppImage](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-linux-x86_64.AppImage)
@@ -87,21 +115,27 @@ jobs:
         run: npm run build
         env:
           USE_HARD_LINKS: false
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+
       - name: Upload Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux' && matrix.arch == 'x64'
         with:
           body_path: "./release.txt"
           files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
 
       - name: 安装腾讯云 CLI
+        if: runner.os == 'Linux' && matrix.arch == 'x64'
         run: pip install coscmd
 
       - name: 配置腾讯云 COS 认证
+        if: runner.os == 'Linux' && matrix.arch == 'x64'
         run: |
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
 
       - name: 上传到腾讯云 COS
+        if: runner.os == 'Linux' && matrix.arch == 'x64'
         #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
         run: |
           coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
