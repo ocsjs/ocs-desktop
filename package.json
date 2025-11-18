@@ -2,6 +2,7 @@
 	"name": "ocs-desktop",
 	"version": "2.9.30",
 	"description": "desktop for userscript",
+	"packageManager": "pnpm@10.21.0",
 	"files": [
 		"lib",
 		"dist"
