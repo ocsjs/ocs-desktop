@@ -1,6 +1,6 @@
 {
 	"name": "ocs-desktop",
-	"version": "2.9.30",
+	"version": "2.9.31",
 	"description": "desktop for userscript",
 	"packageManager": "pnpm@10.21.0",
 	"files": [
