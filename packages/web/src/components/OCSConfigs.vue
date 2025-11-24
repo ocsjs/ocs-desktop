@@ -22,7 +22,6 @@
 import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
 import { store as Store } from '../store/index';
-import { definedCustomElements, h, $, $ui, MemoryStoreProvider, $store, $elements } from 'easy-us';
 
 type Project = any;
 
@@ -62,10 +61,15 @@ state.watchStopHandle = watch(store, () => {
 	emits('update:store', store.value);
 });
 
-const wrapper = h('div');
-const root = wrapper.attachShadow({ mode: 'closed' });
+let wrapper = null as HTMLElement | null;
+let root = null as ShadowRoot | null;
 
 function renderOCS() {
+	if (!root || !wrapper) return;
+	// @ts-ignore
+	const EUS = global.EUS as typeof import('easy-us');
+	const { definedCustomElements, h, $, $ui, $store } = EUS;
+
 	try {
 		const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
 
@@ -130,6 +134,13 @@ async function loadOCS() {
 			await remote.webContents.call('executeJavaScript', code);
 		}
 
+		// @ts-ignore
+		if (global.EUS === undefined) {
+			// 加载 EUS
+			const code = await remote.methods.call('get', 'https://cdn.ocsjs.com/easy-us.js');
+			await remote.webContents.call('executeJavaScript', code);
+		}
+
 		if (state.css === '') {
 			// 加载样式
 			state.css = await remote.methods.call('get', 'https://cdn.ocsjs.com/style.css');
@@ -137,9 +148,18 @@ async function loadOCS() {
 
 		// @ts-ignore
 		const OCS = global.OCS as typeof import('@ocsjs/script');
+		// @ts-ignore
+		const EUS = global.EUS as typeof import('easy-us');
+
+		const { MemoryStoreProvider, $elements, h } = EUS;
+
+		wrapper = wrapper || h('div');
+		root = root || wrapper.attachShadow({ mode: 'closed' });
+
 		OCS.$elements.root = root;
 		$elements.root = root;
 		console.log(OCS);
+		console.log(EUS);
 
 		/** 双向绑定数据 */
 		MemoryStoreProvider._source.store = store.value;
