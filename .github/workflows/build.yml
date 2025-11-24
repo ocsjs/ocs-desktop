@@ -123,7 +123,7 @@ jobs:
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux' && matrix.arch == 'x64'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: "./release.txt"
           files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
