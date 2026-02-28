@@ -5,8 +5,7 @@
 	"main": "./lib/index.js",
 	"types": "./lib/types.d.ts",
 	"scripts": {
-		"dev": "tsc &&  chcp 65001 && electron .",
-		"dev:mac": "tsc && electron .",
+		"dev": "tsc && electron .",
 		"pack": "tsc && electron-builder --config ./electron.builder.json --dir --publish never",
 		"dist": "tsc && electron-builder --config ./electron.builder.json --publish never",
 		"proxy": "HTTPS_PROXY=127.0.0.1:7890"
@@ -48,10 +47,7 @@
 		"ocs",
 		"script",
 		"playwright",
-		"puppeteer",
 		"electron",
-		"vue",
-		"ant-design-vue",
 		"typescript"
 	],
 	"author": {

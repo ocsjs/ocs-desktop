@@ -59,10 +59,9 @@
 		"ocs",
 		"script",
 		"playwright",
-		"puppeteer",
 		"electron",
 		"vue",
-		"ant-design-vue",
+		"arco-design-vue",
 		"typescript"
 	],
 	"author": "enncy",

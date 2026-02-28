@@ -6,6 +6,7 @@
 
 .chrome-temp/
 bin/
+package-lock.json
 
 # tsc
 

@@ -17,16 +17,13 @@
 		"target": [
 			{
 				"target": "nsis"
-			},
-			{
-				"target": "zip"
 			}
 		],
 		"requestedExecutionLevel": "highestAvailable",
 		"extraResources": [
 			{
-				"from": "../../bin/",
-				"to": "bin",
+				"from": "../../bin/chrome/win-${arch}/",
+				"to": "bin/chrome",
 				"filter": ["**/*.zip"]
 			}
 		]
@@ -36,16 +33,13 @@
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{
-				"target": "zip"
-			},
-			{
 				"target": "dmg"
 			}
 		],
 		"extraResources": [
 			{
-				"from": "../../bin/",
-				"to": "bin",
+				"from": "../../bin/chrome/mac-${arch}/",
+				"to": "bin/chrome",
 				"filter": ["**/*.zip"]
 			}
 		]
@@ -60,8 +54,8 @@
 		],
 		"extraResources": [
 			{
-				"from": "../../bin/",
-				"to": "bin",
+				"from": "../../bin/chrome/linux-${arch}/",
+				"to": "bin/chrome",
 				"filter": ["**/*.zip"]
 			}
 		]

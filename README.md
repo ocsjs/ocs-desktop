@@ -5,8 +5,11 @@
 ## 初始化项目依赖
 
 ```bash
+# 启用 Corepack（Node.js 自带的包管理器管理工具）
+corepack enable
+corepack prepare pnpm@10.21.0 --activate
+
 # 安装依赖
-npm i pnpm -g
 pnpm install
 
 # 编译 common 库，此操作只需执行一次，除非后续更改 common 代码，否则无需重复操作。
@@ -22,20 +25,20 @@ npx tsc
 
 ```bash
 cd packages/web
-npm run dev
+pnpm dev
 ```
 
 **终端 2** - 运行 electron 主进程
 
 ```bash
 cd packages/app
-npm run dev
+pnpm dev
 ```
 
 ## 打包
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## 注意

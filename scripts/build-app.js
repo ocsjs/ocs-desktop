@@ -19,7 +19,14 @@ function cleanOutput() {
 }
 
 function packResource() {
-	return src('../packages/app/dist/win-unpacked/resources/app/**/*')
+	const platform = process.env.PLATFORM || 'win';
+	const unpackedDirs = {
+		win: '../packages/app/dist/win-unpacked',
+		mac: '../packages/app/dist/mac-unpacked',
+		linux: '../packages/app/dist/linux-unpacked'
+	};
+	const unpackedDir = unpackedDirs[platform] || unpackedDirs.win;
+	return src(`${unpackedDir}/resources/app/**/*`)
 		.pipe(zip(`app${version}.zip`))
 		.pipe(dest('../packages/app/dist'));
 }

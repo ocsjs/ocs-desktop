@@ -11,12 +11,6 @@
 	},
 	"keywords": [
 		"ocs",
-		"script",
-		"playwright",
-		"puppeteer",
-		"electron",
-		"vue",
-		"ant-design-vue",
 		"typescript"
 	],
 	"author": "enncy",
