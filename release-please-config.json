@@ -1,7 +1,10 @@
 {
   "release-type": "node",
+  "include-component-in-tag": false,
+  "bootstrap-sha": "55a3f44f9a45cff86980211747089ee603418a9d",
   "packages": {
     ".": {
+      "component": "ocs-desktop",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         "packages/app/package.json"

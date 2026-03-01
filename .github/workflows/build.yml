@@ -120,6 +120,30 @@ jobs:
             fi
           done
 
+      - name: Append custom release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          EXISTING_BODY=$(gh release view "$TAG_NAME" --json body -q .body 2>/dev/null || echo "")
+          DL="${{ env.DOWNLOAD_URL }}"
+          VER="${{ env.VERSION }}"
+          BT="${{ env.BUILDTIME }}"
+          CUSTOM_NOTES="
+          ---
+          ## 📦 下载地址
+          ### Windows (不支持Win7)
+          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe)
+          ### macOS
+          - [M系列芯片(ARM64)](${DL}ocs-${VER}-setup-mac-arm64.dmg) | [Intel芯片(x64)](${DL}ocs-${VER}-setup-mac-x64.dmg)
+          ### Linux
+          - [AppImage](${DL}ocs-${VER}-setup-linux-x64.AppImage)
+          ### 🔗 快捷访问
+          - [官网](https://docs.ocsjs.com/)
+          - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)
+          > Created at ${BT}."
+          gh release edit "$TAG_NAME" --notes "${EXISTING_BODY}${CUSTOM_NOTES}"
+
   upload-cos:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
