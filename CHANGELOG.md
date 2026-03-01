@@ -2,6 +2,19 @@
 
 
 
+## [2.10.0](https://github.com/ShyButHandsome/ocs-desktop/compare/v2.9.32...v2.10.0) (2026-03-01)
+
+
+### ✨ Features
+
+* **web:** redesign bookmarks page with modern dark theme UI ([6845c1f](https://github.com/ShyButHandsome/ocs-desktop/commit/6845c1f4e907f1b209ea6102aca2efa97a7a5681))
+* 美化书签页面并修复访问问题 ([9cd0abc](https://github.com/ShyButHandsome/ocs-desktop/commit/9cd0abc37e1c3b70996b91749f8150ad65d1131c))
+
+
+### 🐛 Bug Fixes
+
+* browser bookmark page inaccessible after installation ([50a73e8](https://github.com/ShyButHandsome/ocs-desktop/commit/50a73e8243de27c5fa8f7999e681ad108403fc8a))
+
 ## [2.9.32](https://github.com/ShyButHandsome/ocs-desktop/compare/v2.9.31...v2.9.32) (2026-03-01)
 
 
