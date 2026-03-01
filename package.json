@@ -12,7 +12,11 @@
 		"tsc": "pnpm lint && gulp -f ./scripts/tsc.js",
 		"lint": "pnpm format && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
 		"format": "prettier -c ./.prettierrc.json **/*.ts **/*.js **/*.vue **/*.css --write",
-		"prepare": "husky"
+		"prepare": "husky",
+		"dev:common": "pnpm --filter @ocs-desktop/common tsc",
+		"dev:app": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/app dev",
+		"dev:web": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/web dev",
+		"dev": "echo '用法：\\n  pnpm dev:web - 启动 Web 开发服务器\\n  pnpm dev:app - 启动 Electron 主进程\\n\\n请分别在两个终端中运行这两个命令。'"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.0.0",
