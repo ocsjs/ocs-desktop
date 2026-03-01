@@ -119,11 +119,23 @@ export async function startupServer() {
 	// 静态资源
 	app.use(express.static(path.join(getProjectPath(), './public')));
 
-	const server = app.listen(store.store.server.port, () => {
-		const address = server.address();
-		if (address && typeof address === 'object') {
-			// 存储本次服务的端口
-			logger.info(`OCS服务启动成功 => ${address.port}`);
-		}
+	return new Promise<void>((resolve, reject) => {
+		const server = app.listen(store.store.server.port, () => {
+			const address = server.address();
+			if (address && typeof address === 'object') {
+				// 存储本次服务的端口
+				logger.info(`OCS服务启动成功 => ${address.port}`);
+			}
+			resolve();
+		});
+
+		server.on('error', (err: NodeJS.ErrnoException) => {
+			if (err.code === 'EADDRINUSE') {
+				logger.error(`端口 ${store.store.server.port} 已被占用，服务启动失败`);
+			} else {
+				logger.error(`OCS服务启动失败: ${err.message}`);
+			}
+			reject(err);
+		});
 	});
 }

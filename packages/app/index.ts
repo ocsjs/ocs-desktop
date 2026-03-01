@@ -36,9 +36,9 @@ function bootstrap() {
 	task('OCS启动程序', () =>
 		Promise.all([
 			task('初始化错误处理', () => handleError()),
-			task('初始化本地设置', () => {
+			task('初始化本地设置', async () => {
 				initStore();
-				task('启动接口服务', () => startupServer());
+				await task('启动接口服务', () => startupServer());
 			}),
 			task('初始化自动启动', () => autoLaunch()),
 			task('启动渲染进程', async () => {
