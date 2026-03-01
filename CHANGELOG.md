@@ -2,6 +2,13 @@
 
 
 
+## [2.9.32](https://github.com/ShyButHandsome/ocs-desktop/compare/v2.9.31...v2.9.32) (2026-03-01)
+
+
+### ♻️ Refactoring
+
+* restructure project architecture ([b5b5da7](https://github.com/ShyButHandsome/ocs-desktop/commit/b5b5da7edc8fb7eed0c9747085af568706580a3f))
+
 ## [2.9.30](https://github.com/ocsjs/ocs-desktop/compare/2.9.28...2.9.30) (2025-11-16)
 
 
@@ -701,6 +708,3 @@
 * **app:** 新增智慧职教-账号密码登录自动化脚本 ([96d2eb1](https://github.com/ocsjs/ocs-desktop/commit/96d2eb1bfe6befd65dd71e527758ed58d71cf0fe))
 * **web:** 添加浏览器缓存清除功能 ([52431c3](https://github.com/ocsjs/ocs-desktop/commit/52431c3f41a7cbc2f7168bbeba4f70c0e2e4a438))
 * **web:** 新增可添加网络脚本的功能 ([e2919fe](https://github.com/ocsjs/ocs-desktop/commit/e2919fe894df82f663936926f5205d6fae890c8a))
-
-
-
