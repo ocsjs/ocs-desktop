@@ -1,7 +1,7 @@
 <template>
 	<div class="col-12 p-2 m-auto h-100">
 		<a-tabs
-			v-model:activeKey="state.activeKey"
+			v-model:active-key="state.activeKey"
 			class="overflow-auto h-100"
 		>
 			<a-tab-pane
@@ -266,7 +266,7 @@
 					</div>
 
 					<div class="col-12">
-						<a-tabs v-model:activeKey="state.engineKey">
+						<a-tabs v-model:active-key="state.engineKey">
 							<a-tab-pane
 								v-for="item of engineSearchList"
 								:key="item.engine.name"

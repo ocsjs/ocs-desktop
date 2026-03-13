@@ -376,8 +376,15 @@ export async function launchBrowser({
 				executablePath,
 				ignoreHTTPSErrors: true,
 				acceptDownloads: true,
-				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation', '--no-sandbox'],
-				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args]
+				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
+				args: [
+					'--window-position=0,0',
+					'--no-first-run',
+					'--no-default-browser-check',
+					'--no-sandbox',
+					'--disable-setuid-sandbox',
+					...args
+				]
 			})
 			.then(async (browser) => {
 				// 处理浏览器初始

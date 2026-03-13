@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ValidBrowser } from '../interface';
 import os from 'os';
-import 'electron';
+import { app } from 'electron';
 
 // 获取可用浏览器路径
 export function getValidBrowsers(): ValidBrowser[] {
@@ -33,6 +33,14 @@ export function getValidBrowsers(): ValidBrowser[] {
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
+		case 'linux': {
+			return [
+				{
+					name: '软件内置浏览器-谷歌(Chrome)',
+					path: resolveBrowserPath('bin/chrome/chrome/chrome')
+				}
+			].filter((b) => b.path) as ValidBrowser[];
+		}
 		default: {
 			return [];
 		}
@@ -41,6 +49,7 @@ export function getValidBrowsers(): ValidBrowser[] {
 
 function resolveBrowserPath(commonPath: string) {
 	return [
+		join(app.getPath('userData'), commonPath),
 		join(process.resourcesPath, commonPath),
 		...(process.platform === 'win32'
 			? [

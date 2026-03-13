@@ -84,27 +84,50 @@ export const Environment = {
 			extension.installed = await resourceLoader.isZipFileExists('extensions', extension);
 		}
 		const installed_extension = extensions.find((e) => e.installed);
-		if (!installed_extension) return;
-
-		const manifest = JSON.parse(
-			String(
-				await remote.fs.call(
-					'readFileSync',
-					await remote.path.call(
-						'join',
-						await resourceLoader.getUnzippedPath('extensions', installed_extension),
-						'manifest.json'
-					),
-					'utf-8'
+		if (installed_extension) {
+			const manifest = JSON.parse(
+				String(
+					await remote.fs.call(
+						'readFileSync',
+						await remote.path.call(
+							'join',
+							await resourceLoader.getUnzippedPath('extensions', installed_extension),
+							'manifest.json'
+						),
+						'utf-8'
+					)
 				)
-			)
-		);
-		// 检查是否为 MV2 拓展，如果是则报错
-		if (_get(manifest, 'manifest_version', 2) < 3) {
-			return undefined;
+			);
+			// 检查是否为 MV2 拓展，如果是则报错
+			if (_get(manifest, 'manifest_version', 2) < 3) {
+				return undefined;
+			}
+			return installed_extension;
 		}
 
-		return installed_extension;
+		// 兜底：远程资源列表未命中时，直接扫描本地 extensions 目录
+		try {
+			// @ts-ignore
+			const paths: string[] = await remote.fs.call('readdirSync', store.paths.extensionsFolder);
+			for (const file of paths.filter((f) => f !== '.DS_Store')) {
+				const extensionPath = await remote.path.call('join', store.paths.extensionsFolder, file);
+				const isDirectory = remote.methods.callSync('isDirectory', extensionPath);
+				if (!isDirectory) continue;
+				const manifestPath = await remote.path.call('join', extensionPath, 'manifest.json');
+				const exists = await remote.fs.call('existsSync', manifestPath);
+				if (!exists) continue;
+
+				const manifest = JSON.parse(String(await remote.fs.call('readFileSync', manifestPath, 'utf-8')));
+				if (_get(manifest, 'manifest_version', 2) >= 3) {
+					return {
+						id: file,
+						name: _get(manifest, 'name', file),
+						url: '',
+						installed: true
+					} as Extension;
+				}
+			}
+		} catch {}
 	},
 
 	async getValidUserScript() {
