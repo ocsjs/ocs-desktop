@@ -125,7 +125,6 @@ import { installExtensions } from '../utils/extension';
 import { addScriptFromUrl } from '../utils/user-scripts';
 import { root } from '../fs/folder';
 import { newBrowser } from '../utils/browser';
-import { Browser } from '../fs/browser';
 import { child_process } from '../utils/node';
 import { Environment } from '../utils/environment';
 

@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-v-html -->
 <template>
 	<div class="col-12 p-2 m-auto h-100">
 		<a-tabs
