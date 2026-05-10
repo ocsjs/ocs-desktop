@@ -417,37 +417,6 @@ function prepare() {
 			});
 
 			state.steps.push({
-				title: '浏览器启动测试',
-				async action(step) {
-					const children = root().listChildren();
-					if (children.length === 0) {
-						step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
-						return;
-					}
-
-					const browser = children[0];
-					const instance = Browser.from(browser.uid);
-					if (!instance) {
-						step.error = '未检测到浏览器，请稍后在左侧软件设置中创建浏览器。';
-						return;
-					}
-
-					try {
-						const code = await instance.launch();
-						if (typeof code === 'number') {
-							step.error = '浏览器启动测试失败，请查看右侧详细错误信息。';
-							return;
-						} else {
-							step.description = '浏览器启动测试成功，即将自动关闭';
-							instance.close();
-						}
-					} catch (err) {
-						step.error = '浏览器启动测试失败：' + err;
-					}
-				}
-			});
-
-			state.steps.push({
 				title: '初始化完成',
 				async action(step) {
 					step.description = lang('setup_finish_notice', '');
