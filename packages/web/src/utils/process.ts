@@ -170,8 +170,12 @@ export class Process extends EventEmitter {
 						this.worker?.('launch', {
 							userDataDir: this.browser.cachePath,
 							// 这里要加密编码，防止路径中有中文等特殊字符，会无法安装脚本
-							userscripts: enabledUserScripts.map(
-								(s) => (s.isLocalScript ? 'file://' : '') + (s.info?.code_url || s.url)
+							userscripts: enabledUserScripts.map((s) =>
+								s.isLocalScript
+									? `http://localhost:${store.server.port}/api/local-userscript?path=${encodeURIComponent(
+											s.info?.code_url || s.url
+									  )}`
+									: s.info?.code_url || s.url
 							),
 							...this.launchOptions
 						});

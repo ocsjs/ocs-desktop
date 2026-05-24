@@ -10,7 +10,9 @@ const logger = Logger('chrome-init');
 export async function initChrome(win: BrowserWindow) {
 	try {
 		// 解压浏览器内核
-		const chromePath = path.join(process.resourcesPath, 'bin', 'chrome');
+		const chromePath = app.isPackaged
+			? path.join(process.resourcesPath, 'bin', 'chrome')
+			: path.join(app.getAppPath(), '..', '..', 'bin', 'chrome');
 		logger.log('chromePath', chromePath);
 		if (!fs.existsSync(chromePath)) {
 			logger.error(`内置浏览器目录不存在: ${chromePath}`);
