@@ -1,6 +1,7 @@
 import express from 'express';
 import { Logger } from '../logger';
 import path from 'path';
+import fs from 'fs';
 import axios from 'axios';
 import { getDecryptedRenderData, store } from '../store';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
@@ -114,6 +115,17 @@ export async function startupServer() {
 		moveWindowToTop();
 		// 显示浏览器文件
 		getCurrentWebContents().send('show-browser-in-app', req.query.uid);
+	});
+
+	// 提供本地用户脚本（扩展只能拦截 http/https 请求安装脚本）
+	app.get('/api/local-userscript', (req, res) => {
+		const filePath = req.query.path as string;
+		if (filePath && fs.existsSync(filePath)) {
+			res.setHeader('Content-Type', 'application/javascript');
+			res.sendFile(path.resolve(filePath));
+		} else {
+			res.status(404).send('File not found');
+		}
 	});
 
 	// 静态资源
