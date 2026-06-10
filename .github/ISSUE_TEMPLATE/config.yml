@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 官方文档
+    url: https://docs.ocsjs.com/docs/quickly-start
+    about: 查看快速入门和使用文档
+  - name: 📚 脚本问题反馈
+    url: https://github.com/ocsjs/ocsjs/issues
+    about: 课程脚本相关问题请前往 ocsjs/ocsjs 仓库反馈
+  - name: 📢 官网
+    url: https://docs.ocsjs.com/
+    about: 访问官网获取最新版本和使用指南

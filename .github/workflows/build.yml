@@ -1,144 +1,199 @@
-name: Build/release
+name: Build and Upload
 
 on:
-  push:
-    tags:
-      - "*"
   workflow_dispatch:
 
 jobs:
-  release_to_tencent_cloud:
+  build:
     strategy:
       matrix:
         include:
-          # Windows 构建
+          # Windows x64
           - os: windows-latest
             platform: win
             arch: x64
-          # - os: windows-11-arm
-          #   platform: win
-          #   arch: arm64
-            
-          # macOS 构建
-          - os: macos-13
+
+          # macOS x64 (Intel Mac runner 原生构建)
+          - os: macos-15-intel
             platform: mac
             arch: x64
+
+          # macOS ARM64
           - os: macos-latest
             platform: mac
             arch: arm64
-            
-          # Linux 构建
+
+          # Linux x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
-          - os: ubuntu-22.04-arm
-            platform: linux
-            arch: arm64
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          # electron的不同版本有专门对应的node版本，当前项目electron35对应的是22.14
           node-version: "22.14"
-      
-      # 在GitHub Action当中应该使用uses: pnpm/action-setup而不是npm install pnpm
-      - name: Npm Install
+
+      - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: true
 
-      - name: Build Change Logs
-        run: npm run changelog:current
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
 
       - name: Set Env
         run: |
-          echo "BUILDTIME=$(TZ=Asia/Shanghai date)" >> $GITHUB_ENV
           VERSION=$(jq -r .version package.json)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "DOWNLOAD_URL=https://github.com/ocsjs/ocs-desktop/releases/download/$VERSION/" >> $GITHUB_ENV
           echo "PLATFORM=${{ matrix.platform }}" >> $GITHUB_ENV
           echo "ARCH=${{ matrix.arch }}" >> $GITHUB_ENV
         shell: bash
-        
-      - name: Fetch Change logs
-        if: runner.os == 'Linux' && matrix.arch == 'x64'
-        run: |
-          if [ -f "CHANGELOG_CURRENT.md" ]; then
-            CHANGE_LOGS=$(awk '/^## v/{if(flag) exit; flag=1} flag' CHANGELOG_CURRENT.md)
-            if [ -n "$CHANGE_LOGS" ]; then
-              echo "Found change logs"
-              echo "CHANGE_LOGS<<EOF" >> $GITHUB_ENV
-              echo "$CHANGE_LOGS" >> $GITHUB_ENV
-              echo "EOF" >> $GITHUB_ENV
-            else
-              echo "No change sections found in CHANGELOG_CURRENT.md"
-            fi
-          else
-            echo "CHANGELOG_CURRENT.md file not found"
-          fi
-        shell: bash
-        
-      - name: Generate release.txt
-        if: runner.os == 'Linux' && matrix.arch == 'x64'
-        run: |
-          if [ -z "$CHANGE_LOGS" ]; then
-            echo "No change logs found, using default message"
-            CHANGE_LOGS="More new features are now supported. Check for detailed changelog soon."
-          else
-            echo "Using found change logs"
-          fi
-
-          cat > release.txt << EOF
-          $CHANGE_LOGS
-
-          ## 下载地址
-
-          ### Windows (不支持Win7)
-          - [64位(常用)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-x64.exe) | [64位(压缩包版本)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-x64.zip) | [ARM64(不常用)](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-win-arm64.exe)
-          ### macOS
-          - [M系列芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-arm64.dmg) | [Intel芯片](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-mac-x64.dmg)
-
-          ### Linux
-          - [AppImage](${{ env.DOWNLOAD_URL }}ocs-${{ env.VERSION }}-setup-linux-x86_64.AppImage)
-
-          ### 快捷访问
-          - [官网](https://docs.ocsjs.com/)
-          - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)
-
-          Created at ${{ env.BUILDTIME }}.
-          EOF
 
       - name: Build
-        run: npm run build
+        run: pnpm build
         env:
           USE_HARD_LINKS: false
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
 
-      - name: Upload Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux' && matrix.arch == 'x64'
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          body_path: "./release.txt"
-          files: "./packages/app/dist/**.exe,./packages/app/dist/**.dmg,./packages/app/dist/**.AppImage,./packages/app/dist/**.zip,./packages/app/dist/**.deb,./packages/app/dist/**.rpm"
+          name: build-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            packages/app/dist/*.exe
+            packages/app/dist/*.dmg
+            packages/app/dist/*.AppImage
+            packages/app/dist/*.deb
+            packages/app/dist/*.rpm
+          if-no-files-found: ignore
+          retention-days: 3
 
-      - name: 安装腾讯云 CLI
-        if: runner.os == 'Linux' && matrix.arch == 'x64'
+  upload-release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Set Env
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
+          BUILDTIME=$(TZ=Asia/Shanghai date)
+          echo "BUILDTIME=$BUILDTIME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Create Release if not exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          gh release create "$TAG_NAME" --draft --generate-notes || true
+
+      - name: Upload artifacts to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Uploading artifacts to release: $TAG_NAME"
+          for file in artifacts/*; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $file"
+              gh release upload "$TAG_NAME" "$file" --clobber || echo "Failed to upload $file"
+            fi
+          done
+
+      - name: Append custom release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          EXISTING_BODY=$(gh release view "$TAG_NAME" --json body -q .body 2>/dev/null || echo "")
+          DL="${{ env.DOWNLOAD_URL }}"
+          VER="${{ env.VERSION }}"
+          BT="${{ env.BUILDTIME }}"
+          CUSTOM_NOTES="
+          ---
+          ## 📦 下载地址
+          ### Windows (不支持Win7)
+          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe)
+          ### macOS
+          - [M系列芯片(ARM64)](${DL}ocs-${VER}-setup-mac-arm64.dmg) | [Intel芯片(x64)](${DL}ocs-${VER}-setup-mac-x64.dmg)
+          ### Linux
+          - [AppImage](${DL}ocs-${VER}-setup-linux-x64.AppImage)
+          ### 🔗 快捷访问
+          - [官网](https://docs.ocsjs.com/)
+          - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)
+          > Created at ${BT}."
+          gh release edit "$TAG_NAME" --notes "${EXISTING_BODY}${CUSTOM_NOTES}"
+
+  upload-cos:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    # 腾讯云 COS 上传 — 需要配置 secrets
+    # 如果是 fork 仓库没有密钥，此 job 会自动跳过
+    continue-on-error: true
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Set Env
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Check COS secrets availability
+        id: check-secrets
+        run: |
+          if [ -n "$COS_SECRET_ID" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "Skipping COS upload: TENCENT_SECRET_ID not configured"
+          fi
+        env:
+          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+
+      - name: Install Tencent Cloud CLI
+        if: steps.check-secrets.outputs.available == 'true'
         run: pip install coscmd
 
-      - name: 配置腾讯云 COS 认证
-        if: runner.os == 'Linux' && matrix.arch == 'x64'
+      - name: Configure Tencent Cloud COS
+        if: steps.check-secrets.outputs.available == 'true'
         run: |
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
 
-      - name: 上传到腾讯云 COS
-        if: runner.os == 'Linux' && matrix.arch == 'x64'
-        #  每个打包成非安装包的文件夹下都会有，chrome.zip，这里要删除，只上传安装包文件，里面自带编译了 chrome.zip 内置谷歌浏览器
+      - name: Upload to Tencent Cloud COS
+        if: steps.check-secrets.outputs.available == 'true'
         run: |
-          coscmd upload -r packages/app/dist/ /app/download/${{ env.VERSION }}/  --include *.zip,*.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
+          coscmd upload -r artifacts/ /app/download/${{ env.VERSION }}/  --include *.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"

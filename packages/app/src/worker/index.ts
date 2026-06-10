@@ -269,11 +269,15 @@ export class ScriptWorker {
 	async gotoWebRTCPage() {
 		const page = await this.browser?.newPage();
 		if (page) {
+			const loadingText = ScriptWorker.lang('webrtc_page_loading_notice', `正在获取图像中，请勿操作...`);
 			await page
-				.evaluate((uid) => {
-					document.title = uid;
-					document.body.innerHTML = ScriptWorker.lang('webrtc_page_loading_notice', `正在获取图像中，请勿操作...`);
-				}, this.uid)
+				.evaluate(
+					({ uid, text }: { uid: string; text: string }) => {
+						document.title = uid;
+						document.body.innerHTML = text;
+					},
+					{ uid: this.uid, text: loadingText }
+				)
 				.catch(console.error);
 
 			setTimeout(() => {
