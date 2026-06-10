@@ -16,7 +16,7 @@
 		"dev:common": "pnpm --filter @ocs-desktop/common tsc",
 		"dev:app": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/app dev",
 		"dev:web": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/web dev",
-		"dev": "concurrently --kill-others-on-fail 'pnpm --filter @ocs-desktop/common tsc' 'pnpm --filter @ocs-desktop/web dev' 'pnpm --filter @ocs-desktop/app dev'"
+		"dev": "concurrently --kill-others-on-fail \"pnpm --filter @ocs-desktop/common tsc\" \"pnpm --filter @ocs-desktop/web dev\" \"pnpm --filter @ocs-desktop/app dev\""
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.0.0",
