@@ -1,0 +1,32 @@
+name: Release Tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-tag:
+    # 只在 PR 被合并时执行
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-pull-request: true  # 只创建 Release，不创建 PR
+
+      - name: Trigger Build workflow
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build.yml --ref ${{ steps.release.outputs.tag_name }} --repo ${{ github.repository }}

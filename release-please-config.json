@@ -1,0 +1,25 @@
+{
+  "release-type": "node",
+  "include-component-in-tag": false,
+  "bootstrap-sha": "55a3f44f9a45cff86980211747089ee603418a9d",
+  "packages": {
+    ".": {
+      "component": "ocs-desktop",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "packages/app/package.json"
+      ]
+    }
+  },
+  "changelog-sections": [
+    { "type": "feat", "section": "✨ Features" },
+    { "type": "fix", "section": "🐛 Bug Fixes" },
+    { "type": "perf", "section": "⚡ Performance" },
+    { "type": "docs", "section": "📝 Documentation" },
+    { "type": "refactor", "section": "♻️ Refactoring" },
+    { "type": "chore", "section": "🔧 Miscellaneous", "hidden": true },
+    { "type": "ci", "section": "🔧 Miscellaneous", "hidden": true },
+    { "type": "test", "section": "🔧 Miscellaneous", "hidden": true },
+    { "type": "style", "section": "🔧 Miscellaneous", "hidden": true }
+  ]
+}

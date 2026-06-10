@@ -4,19 +4,16 @@
 	"description": "common package of ocs-desktop",
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
-	"scripts": {},
+	"scripts": {
+		"tsc": "tsc",
+		"build": "tsc"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/ocsjs/ocs-desktop.git"
 	},
 	"keywords": [
 		"ocs",
-		"script",
-		"playwright",
-		"puppeteer",
-		"electron",
-		"vue",
-		"ant-design-vue",
 		"typescript"
 	],
 	"author": "enncy",

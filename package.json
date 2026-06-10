@@ -1,6 +1,6 @@
 {
 	"name": "ocs-desktop",
-	"version": "2.9.33",
+	"version": "2.10.0",
 	"description": "desktop for userscript",
 	"packageManager": "pnpm@10.21.0",
 	"files": [
@@ -8,24 +8,26 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "npm run tsc && gulp -f ./scripts/build-app.js",
-		"release": "sh ./scripts/release.sh",
-		"changelog": "conventional-changelog -p angular -i CHANGELOG.md --same-file -r 0",
-		"changelog:current": "conventional-changelog -p angular -o CHANGELOG_CURRENT.md -r 1",
+		"build": "pnpm tsc && gulp -f ./scripts/build-app.js",
 		"tsc": "pnpm lint && gulp -f ./scripts/tsc.js",
-		"lint": "pnpm format && eslint  ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
-		"format": "prettier -c ./.prettierrc.json  **/*.ts  **/*.js **/*.vue **/*.css  --write",
-		"init-commitizen": "commitizen init cz-conventional-changelog --save --save-exact"
+		"lint": "pnpm format && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
+		"format": "prettier -c ./.prettierrc.json **/*.ts **/*.js **/*.vue **/*.css --write",
+		"prepare": "husky",
+		"dev:common": "pnpm --filter @ocs-desktop/common tsc",
+		"dev:app": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/app dev",
+		"dev:web": "pnpm --filter @ocs-desktop/common tsc && pnpm --filter @ocs-desktop/web dev",
+		"dev": "concurrently --kill-others-on-fail 'pnpm --filter @ocs-desktop/common tsc' 'pnpm --filter @ocs-desktop/web dev' 'pnpm --filter @ocs-desktop/app dev'"
 	},
 	"devDependencies": {
+		"@commitlint/cli": "^19.0.0",
+		"@commitlint/config-conventional": "^19.0.0",
 		"@html-eslint/eslint-plugin": "^0.15.0",
 		"@puppeteer/browsers": "^2.10.5",
 		"@types/node": "^17.0.16",
 		"@typescript-eslint/eslint-plugin": "^5.19.0",
 		"@typescript-eslint/parser": "^5.19.0",
 		"browser-env": "^3.3.0",
-		"conventional-changelog-cli": "^2.2.2",
-		"cz-conventional-changelog": "^3.3.0",
+		"concurrently": "^9.2.1",
 		"del": "^6.0.0",
 		"eslint": "^7.32.0",
 		"eslint-config-prettier": "^8.5.0",
@@ -38,6 +40,7 @@
 		"gulp": "^4.0.2",
 		"gulp-cli": "^2.3.0",
 		"gulp-zip": "^5.1.0",
+		"husky": "^9.0.0",
 		"prettier": "^2.8.8",
 		"typescript": "^4.5.5"
 	},
@@ -49,10 +52,9 @@
 		"ocs",
 		"script",
 		"playwright",
-		"puppeteer",
 		"electron",
 		"vue",
-		"ant-design-vue",
+		"arco-design-vue",
 		"typescript"
 	],
 	"author": "enncy",
@@ -61,10 +63,9 @@
 		"url": "https://github.com/ocsjs/ocs-desktop/issues"
 	},
 	"homepage": "https://github.com/ocsjs/ocs-desktop#readme",
-	"config": {
-		"commitizen": {
-			"path": "./node_modules/cz-conventional-changelog"
-		}
+	"engines": {
+		"node": ">=22.0.0",
+		"pnpm": ">=10.0.0"
 	},
 	"dependencies": {
 		"@types/minimatch": "^6.0.0",
