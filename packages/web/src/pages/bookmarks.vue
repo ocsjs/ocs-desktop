@@ -172,6 +172,11 @@
 								class="bookmark-item"
 								:style="{ '--item-index': idx }"
 							>
+								<img
+									:data-img-src="bookmark?.icon || ''"
+									class="icon"
+									:src="iconUrl(bookmark?.icon)"
+								/>
 								<span class="bookmark-name">{{ bookmark?.name }}</span>
 								<a-tooltip
 									background-color="rgba(20, 20, 30, 0.95)"
@@ -197,6 +202,13 @@ import { BookmarkResource } from '../../../common/src/api';
 type BookMark = BookmarkResource;
 
 const bookmarks = ref<BookMark[]>([]);
+
+/** 通过本地服务代理加载图标，解决跨域问题 */
+function iconUrl(url?: string): string {
+	if (!url) return '';
+	const port = location.port || 15319;
+	return `http://localhost:${port}/icon?url=${encodeURIComponent(url)}`;
+}
 
 const state = reactive({
 	loading: false,
@@ -583,7 +595,7 @@ function openInApp() {
 .page-header {
 	text-align: center;
 	margin-bottom: 40px;
-	padding: 20px 0;
+	padding: 12px 0;
 }
 
 .page-title {
@@ -656,7 +668,7 @@ function openInApp() {
 .group-icon {
 	width: 28px;
 	height: 28px;
-	padding: 5px;
+	padding: 2px;
 	background: linear-gradient(135deg, @accent-rose, @accent-violet);
 	border-radius: 8px;
 	color: white;
@@ -865,6 +877,28 @@ body:not([arco-theme='dark']) & {
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+	}
+}
+
+.icon {
+	width: 48px;
+	height: 48px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #e1e1e1;
+	border-radius: 100%;
+	cursor: pointer;
+
+	&:hover {
+		border: 1px solid #70d5fd;
+	}
+
+	object,
+	img {
+		width: 24px;
+		height: 24px;
+		display: block;
 	}
 }
 </style>

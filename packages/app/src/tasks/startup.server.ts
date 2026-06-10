@@ -66,6 +66,28 @@ export async function startupServer() {
 		res.send(store.store.server.authToken);
 	});
 
+	app.get('/icon', async (req, res) => {
+		const iconUrl = req.query.url as string;
+		if (!iconUrl) {
+			res.status(400).send('Missing url parameter');
+			return;
+		}
+		try {
+			const response = await axios.get(iconUrl, {
+				responseType: 'arraybuffer',
+				timeout: 5000
+			});
+			const contentType = response.headers['content-type'] || 'image/png';
+			res.setHeader('Content-Type', contentType);
+			res.setHeader('Cache-Control', 'public, max-age=86400');
+			res.send(response.data);
+		} catch (err) {
+			// 返回 1x1 透明 GIF 作为降级图标
+			res.setHeader('Content-Type', 'image/gif');
+			res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+		}
+	});
+
 	/** 请求转发 */
 	app.post('/proxy', async (req, res) => {
 		const { method, url, data, headers } = req.body || {};

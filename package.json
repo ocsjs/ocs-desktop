@@ -28,6 +28,7 @@
 		"@typescript-eslint/parser": "^5.19.0",
 		"browser-env": "^3.3.0",
 		"concurrently": "^9.2.1",
+		"cz-conventional-changelog": "^3.3.0",
 		"del": "^6.0.0",
 		"eslint": "^7.32.0",
 		"eslint-config-prettier": "^8.5.0",
@@ -70,5 +71,10 @@
 	"dependencies": {
 		"@types/minimatch": "^6.0.0",
 		"minimatch": "^10.0.3"
+	},
+	"config": {
+		"commitizen": {
+			"path": "./node_modules/cz-conventional-changelog"
+		}
 	}
 }
