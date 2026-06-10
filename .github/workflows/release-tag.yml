@@ -21,12 +21,12 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          skip-github-pull-request: true  # 只创建 Release，不创建 PR
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          skip-github-pull-request: true # 只创建 Release，不创建 PR
 
       - name: Trigger Build workflow
         if: ${{ steps.release.outputs.release_created }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN  }}
         run: |
           gh workflow run build.yml --ref ${{ steps.release.outputs.tag_name }} --repo ${{ github.repository }}

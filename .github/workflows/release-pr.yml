@@ -16,5 +16,5 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          skip-github-release: true  # 只创建 PR，不创建 Release
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN  }}
+          skip-github-release: true # 只创建 PR，不创建 Release
