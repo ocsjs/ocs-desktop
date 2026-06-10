@@ -8,6 +8,38 @@
 
 
 
+## [2.11.0](https://github.com/ocsjs/ocs-desktop/compare/v2.10.0...v2.11.0) (2026-06-10)
+
+
+### ✨ Features
+
+* **ci:** 添加 CI 和安全检查工作流 ([5321b94](https://github.com/ocsjs/ocs-desktop/commit/5321b94172a17cf742ee298e30082eef45f4453a))
+* **web:** 使用现代暗色主题重新设计书签页面 ([e083b99](https://github.com/ocsjs/ocs-desktop/commit/e083b99a612bf4b12e711e0320da8ace01567159))
+* 项目更新与 CI 工作流添加 ([b21a67a](https://github.com/ocsjs/ocs-desktop/commit/b21a67af520eae938d91f6bc98dfe57ecee6e4f8))
+
+
+### 🐛 Bug Fixes
+
+* **app:** 修复本地脚本安装死循环及开发环境内置浏览器不可用 ([c4fd159](https://github.com/ocsjs/ocs-desktop/commit/c4fd1594f1b73dcff7d0f7dc40587d93dffc0ad9))
+* **app:** 修复本地脚本安装死循环及开发环境内置浏览器不可用 ([fd2e0da](https://github.com/ocsjs/ocs-desktop/commit/fd2e0da6a508e5e01855c668be2e66b202ce1e6e))
+* **ci:** 添加 issues 和 pull-requests 写权限修复 label 移除错误 ([796621e](https://github.com/ocsjs/ocs-desktop/commit/796621e1b3b33440f5dd9eb09d2a1df42dc3207b))
+* **web:** 使用实时easy-us库，同步最新版本 ([2d122a8](https://github.com/ocsjs/ocs-desktop/commit/2d122a8c4193f2ba8259678d622edd88e7f75976))
+* **web:** 修复 Mac 系统 favicon 图标显示问题 ([adee497](https://github.com/ocsjs/ocs-desktop/commit/adee49783dfd518507a48eb866ce2b5af8be6d0a))
+* **web:** 修复书签页面安装后无法访问的问题 ([291938f](https://github.com/ocsjs/ocs-desktop/commit/291938f50d94ac4077f44e0db6636fa9031c8c1c))
+* **web:** 移除初始化浏览器启动测试 ([da36a8d](https://github.com/ocsjs/ocs-desktop/commit/da36a8d3cee8f1904d207802ca2946b714998582))
+* 修复监控和开发脚本相关问题 ([3e344e9](https://github.com/ocsjs/ocs-desktop/commit/3e344e985b6b01fb122ea8ee62be34c33a6779b3))
+
+
+### 📝 Documentation
+
+* 更新 README 以反映当前开发工作流 ([84072cb](https://github.com/ocsjs/ocs-desktop/commit/84072cb09026690ebdce9fe6aeccaab92473b7ff))
+
+
+### ♻️ Refactoring
+
+* **ci:** 分离 Release PR 创建和 Release 发布流程 ([c78fc6b](https://github.com/ocsjs/ocs-desktop/commit/c78fc6b3cb93574c8c35326f0bdb6626b2b8b82b))
+* 重构项目架构 ([0db2ae6](https://github.com/ocsjs/ocs-desktop/commit/0db2ae6481f362fa6c799fa08c2767e7aa9ae7f1))
+
 ## [2.9.31](https://github.com/ocsjs/ocs-desktop/compare/2.9.30...2.9.31) (2025-11-18)
 
 
