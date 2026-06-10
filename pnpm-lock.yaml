@@ -13,11 +13,7 @@ importers:
         version: 6.0.0
       minimatch:
         specifier: ^10.0.3
-<<<<<<< HEAD
-        version: 10.2.4
-=======
         version: 10.2.5
->>>>>>> 71fa540785bb4177547cb6556db5e6126e39e99b
     devDependencies:
       '@commitlint/cli':
         specifier: ^19.0.0
