@@ -191,9 +191,19 @@ jobs:
       - name: Configure Tencent Cloud COS
         if: steps.check-secrets.outputs.available == 'true'
         run: |
-          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} -s ${{ secrets.TENCENT_SECRET_KEY }} -b ${{ secrets.COS_BUCKET }} -r ${{ secrets.COS_REGION }}
+          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -b ${{ secrets.COS_BUCKET }} \
+            -r ${{ secrets.COS_REGION }}
 
       - name: Upload to Tencent Cloud COS
         if: steps.check-secrets.outputs.available == 'true'
         run: |
-          coscmd upload -r artifacts/ /app/download/${{ env.VERSION }}/  --include *.exe,*.dmg,*.AppImage,*.deb,*.rpm  --ignore  "**/*/chrome.zip"
+          coscmd upload -r artifacts/ /app/download/${{ env.VERSION }}/ \
+            --include *.exe,*.dmg,*.AppImage,*.deb,*.rpm \
+            --ignore "**/*/chrome.zip" \
+            --timeout 600 \
+            --connect-timeout 60 \
+            --part-size 20 \
+            --thread 10 \
+            --retry 5
