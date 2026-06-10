@@ -8,6 +8,13 @@
 
 
 
+## [2.11.1](https://github.com/ocsjs/ocs-desktop/compare/v2.11.0...v2.11.1) (2026-06-10)
+
+
+### 🐛 Bug Fixes
+
+* 修复导航界面无法显示网站图标的问题 ([1bdd2d7](https://github.com/ocsjs/ocs-desktop/commit/1bdd2d7e4d3838192c5c8bb3f8de6ce6a01839d3))
+
 ## [2.11.0](https://github.com/ocsjs/ocs-desktop/compare/v2.10.0...v2.11.0) (2026-06-10)
 
 
