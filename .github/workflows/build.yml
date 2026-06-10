@@ -194,16 +194,15 @@ jobs:
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
             -s ${{ secrets.TENCENT_SECRET_KEY }} \
             -b ${{ secrets.COS_BUCKET }} \
-            -r ${{ secrets.COS_REGION }}
+            -r ${{ secrets.COS_REGION }} \
+            -m 10 \          # 并发线程数
+            -p 20 \          # 分块大小 20MB
+            -t 600 \         # 超时时间 600 秒
+            --connect-timeout 60
 
       - name: Upload to Tencent Cloud COS
         if: steps.check-secrets.outputs.available == 'true'
         run: |
           coscmd upload -r artifacts/ /app/download/${{ env.VERSION }}/ \
             --include *.exe,*.dmg,*.AppImage,*.deb,*.rpm \
-            --ignore "**/*/chrome.zip" \
-            --timeout 600 \
-            --connect-timeout 60 \
-            --part-size 20 \
-            --thread 10 \
-            --retry 5
+            --ignore "**/*/chrome.zip"
