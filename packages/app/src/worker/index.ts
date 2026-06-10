@@ -381,7 +381,13 @@ export async function launchBrowser({
 				ignoreHTTPSErrors: true,
 				acceptDownloads: true,
 				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation', '--no-sandbox'],
-				args: ['--window-position=0,0', '--no-first-run', '--no-default-browser-check', ...args]
+				args: [
+					'--window-position=0,0',
+					'--no-first-run',
+					'--no-default-browser-check',
+					'--allow-file-access-from-files',
+					...args
+				]
 			})
 			.then(async (browser) => {
 				// 处理浏览器初始
@@ -463,6 +469,8 @@ export async function launchBrowser({
 async function initScripts(urls: string[], browser: BrowserContext, config?: BrowserConfig) {
 	console.log('install ', urls);
 	let installCont = 0;
+	let retryCount = 0;
+	const maxRetries = 120;
 
 	// 触发下载
 	await (async () => {
@@ -514,11 +522,17 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 					installCont++;
 				}
 				if (installCont < urls.length) {
+					retryCount = 0;
 					await tryInstall();
 				}
 			} else if (installCont === urls.length) {
 				//
 			} else {
+				retryCount++;
+				if (retryCount > maxRetries) {
+					console.error('脚本安装超时，跳过未安装的脚本');
+					return;
+				}
 				await sleep(1000);
 				await tryInstall();
 			}
