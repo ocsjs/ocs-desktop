@@ -55,6 +55,7 @@
 				v-model:visible="state.setupVisible"
 				confirm-text="环境修复"
 				cancel-text="稍后再说"
+				title=""
 				:create-new-browser="false"
 				@close="
 					async () => {
@@ -68,8 +69,17 @@
 
 			<div class="col-12 p-1 ps-2 pe-2 operations">
 				<!-- 路径栏 -->
-				<!-- 当处于搜索状态时隐藏 -->
-				<FileBreadcrumb v-show="currentSearchedEntities === undefined"></FileBreadcrumb>
+				<Transition
+					name="breadcrumb-fade"
+					appear
+				>
+					<FileBreadcrumb
+						v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
+						:key="currentFolder.uid"
+					></FileBreadcrumb>
+				</Transition>
+				<!-- 撑开间距，将搜索和筛选推到最右边 -->
+				<div class="flex-grow-1"></div>
 				<!-- 文件筛选 -->
 				<FileFilters></FileFilters>
 
@@ -122,15 +132,26 @@
 				></a-empty>
 			</template>
 
-			<div
-				v-else
-				class="col-12 p-2 pt-1 entities-container"
+			<Transition
+				name="entities-slide"
+				appear
 			>
-				<!-- 显示浏览器以及文件夹列表 -->
-				<div class="entities">
-					<BrowserList :entities="currentSearchedEntities ? currentSearchedEntities : currentEntities"></BrowserList>
+				<div
+					v-if="
+						currentEntities.length > 0 &&
+						!(currentSearchedEntities !== undefined && currentSearchedEntities.length === 0)
+					"
+					:key="currentFolder.uid"
+					class="col-12 p-2 pt-1 entities-container"
+				>
+					<!-- 右键菜单提示 -->
+					<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
+					<!-- 显示浏览器以及文件夹列表 -->
+					<div class="entities">
+						<BrowserList :entities="currentSearchedEntities ? currentSearchedEntities : currentEntities"></BrowserList>
+					</div>
 				</div>
-			</div>
+			</Transition>
 		</a-spin>
 	</div>
 </template>
@@ -140,7 +161,7 @@ import Icon from '../../components/Icon.vue';
 import { resetSearch } from '../../utils/entity';
 import FileFilters from '../../components/browsers/FileFilters.vue';
 import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
-import { currentEntities, currentSearchedEntities } from '../../fs';
+import { currentEntities, currentSearchedEntities, currentFolder } from '../../fs';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import { about } from '../../utils';
 import BrowserList from '../../components/BrowserList.vue';
@@ -149,6 +170,7 @@ import { Environment } from '../../utils//environment';
 import { reactive, onActivated, watch } from 'vue';
 import type { ValidBrowser } from '../../../../common/lib/src/interface';
 import Setup from '../../components/Setup.vue';
+import { IconRightCircle } from '@arco-design/web-vue/es/icon';
 import { lang, store } from '../../store';
 
 const state = reactive({
@@ -198,10 +220,53 @@ async function updateEnvironmentDetect() {
 .entities-container {
 	height: calc(100% - 80px);
 	padding-bottom: 0px !important;
+	position: relative;
 }
 
 .entities {
 	height: 100%;
 	overflow: overlay;
+}
+
+.context-hint {
+	font-size: 12px;
+	color: #686868;
+	position: absolute;
+	right: 12px;
+	bottom: 8px;
+	user-select: none;
+	opacity: 0.7;
+}
+
+/* 路径栏过渡动画 */
+.breadcrumb-fade-enter-active {
+	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.breadcrumb-fade-leave-active {
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.breadcrumb-fade-enter-from {
+	opacity: 0;
+	transform: translateY(-4px);
+}
+.breadcrumb-fade-leave-to {
+	opacity: 0;
+	transform: translateY(-4px);
+}
+
+/* 浏览器列表过渡动画 */
+.entities-slide-enter-active {
+	transition: opacity 0.2s ease 0.2s, transform 0.2s ease 0.2s;
+}
+.entities-slide-leave-active {
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.entities-slide-enter-from {
+	opacity: 0;
+	transform: translateY(8px);
+}
+.entities-slide-leave-to {
+	opacity: 0;
+	transform: translateY(8px);
 }
 </style>

@@ -1,12 +1,9 @@
 <template>
 	<a-space
 		v-if="instance"
-		:size="0"
-		class="justify-content-end align-items-center"
+		:size="4"
+		class="justify-content-end align-items-center browser-operators"
 	>
-		<template #split>
-			<slot name="split"></slot>
-		</template>
 		<template v-if="process === undefined || process.status === 'closed'">
 			<a-tooltip
 				:position="tooltipPosition"
@@ -18,12 +15,18 @@
 					- 以及执行自动化脚本等一系列操作。
 				</template>
 
-				<Icon
-					type="play_circle"
-					color="#165dff"
-					:class="iconClass"
+				<a-button
+					size="small"
+					type="text"
 					@click="instance?.launch()"
-				/>
+				>
+					<Icon
+						type="play_circle"
+						color="#165dff"
+						:class="iconClass"
+					/>
+					<span class="ms-1">启动</span>
+				</a-button>
 			</a-tooltip>
 		</template>
 
@@ -32,36 +35,51 @@
 				content="置顶"
 				:position="tooltipPosition"
 			>
-				<Icon
-					type="push_pin"
-					:class="iconClass"
-					color="#165dff"
+				<a-button
+					type="text"
+					size="mini"
 					@click="instance?.bringToFront()"
-				/>
+				>
+					<Icon
+						type="push_pin"
+						:class="iconClass"
+						color="#165dff"
+					/>
+				</a-button>
 			</a-tooltip>
 
 			<a-tooltip
 				content="重启"
 				:position="tooltipPosition"
 			>
-				<Icon
-					type="sync"
-					:class="iconClass"
-					color="#165dff"
+				<a-button
+					type="text"
+					size="mini"
 					@click="instance?.relaunch()"
-				/>
+				>
+					<Icon
+						type="sync"
+						:class="iconClass"
+						color="#165dff"
+					/>
+				</a-button>
 			</a-tooltip>
 
 			<a-tooltip
 				content="关闭"
 				:position="tooltipPosition"
 			>
-				<Icon
-					type="cancel"
-					:class="iconClass"
-					color="#ff0000db"
+				<a-button
+					type="text"
+					size="mini"
 					@click="instance?.close()"
-				/>
+				>
+					<Icon
+						type="cancel"
+						:class="iconClass"
+						color="#ff0000db"
+					/>
+				</a-button>
 			</a-tooltip>
 		</template>
 
@@ -97,7 +115,9 @@ const process = computed(() => Process.from(props.browser.uid));
 </script>
 
 <style scoped lang="less">
-.arco-space-item > span {
-	cursor: pointer;
+.browser-operators {
+	.arco-space-item {
+		cursor: pointer;
+	}
 }
 </style>

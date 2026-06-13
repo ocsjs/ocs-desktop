@@ -13,15 +13,6 @@
 						type="folder"
 					></Icon>
 				</template>
-
-				<template #actions>
-					<EntityOperator
-						icon-class="fs-5"
-						type="folder"
-						:entity="child"
-						:permissions="currentSearchedEntities ? ['location'] : ['rename', 'remove']"
-					></EntityOperator>
-				</template>
 			</Entity>
 		</template>
 
@@ -86,16 +77,8 @@
 				<template #actions>
 					<BrowserOperators
 						:browser="child"
-						icon-class="fs-5"
-					>
-						<template #split>
-							<a-divider direction="vertical" />
-						</template>
-					</BrowserOperators>
-					<EntityOperator
-						type="browser"
-						:entity="child"
-					></EntityOperator>
+						icon-class="fs-4"
+					/>
 				</template>
 			</Entity>
 		</template>
@@ -103,13 +86,11 @@
 </template>
 
 <script lang="ts" setup>
-import { currentSearchedEntities } from '../fs';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderOptions, FolderType } from '../fs/interface';
 import BrowserOperators from './browsers/BrowserOperators.vue';
 import Entity from './Entity.vue';
-import EntityOperator from './EntityOperator.vue';
 import Icon from './Icon.vue';
 import Tags from './Tags.vue';
 

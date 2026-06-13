@@ -36,7 +36,6 @@
 					>
 						<a-step
 							v-show="!step.hidden"
-							:title="step[0]"
 							:status="step.status"
 						>
 							<template
@@ -147,7 +146,7 @@ const props = withDefaults(
 		visible: boolean;
 		confirmText: string;
 		cancelText: string;
-		title: string;
+		title?: string;
 		createNewBrowser?: boolean;
 	}>(),
 	{
@@ -313,7 +312,7 @@ function prepare() {
 					}
 				} catch (error) {
 					console.error(error);
-					step.error = error;
+					step.error = String(error);
 				}
 			}
 		});
@@ -374,7 +373,7 @@ function prepare() {
 							});
 						});
 					} catch (err) {
-						step.error = err;
+						step.error = String(err);
 						return;
 					}
 					return;

@@ -16,7 +16,12 @@
 				:label="key"
 			>
 				<a-space>
-					<a-tag :color="store.render.browser.tags[key].color"> {{ key }} </a-tag>
+					<a-tag
+						size="small"
+						:color="store.render.browser.tags[key].color"
+					>
+						{{ key }}
+					</a-tag>
 					<span style="float: right"> {{ store.render.browser.tags[key].count }} </span>
 				</a-space>
 			</a-option>

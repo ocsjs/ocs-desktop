@@ -1,7 +1,7 @@
 <template>
 	<a-space>
 		<a-dropdown trigger="hover">
-			<a-button size="mini">
+			<a-button size="small" type="outline">
 				<Icon type="more_horiz"> 更多 </Icon>
 			</a-button>
 			<template #content>
@@ -14,8 +14,8 @@
 		</a-dropdown>
 
 		<a-button
-			size="mini"
-			type="outline"
+			size="small"
+			type="primary"
 			@click="newBrowser()"
 		>
 			<Icon type="web"> 新建浏览器 </Icon>
@@ -65,7 +65,7 @@
 				选择标签进行删除：
 				<a-select
 					v-model="state.remove_tags_modal.tags"
-					size="mini"
+					size="small"
 					multiple
 					placeholder="选择..."
 					style="width: 200px"

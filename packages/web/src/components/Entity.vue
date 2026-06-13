@@ -3,6 +3,7 @@
 		v-if="instance"
 		class="entity align-items-center d-flex"
 		:class="{ active: store.render.browser.currentBrowserUid === instance.uid }"
+		:data-uid="instance.uid"
 	>
 		<div
 			style="cursor: pointer; flex: auto"
@@ -30,10 +31,7 @@
 				</span>
 
 				<!-- 名字 -->
-				<a-dropdown
-					:trigger="['hover']"
-					position="rt"
-				>
+				<a-tooltip content="右键打开菜单">
 					<span class="ms-2">
 						<a-input
 							v-show="instance.renaming"
@@ -47,16 +45,11 @@
 							{{ instance.name }}
 						</span>
 					</span>
-					<template #content>
-						<a-doption @click="instance && (instance.renaming = true)">
-							<Icon type="text_format">重命名</Icon>
-						</a-doption>
-					</template>
-				</a-dropdown>
 
-				<div style="flex: 1 1 auto">
-					<slot name="suffix"></slot>
-				</div>
+					<div style="flex: 1 1 auto">
+						<slot name="suffix"></slot>
+					</div>
+				</a-tooltip>
 			</div>
 
 			<div
@@ -97,7 +90,6 @@ import { store } from '../store';
 import { FolderOptions, BrowserOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
-import Icon from './Icon.vue';
 
 const slots = useSlots();
 
