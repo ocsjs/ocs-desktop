@@ -4,11 +4,9 @@
 		class="entity align-items-center d-flex"
 		:class="{ active: store.render.browser.currentBrowserUid === instance.uid }"
 		:data-uid="instance.uid"
+		@click="instance?.select()"
 	>
-		<div
-			style="cursor: pointer; flex: auto"
-			@click="instance?.select()"
-		>
+		<div style="cursor: pointer; flex: auto">
 			<div
 				style="cursor: pointer; flex: auto"
 				class="text-secondary entity-name align-items-center d-flex"
@@ -159,9 +157,5 @@ function active() {
 	&.active {
 		background-color: #3577db25;
 	}
-}
-
-.arco-space-item > span {
-	cursor: pointer;
 }
 </style>

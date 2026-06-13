@@ -1,5 +1,5 @@
 <template>
-	<a-row class="col-12 p-1 ps-2 pe-2">
+	<a-row class="col-12 pt-2">
 		<a-col flex="auto">
 			<a-space :size="0">
 				<template #split>

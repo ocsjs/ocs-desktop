@@ -107,6 +107,7 @@ defineProps<{
 }
 
 .entity {
-	padding: 4px 0px;
+	padding: 6px 0px;
+	cursor: pointer;
 }
 </style>

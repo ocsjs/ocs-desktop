@@ -1,10 +1,10 @@
 <template>
 	<div
 		id="browsers"
-		class="h-100"
+		class="h-100 browsers-page"
 	>
 		<a-spin
-			class="w-100 h-100"
+			class="w-100 h-100 browsers-spin"
 			:loading="
 				!state.isCurrentBrowserSupported ||
 				state.supportedBrowser === undefined ||
@@ -67,35 +67,41 @@
 
 			<!-- ====================== 浏览器列表内容部分 ======================-->
 
-			<div class="col-12 p-1 ps-2 pe-2 operations">
-				<!-- 路径栏 -->
-				<Transition
-					name="breadcrumb-fade"
-					appear
-				>
-					<FileBreadcrumb
-						v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
-						:key="currentFolder.uid"
-					></FileBreadcrumb>
-				</Transition>
-				<!-- 撑开间距，将搜索和筛选推到最右边 -->
-				<div class="flex-grow-1"></div>
-				<!-- 文件筛选 -->
-				<FileFilters></FileFilters>
-
-				<!-- 搜索时禁止文件操作 -->
-				<template v-if="currentSearchedEntities">
-					<a-button
-						size="mini"
-						@click="resetSearch"
+			<a-card
+				class="operations-card"
+				:bordered="true"
+				size="small"
+			>
+				<div class="operations">
+					<!-- 路径栏 -->
+					<Transition
+						name="breadcrumb-fade"
+						appear
 					>
-						<Icon type="restart_alt"> 重置 </Icon>
-					</a-button>
-				</template>
-			</div>
+						<FileBreadcrumb
+							v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
+							:key="currentFolder.uid"
+						></FileBreadcrumb>
+					</Transition>
+					<!-- 撑开间距，将搜索和筛选推到最右边 -->
+					<div class="flex-grow-1"></div>
+					<!-- 文件筛选 -->
+					<FileFilters></FileFilters>
 
-			<!-- 文件操作 -->
-			<FileMultipleOperators></FileMultipleOperators>
+					<!-- 搜索时禁止文件操作 -->
+					<template v-if="currentSearchedEntities">
+						<a-button
+							size="mini"
+							@click="resetSearch"
+						>
+							<Icon type="restart_alt"> 重置 </Icon>
+						</a-button>
+					</template>
+				</div>
+
+				<!-- 文件操作 -->
+				<FileMultipleOperators></FileMultipleOperators>
+			</a-card>
 
 			<template v-if="currentEntities.length === 0">
 				<div
@@ -142,14 +148,14 @@
 						!(currentSearchedEntities !== undefined && currentSearchedEntities.length === 0)
 					"
 					:key="currentFolder.uid"
-					class="col-12 p-2 pt-1 entities-container"
+					class="entities-container"
 				>
-					<!-- 右键菜单提示 -->
-					<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
 					<!-- 显示浏览器以及文件夹列表 -->
 					<div class="entities">
 						<BrowserList :entities="currentSearchedEntities ? currentSearchedEntities : currentEntities"></BrowserList>
 					</div>
+					<!-- 右键菜单提示 -->
+					<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
 				</div>
 			</Transition>
 		</a-spin>
@@ -208,6 +214,22 @@ async function updateEnvironmentDetect() {
 </script>
 
 <style scoped lang="less">
+.browsers-page {
+	display: flex;
+	flex-direction: column;
+}
+
+.browsers-spin {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.operations-card {
+	flex-shrink: 0;
+	margin: 6px 8px 0;
+}
+
 .operations {
 	display: flex;
 	align-items: center;
@@ -218,24 +240,27 @@ async function updateEnvironmentDetect() {
 }
 
 .entities-container {
-	height: calc(100% - 80px);
-	padding-bottom: 0px !important;
-	position: relative;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	padding: 4px 8px 0;
 }
 
 .entities {
-	height: 100%;
+	flex: 1;
+	min-height: 0;
 	overflow: overlay;
 }
 
 .context-hint {
-	font-size: 12px;
-	color: #686868;
-	position: absolute;
-	right: 12px;
-	bottom: 8px;
+	flex-shrink: 0;
+	font-size: 11px;
+	color: #aaa;
+	text-align: right;
+	padding: 4px 4px 8px 0;
 	user-select: none;
-	opacity: 0.7;
 }
 
 /* 路径栏过渡动画 */
