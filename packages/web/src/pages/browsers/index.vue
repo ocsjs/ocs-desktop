@@ -73,7 +73,7 @@
 				size="small"
 			>
 				<div class="operations">
-					<!-- 路径栏 -->
+					<!-- 路径栏 / 统计栏 -->
 					<Transition
 						name="breadcrumb-fade"
 						appear
@@ -82,7 +82,16 @@
 							v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
 							:key="currentFolder.uid"
 						></FileBreadcrumb>
-					</Transition>
+						<div
+							v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
+							class="stats-bar"
+						>
+							<span><icon-desktop /> {{ stats.browsers }}</span>
+							<span><icon-code /> {{ stats.scripts }}</span>
+							<span><icon-folder /> {{ stats.folders }}</span>
+							<span><icon-tag /> {{ stats.tags }}</span>
+						</div></Transition
+					>
 					<!-- 撑开间距，将搜索和筛选推到最右边 -->
 					<div class="flex-grow-1"></div>
 					<!-- 文件筛选 -->
@@ -104,31 +113,28 @@
 			</a-card>
 
 			<template v-if="currentEntities.length === 0">
-				<div
-					class="d-flex"
-					style="height: 50vh"
-				>
-					<a-empty class="p-3 m-auto">
-						<div class="mb-3">暂无浏览器</div>
-
-						<a-space>
+				<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
+					<div>
+						<a-empty class="p-3 m-auto">
+							<div class="mb-3">暂无浏览器</div>
+						</a-empty>
+						<div>
 							<a-button
-								type="outline"
-								size="mini"
+								type="text"
 								@click="about"
 							>
 								<Icon type="book">点击查看使用教程</Icon>
 							</a-button>
-
+						</div>
+						<div>
 							<a-button
-								type="outline"
-								size="mini"
+								type="text"
 								@click="newBrowser()"
 							>
 								<Icon type="web">新建浏览器</Icon>
 							</a-button>
-						</a-space>
-					</a-empty>
+						</div>
+					</div>
 				</div>
 			</template>
 			<template v-else-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
@@ -168,16 +174,37 @@ import { resetSearch } from '../../utils/entity';
 import FileFilters from '../../components/browsers/FileFilters.vue';
 import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
 import { currentEntities, currentSearchedEntities, currentFolder } from '../../fs';
+import { root } from '../../fs/folder';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import { about } from '../../utils';
 import BrowserList from '../../components/BrowserList.vue';
 import { newBrowser } from '../../utils/browser';
 import { Environment } from '../../utils//environment';
-import { reactive, onActivated, watch } from 'vue';
+import { reactive, onActivated, watch, computed } from 'vue';
 import type { ValidBrowser } from '../../../../common/lib/src/interface';
 import Setup from '../../components/Setup.vue';
-import { IconRightCircle } from '@arco-design/web-vue/es/icon';
+import { IconRightCircle, IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
 import { lang, store } from '../../store';
+
+const stats = computed(() => {
+	const r = root();
+	const allBrowsers = r.findAll((e) => e.type === 'browser');
+	const allFolders = r.findAll((e) => e.type === 'folder');
+	console.log(allBrowsers);
+
+	const tagSet = new Set<string>();
+	for (const b of allBrowsers) {
+		if (b.type === 'browser') {
+			b.tags.forEach((t) => tagSet.add(t.name));
+		}
+	}
+	return {
+		browsers: allBrowsers.length,
+		folders: allFolders.length,
+		tags: tagSet.size,
+		scripts: store.render.scripts.length
+	};
+});
 
 const state = reactive({
 	isCurrentBrowserSupported: true,
@@ -261,6 +288,22 @@ async function updateEnvironmentDetect() {
 	text-align: right;
 	padding: 4px 4px 8px 0;
 	user-select: none;
+}
+
+.stats-bar {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	font-size: 12px;
+	color: #86909c;
+	white-space: nowrap;
+	user-select: none;
+
+	span {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
 }
 
 /* 路径栏过渡动画 */
