@@ -32,6 +32,10 @@ export function createWindow() {
 	});
 
 	win.webContents.on('will-navigate', (event, url) => {
+		// 允许应用内部导航（开发服务器或本地文件），避免 Vite 热更新整页刷新时打开浏览器
+		if (url.startsWith('http://localhost') || url.startsWith('file://')) {
+			return;
+		}
 		event.preventDefault();
 		shell.openExternal(url);
 	});
