@@ -16,7 +16,7 @@
 				</template>
 
 				<a-button
-					size="small"
+					size="mini"
 					type="text"
 					@click="instance?.launch()"
 				>
@@ -85,7 +85,13 @@
 
 		<!-- 加载中 -->
 		<template v-else-if="process.status === 'launching' || process.status === 'closing'">
-			<icon-loading />
+			<a-button
+				type="text"
+				size="mini"
+				style="color: gray"
+			>
+				<icon-loading :class="iconClass" />
+			</a-button>
 		</template>
 
 		<slot name="extra"></slot>

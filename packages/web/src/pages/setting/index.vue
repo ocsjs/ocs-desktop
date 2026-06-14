@@ -1,5 +1,5 @@
 <template>
-	<div class="w-100">
+	<div class="w-100 h-100 overflow-auto">
 		<div class="setting text-center p-2 col-12 col-lg-10">
 			<Card title="通用设置">
 				<BrowserPath></BrowserPath>

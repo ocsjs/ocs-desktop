@@ -114,24 +114,26 @@
 				></a-empty>
 			</template>
 
-			<Transition
-				name="entities-slide"
-				appear
-			>
-				<div
-					:key="currentFolder.uid"
-					class="entities-container"
+			<div class="entities-wrapper">
+				<Transition
+					name="entities-slide"
+					appear
 				>
-					<!-- 显示浏览器以及文件夹列表 -->
-					<div class="entities">
-						<BrowserList
-							:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
-						></BrowserList>
+					<div
+						:key="currentFolder.uid"
+						class="entities-container"
+					>
+						<!-- 显示浏览器以及文件夹列表 -->
+						<div class="entities">
+							<BrowserList
+								:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
+							></BrowserList>
+						</div>
+						<!-- 右键菜单提示 -->
+						<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
 					</div>
-					<!-- 右键菜单提示 -->
-					<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
-				</div>
-			</Transition>
+				</Transition>
+			</div>
 		</a-spin>
 	</div>
 </template>
@@ -232,19 +234,30 @@ async function updateEnvironmentDetect() {
 	overflow-y: hidden;
 }
 
-.entities-container {
+.entities-wrapper {
 	flex: 1;
 	min-height: 0;
+	position: relative;
+	overflow: hidden;
+}
+
+.entities-container {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	padding: 4px 12px 0;
 }
 
 .entities {
 	flex: 1;
 	min-height: 0;
 	overflow: overlay;
+
+	padding: 4px 12px 0;
 }
 
 .context-hint {
