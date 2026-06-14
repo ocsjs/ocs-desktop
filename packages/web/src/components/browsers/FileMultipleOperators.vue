@@ -29,12 +29,12 @@
 					</a-tooltip>
 
 					<a-tooltip
+						v-if="state.selectedAll || currentCheckedBrowsers.length"
 						:content="`共选中${currentCheckedBrowsers.length}个文件`"
 						position="top"
 						mini
 					>
 						<a-button
-							v-if="state.selectedAll || currentCheckedBrowsers.length"
 							size="mini"
 							class="ms-2"
 							@click="
@@ -55,8 +55,11 @@
 						position="top"
 						mini
 					>
-						<a-dropdown>
-							<a-button size="mini"> 批量操作 <icon-down /> </a-button>
+						<a-dropdown
+							class="multi-operate"
+							:popup-max-height="false"
+						>
+							<a-button size="mini"> <Icon type="checklist">批量操作</Icon> <icon-down /> </a-button>
 							<template #content>
 								<a-doption
 									class="border-bottom"
@@ -64,26 +67,26 @@
 									type="text"
 									@click="state.showChecked = true"
 								>
-									查看
+									<Icon type="visibility"> 查看 </Icon>
 								</a-doption>
 								<a-doption
 									style="width: 100px"
 									@click="copy"
 								>
-									复制
+									<Icon type="content_copy"> 复制 </Icon>
 								</a-doption>
-								<a-doption @click="cut"> 剪切 </a-doption>
+								<a-doption @click="cut"> <Icon type="content_cut"> 剪切 </Icon> </a-doption>
 								<a-doption
 									class="border-bottom"
 									:disabled="state.selectBrowsers.length === 0"
 									@click="paste"
 								>
-									粘贴
+									<Icon type="content_paste"> 粘贴 </Icon>
 								</a-doption>
 
-								<a-doption @click="launchAll"> 批量运行 </a-doption>
-								<a-doption @click="closeAll"> 批量关闭 </a-doption>
-								<a-doption @click="deleteAll"> 批量删除 </a-doption>
+								<a-doption @click="launchAll"> <Icon type="play_arrow"> 批量运行 </Icon> </a-doption>
+								<a-doption @click="closeAll"> <Icon type="close"> 批量关闭 </Icon> </a-doption>
+								<a-doption @click="deleteAll"> <Icon type="delete"> 批量删除 </Icon> </a-doption>
 							</template>
 						</a-dropdown>
 					</a-tooltip>
@@ -120,6 +123,8 @@ import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-de
 import { Process } from '../../utils/process';
 import BrowserList from '../BrowserList.vue';
 import { IconSync } from '@arco-design/web-vue/es/icon';
+import Icon from '../Icon.vue';
+import { Status } from '../../utils/statusBar';
 
 const state = reactive({
 	showChecked: false,
@@ -276,15 +281,18 @@ async function deleteAll() {
 function copy() {
 	state.selectBrowsers = currentCheckedBrowsers.value;
 	state.pasteType = 'copy';
+	Status.show(`已复制 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_copy' });
 }
 
 function cut() {
 	state.selectBrowsers = currentCheckedBrowsers.value;
 	state.pasteType = 'cut';
+	Status.show(`已剪切 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_cut' });
 }
 
 async function paste() {
 	const browsers: BrowserOptions[] = JSON.parse(JSON.stringify(state.selectBrowsers));
+	const count = browsers.length;
 	state.selectBrowsers = [];
 
 	for (const browser of browsers) {
@@ -306,6 +314,7 @@ async function paste() {
 	}
 
 	cancelAllBrowserCheck();
+	Status.show(`已粘贴 ${count} 个浏览器`, { icon: 'content_paste' });
 }
 
 /**
