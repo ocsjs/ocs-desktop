@@ -75,6 +75,7 @@
 			v-if="slots.actions"
 			style="flex: 0 0 auto"
 			class="text-secondary text-nowrap d-flex justify-content-end ps-1 pe-2"
+			@click.stop
 		>
 			<a-space
 				:size="0"

@@ -16,6 +16,7 @@
 				</template>
 
 				<template #extra>
+					<a-divider direction="vertical" />
 					<a-tooltip position="br">
 						<template #content>
 							仅打开浏览器，不执行其他操作。<br />
