@@ -1,8 +1,9 @@
-import { reactive, computed } from 'vue';
+import { reactive, computed, watch } from 'vue';
 import { currentFolder } from '../fs';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderOptions, FolderType } from '../fs/interface';
+import { Status } from '../utils/statusBar';
 
 export type DropPosition = 'before' | 'after' | 'inside' | null;
 
@@ -26,6 +27,15 @@ export const dragCount = computed(() => dragState.draggingUids.length);
 
 /** 是否正在拖拽中 */
 export const isDragging = computed(() => dragState.draggingUids.length > 0);
+
+/** 监听拖拽状态，自动更新状态栏 */
+watch(isDragging, (dragging) => {
+	if (dragging) {
+		Status.show(`正在拖动 ${dragCount.value} 个文件`, { icon: 'drag_indicator', duration: 0 });
+	} else {
+		Status.clear();
+	}
+});
 
 /** 返回上一级文件夹(...)的放置状态 */
 export const parentBackDropState = reactive({
@@ -80,10 +90,7 @@ export function startDrag(
  * @param entity 悬停的实体
  * @param event dragover事件
  */
-export function onDragOver(
-	entity: BrowserOptions | FolderOptions<FolderType, Browser | Folder>,
-	event: DragEvent
-) {
+export function onDragOver(entity: BrowserOptions | FolderOptions<FolderType, Browser | Folder>, event: DragEvent) {
 	event.preventDefault();
 
 	if (event.dataTransfer) {

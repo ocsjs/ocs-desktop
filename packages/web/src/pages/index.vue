@@ -113,6 +113,8 @@
 				v-model:visible="store.render.state.setup"
 			></Setup>
 		</CommonEditActionDropdown>
+
+		<StatusBar />
 	</a-config-provider>
 </template>
 
@@ -137,6 +139,7 @@ import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
 import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
+import StatusBar from '../components/StatusBar.vue';
 import debounce from 'lodash/debounce';
 const { ipcRenderer } = electron;
 

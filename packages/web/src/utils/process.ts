@@ -9,6 +9,7 @@ import { Message } from '@arco-design/web-vue';
 import EventEmitter from 'events';
 import { child_process } from './node';
 import { notify } from './notify';
+import { Status } from './statusBar';
 
 export type RemoteScriptWorker = <W extends keyof ScriptWorker = keyof ScriptWorker>(
 	event: W,
@@ -162,9 +163,14 @@ export class Process extends EventEmitter {
 						}
 
 						this.status = 'launching';
+						Status.loading(`正在启动 ${this.browser.name}...`);
 
-						this.once('launched', resolve);
+						this.once('launched', () => {
+							Status.clear();
+							resolve();
+						});
 						this.shell?.once('exit', (code) => {
+							Status.clear();
 							resolve(code);
 						});
 						this.worker?.('launch', {
