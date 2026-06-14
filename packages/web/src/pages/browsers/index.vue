@@ -74,24 +74,19 @@
 			>
 				<div class="operations">
 					<!-- 路径栏 / 统计栏 -->
-					<Transition
-						name="breadcrumb-fade"
-						appear
+					<FileBreadcrumb
+						v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
+						:key="currentFolder.uid"
+					></FileBreadcrumb>
+					<div
+						v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
+						class="stats-bar"
 					>
-						<FileBreadcrumb
-							v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
-							:key="currentFolder.uid"
-						></FileBreadcrumb>
-						<div
-							v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
-							class="stats-bar"
-						>
-							<span><icon-desktop /> {{ stats.browsers }}</span>
-							<span><icon-code /> {{ stats.scripts }}</span>
-							<span><icon-folder /> {{ stats.folders }}</span>
-							<span><icon-tag /> {{ stats.tags }}</span>
-						</div></Transition
-					>
+						<span><icon-desktop /> {{ stats.browsers }}</span>
+						<span><icon-code /> {{ stats.scripts }}</span>
+						<span><icon-folder /> {{ stats.folders }}</span>
+						<span><icon-tag /> {{ stats.tags }}</span>
+					</div>
 					<!-- 撑开间距，将搜索和筛选推到最右边 -->
 					<div class="flex-grow-1"></div>
 					<!-- 文件筛选 -->
@@ -112,32 +107,7 @@
 				<FileMultipleOperators></FileMultipleOperators>
 			</a-card>
 
-			<template v-if="currentEntities.length === 0">
-				<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
-					<div>
-						<a-empty class="p-3 m-auto">
-							<div class="mb-3">暂无浏览器</div>
-						</a-empty>
-						<div>
-							<a-button
-								type="text"
-								@click="about"
-							>
-								<Icon type="book">点击查看使用教程</Icon>
-							</a-button>
-						</div>
-						<div>
-							<a-button
-								type="text"
-								@click="newBrowser()"
-							>
-								<Icon type="web">新建浏览器</Icon>
-							</a-button>
-						</div>
-					</div>
-				</div>
-			</template>
-			<template v-else-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
+			<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
 				<a-empty
 					class="p-3"
 					description="暂无浏览器搜索结果"
@@ -149,16 +119,14 @@
 				appear
 			>
 				<div
-					v-if="
-						currentEntities.length > 0 &&
-						!(currentSearchedEntities !== undefined && currentSearchedEntities.length === 0)
-					"
 					:key="currentFolder.uid"
 					class="entities-container"
 				>
 					<!-- 显示浏览器以及文件夹列表 -->
 					<div class="entities">
-						<BrowserList :entities="currentSearchedEntities ? currentSearchedEntities : currentEntities"></BrowserList>
+						<BrowserList
+							:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
+						></BrowserList>
 					</div>
 					<!-- 右键菜单提示 -->
 					<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
@@ -176,9 +144,7 @@ import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
 import { currentEntities, currentSearchedEntities, currentFolder } from '../../fs';
 import { root } from '../../fs/folder';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
-import { about } from '../../utils';
 import BrowserList from '../../components/BrowserList.vue';
-import { newBrowser } from '../../utils/browser';
 import { Environment } from '../../utils//environment';
 import { reactive, onActivated, watch, computed } from 'vue';
 import type { ValidBrowser } from '../../../../common/lib/src/interface';
@@ -272,7 +238,7 @@ async function updateEnvironmentDetect() {
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	padding: 4px 8px 0;
+	padding: 4px 12px 0;
 }
 
 .entities {
@@ -304,22 +270,6 @@ async function updateEnvironmentDetect() {
 		align-items: center;
 		gap: 4px;
 	}
-}
-
-/* 路径栏过渡动画 */
-.breadcrumb-fade-enter-active {
-	transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.breadcrumb-fade-leave-active {
-	transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.breadcrumb-fade-enter-from {
-	opacity: 0;
-	transform: translateY(-4px);
-}
-.breadcrumb-fade-leave-to {
-	opacity: 0;
-	transform: translateY(-4px);
 }
 
 /* 浏览器列表过渡动画 */

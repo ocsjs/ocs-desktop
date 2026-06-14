@@ -89,27 +89,6 @@
 					</a-tooltip>
 				</template>
 			</a-space>
-
-			<div
-				v-if="currentFolder.parent"
-				class="d-inline-flex align-items-center"
-			>
-				<!-- 返回上一级 -->
-				<div>
-					<a-divider direction="vertical"></a-divider>
-				</div>
-				<a-button
-					type="outline"
-					size="mini"
-					@click="
-						() => {
-							currentFolder.flatParents().at(-2)?.select();
-						}
-					"
-				>
-					返回上一级 {{}}
-				</a-button>
-			</div>
 		</a-col>
 
 		<!-- 文件操作 -->
