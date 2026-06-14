@@ -11,36 +11,49 @@
 			<template v-if="contextEntity">
 				<div class="context-tip">
 					<icon-info-circle />
-					左键也可进入编辑
+					左键：编辑 / 拖动
 				</div>
 				<a-doption
 					v-if="contextEntity.type === 'browser' && hasPermission('edit')"
 					:value="'edit'"
 				>
-					<Icon type="edit">编辑</Icon>
+					<a-row>
+						<a-col flex="20px"> <Icon type="edit"></Icon> </a-col>
+						<a-col flex="auto"> 编辑 </a-col>
+					</a-row>
 				</a-doption>
 				<a-doption
 					v-if="hasPermission('rename')"
 					:value="'rename'"
 				>
-					<Icon type="text_format">重命名</Icon>
+					<a-row>
+						<a-col flex="20px"> <Icon type="text_format"></Icon> </a-col>
+						<a-col flex="auto"> 重命名 </a-col>
+					</a-row>
 				</a-doption>
 				<a-doption
 					v-if="hasPermission('remove')"
 					:value="'remove'"
 				>
-					<Icon
-						style="color: red"
-						type="delete"
-					>
-						删除
-					</Icon>
+					<a-row>
+						<a-col flex="20px">
+							<Icon
+								style="color: red"
+								type="delete"
+							>
+							</Icon>
+						</a-col>
+						<a-col flex="auto"> 删除 </a-col>
+					</a-row>
 				</a-doption>
 				<a-doption
 					v-if="hasPermission('location')"
 					:value="'location'"
 				>
-					<Icon type="location_on"> 跳转到文件所在位置 </Icon>
+					<a-row>
+						<a-col flex="20px"> <Icon type="location_on"> </Icon> </a-col>
+						<a-col flex="auto"> 跳转到文件所在位置 </a-col>
+					</a-row>
 				</a-doption>
 				<a-divider style="margin: 4px 0" />
 			</template>
@@ -48,7 +61,10 @@
 			<!-- 空白区域右键：新建浏览器 -->
 			<template v-if="isBlankArea">
 				<a-doption :value="'newBrowser'">
-					<Icon type="web">新建浏览器</Icon>
+					<a-row>
+						<a-col flex="20px"> <Icon type="web"></Icon> </a-col>
+						<a-col flex="auto"> 新建浏览器 </a-col>
+					</a-row>
 				</a-doption>
 				<a-divider style="margin: 4px 0" />
 			</template>
@@ -61,7 +77,8 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> 复制 </a-col>
+					<a-col flex="20px"> <icon-copy /> </a-col>
+					<a-col flex="auto"> 复制 </a-col>
 					<a-col
 						flex="auto"
 						class="text-end"
@@ -75,7 +92,8 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> 剪切 </a-col>
+					<a-col flex="20px"> <icon-scissor /> </a-col>
+					<a-col flex="auto"> 剪切 </a-col>
 					<a-col
 						flex="auto"
 						class="text-end"
@@ -89,7 +107,8 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> 粘贴 </a-col>
+					<a-col flex="20px"> <icon-paste /> </a-col>
+					<a-col flex="auto"> 粘贴 </a-col>
 					<a-col
 						flex="auto"
 						class="text-end"
@@ -103,7 +122,8 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> 上一步（恢复） </a-col>
+					<a-col flex="20px"> <icon-undo /> </a-col>
+					<a-col flex="auto"> 上一步（恢复） </a-col>
 					<a-col
 						flex="auto"
 						class="text-end"
@@ -117,7 +137,8 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> 下一步（还原） </a-col>
+					<a-col flex="20px"> <icon-redo /> </a-col>
+					<a-col flex="auto"> 下一步（还原） </a-col>
 					<a-col
 						flex="auto"
 						class="text-end"
@@ -264,6 +285,5 @@ function onSelect(value: string | number | Record<string, unknown> | undefined) 
 :deep(.arco-dropdown-option-content) {
 	width: 100%;
 	display: block;
-	padding: 5px 12px;
 }
 </style>
