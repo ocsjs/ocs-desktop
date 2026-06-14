@@ -41,19 +41,6 @@
 			</template>
 		</a-dropdown>
 
-		<CommonEditActionDropdown>
-			<span
-				class="title-item"
-				@mousedown="
-					(e) => {
-						e.preventDefault();
-					}
-				"
-			>
-				编辑
-			</span>
-		</CommonEditActionDropdown>
-
 		<a-dropdown
 			class="tittle-dropdown"
 			position="bottom"
@@ -79,6 +66,13 @@
 				</TitleLink>
 			</template>
 		</a-dropdown>
+
+		<a-divider
+			v-if="statusBarState.visible"
+			direction="vertical"
+		/>
+
+		<StatusBar />
 	</div>
 </template>
 
@@ -95,8 +89,9 @@ import { h } from 'vue';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
-import CommonEditActionDropdown from './CommonEditActionDropdown.vue';
 import Icon from './Icon.vue';
+import StatusBar from './StatusBar.vue';
+import { statusBarState } from '../utils/statusBar';
 
 const { shell } = electron;
 
