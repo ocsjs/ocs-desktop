@@ -14,15 +14,46 @@ import { RawPlaywrightScript } from '@ocs-desktop/app/lib/src/tasks/remote.regis
 import { resetSearch } from './entity';
 const { shell } = electron;
 
+/**
+ * 生成不重复的名称，如果重复则追加 (n)
+ * @param baseName 基础名称，如 "未命名浏览器"
+ * @param existingNames 已存在的名称列表
+ * @returns 不重复的名称，如 "未命名浏览器 (2)"
+ */
+function generateUniqueName(baseName: string, existingNames: string[]): string {
+	if (!existingNames.includes(baseName)) {
+		return baseName;
+	}
+
+	// 匹配基础名称后的 (n) 后缀
+	const regex = new RegExp(`^${baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\((\\d+)\\)$`);
+	let maxN = 0;
+
+	for (const name of existingNames) {
+		const match = name.match(regex);
+		if (match) {
+			const n = parseInt(match[1], 10);
+			if (n > maxN) {
+				maxN = n;
+			}
+		}
+	}
+
+	return `${baseName} (${maxN + 1})`;
+}
+
 export function newFolder() {
 	// 关闭搜索模式
 	resetSearch();
 	const id = Entity.uuid();
 
+	const siblingNames = Object.values(currentFolder.value.children).map((c) => c.name);
+	const name = generateUniqueName('未命名文件夹', siblingNames);
+
 	const folder = new Folder({
 		uid: id,
 		type: 'folder',
-		name: '未命名文件夹',
+		name,
 		children: {},
 		createTime: Date.now(),
 		parent: currentFolder.value.uid,
@@ -42,10 +73,13 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 
 	const path_sep = remote.path.get('sep');
 
+	const siblingNames = Object.values(currentFolder.value.children).map((c) => c.name);
+	const name = opts?.name ? generateUniqueName(opts.name, siblingNames) : generateUniqueName('未命名浏览器', siblingNames);
+
 	currentFolder.value.children[id] = new Browser({
 		type: 'browser',
 		uid: id,
-		name: opts?.name || '未命名浏览器',
+		name,
 		checked: false,
 		createTime: Date.now(),
 		notes: '',
