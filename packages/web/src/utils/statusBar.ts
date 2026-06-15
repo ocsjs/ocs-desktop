@@ -30,7 +30,10 @@ export interface ShowStatusOptions {
 }
 
 /** 各类型的默认配置 */
-const typeDefaults: Record<StatusBarType, { icon: string; color: string; bgColor: string; darkColor: string; darkBgColor: string }> = {
+const typeDefaults: Record<
+	StatusBarType,
+	{ icon: string; color: string; bgColor: string; darkColor: string; darkBgColor: string }
+> = {
 	info: {
 		icon: 'info',
 		color: '#1d2129',

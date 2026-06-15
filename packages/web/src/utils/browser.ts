@@ -74,7 +74,9 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 	const path_sep = remote.path.get('sep');
 
 	const siblingNames = Object.values(currentFolder.value.children).map((c) => c.name);
-	const name = opts?.name ? generateUniqueName(opts.name, siblingNames) : generateUniqueName('未命名浏览器', siblingNames);
+	const name = opts?.name
+		? generateUniqueName(opts.name, siblingNames)
+		: generateUniqueName('未命名浏览器', siblingNames);
 
 	currentFolder.value.children[id] = new Browser({
 		type: 'browser',

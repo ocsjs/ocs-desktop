@@ -239,8 +239,6 @@ onMounted(async () => {
 		};
 	}
 
-	console.log('Final bookmarks:', bookmarks.value);
-
 	setTimeout(() => {
 		const nameEl = document.querySelector('#browser-name');
 		const tagsEl = document.querySelector('#browser-tags');
@@ -458,7 +456,7 @@ function openInApp() {
 
 .meta-value {
 	font-size: 13px;
-	color: @text-secondary;
+	color: black;
 }
 
 .meta-divider {
