@@ -108,10 +108,7 @@
 			</template>
 
 			<!-- 显示一键安装 -->
-			<Setup
-				v-if="store.render.state.setup"
-				v-model:visible="store.render.state.setup"
-			></Setup>
+			<Setup v-model:visible="store.render.state.setup"></Setup>
 		</CommonEditActionDropdown>
 	</a-config-provider>
 </template>

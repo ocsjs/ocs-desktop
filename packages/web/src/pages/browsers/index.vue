@@ -17,35 +17,42 @@
 			<template #icon>
 				<div class="shadow">
 					<a-alert
-						title="软件异常"
+						title="警告"
 						style="width: 600px"
 						class="rounded"
-						type="error"
+						type="warning"
 						show-icon
 					>
 						<div>{{ lang('browser_page_environment_error_notice', '软件环境存在问题，将会影响浏览器的正常启动') }}</div>
-						<template v-if="!state.isCurrentBrowserSupported">
-							<div>
-								原因：{{
-									lang('browser_page_environment_error_current_browser_not_supported', '当前浏览器版本不受支持')
-								}}
-							</div>
-						</template>
-						<template v-else-if="!state.supportedBrowser">
-							<div>原因：{{ lang('browser_page_environment_error_no_browser_detected', '未检测到可用的浏览器') }}</div>
-						</template>
-						<template v-else-if="!state.supportedExtension">
-							<div>原因：{{ lang('browser_page_environment_error_no_extension_detected', '未安装脚本管理器') }}</div>
-						</template>
 
-						<a-button
-							class="mt-2"
-							size="mini"
-							type="primary"
-							@click="state.setupVisible = true"
-						>
-							一键修复
-						</a-button>
+						<div class="text-black fw-bold">
+							<template v-if="!state.isCurrentBrowserSupported">
+								<div>
+									原因：{{
+										lang('browser_page_environment_error_current_browser_not_supported', '当前浏览器版本不受支持')
+									}}
+								</div>
+							</template>
+							<template v-else-if="!state.supportedBrowser">
+								<div>
+									原因：{{ lang('browser_page_environment_error_no_browser_detected', '未检测到可用的浏览器') }}
+								</div>
+							</template>
+							<template v-else-if="!state.supportedExtension">
+								<div>原因：{{ lang('browser_page_environment_error_no_extension_detected', '未安装脚本管理器') }}</div>
+							</template>
+						</div>
+
+						<div class="text-end">
+							<a-button
+								class="mt-2"
+								size="mini"
+								type="primary"
+								@click="state.setupVisible = true"
+							>
+								一键修复
+							</a-button>
+						</div>
 					</a-alert>
 				</div>
 			</template>
@@ -53,9 +60,9 @@
 			<Setup
 				v-if="state.setupVisible"
 				v-model:visible="state.setupVisible"
-				confirm-text="环境修复"
+				confirm-text="开始修复"
 				cancel-text="稍后再说"
-				title=""
+				title="环境修复"
 				:create-new-browser="false"
 				@close="
 					async () => {

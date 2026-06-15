@@ -144,8 +144,8 @@ const state = reactive({
 const props = withDefaults(
 	defineProps<{
 		visible: boolean;
-		confirmText: string;
-		cancelText: string;
+		confirmText?: string;
+		cancelText?: string;
 		title?: string;
 		createNewBrowser?: boolean;
 	}>(),
