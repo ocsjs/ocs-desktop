@@ -4,6 +4,7 @@
 		class="entity align-items-center d-flex"
 		:class="{
 			active: store.render.browser.currentBrowserUid === instance.uid,
+			'is-context': contextUid === instance.uid,
 			'is-dragging': isDragging,
 			'drop-before': isDropTarget && dropPosition === 'before',
 			'drop-after': isDropTarget && dropPosition === 'after',
@@ -102,6 +103,7 @@ import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import type { DropPosition } from '../composables/useEntityDrag';
 import { Entity } from '../fs/entity';
+import { contextUid } from '../fs';
 
 const slots = useSlots();
 
@@ -192,6 +194,11 @@ function active() {
 
 	&.active {
 		background-color: #3577db25;
+	}
+	// 右键选中样式
+	&.is-context {
+		background-color: #e8f3ff;
+		border-radius: 4px;
 	}
 
 	// 拖拽中的项目样式

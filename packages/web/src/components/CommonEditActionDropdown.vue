@@ -1,9 +1,11 @@
 <template>
 	<a-dropdown
+		ref="dropdownRef"
 		class="tittle-dropdown"
 		v-bind="$attrs"
 		:popup-max-height="false"
 		@select="onSelect"
+		@popup-visible-change="onPopupVisibleChange"
 	>
 		<slot></slot>
 		<template #content>
@@ -157,7 +159,7 @@ import { remote } from '../utils/remote';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderType, FolderOptions } from '../fs/interface';
-import { currentSearchedEntities } from '../fs';
+import { contextUid, currentSearchedEntities } from '../fs';
 import { newBrowser } from '../utils/browser';
 import Icon from './Icon.vue';
 
@@ -165,6 +167,7 @@ type Permission = 'edit' | 'rename' | 'remove' | 'location';
 
 const contextEntity = ref<BrowserOptions | FolderOptions<FolderType, Browser | Folder> | null>(null);
 const isBlankArea = ref(false);
+const dropdownRef = ref<any>(null);
 
 function hasPermission(p: Permission): boolean {
 	if (!contextEntity.value) return false;
@@ -188,6 +191,7 @@ function handleContextMenu(e: MouseEvent) {
 			const browser = Browser.from(uid);
 			const folder = Folder.from(uid);
 			contextEntity.value = browser || folder || null;
+			contextUid.value = uid;
 			isBlankArea.value = false;
 			return;
 		}
@@ -202,6 +206,13 @@ function handleContextMenu(e: MouseEvent) {
 	}
 
 	contextEntity.value = null;
+	contextUid.value = '';
+}
+
+function onPopupVisibleChange(visible: boolean) {
+	if (!visible) {
+		contextUid.value = '';
+	}
 }
 
 onMounted(() => {

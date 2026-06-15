@@ -1,7 +1,10 @@
 <template>
 	<a-space>
 		<a-dropdown trigger="hover">
-			<a-button size="small" type="outline">
+			<a-button
+				size="small"
+				type="outline"
+			>
 				<Icon type="more_horiz"> 更多 </Icon>
 			</a-button>
 			<template #content>

@@ -1,6 +1,9 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { store } from '../store';
 import { root } from './folder';
+
+/** 当前右键选中的实体 uid（仅用于视觉高亮，不代表选中/勾选） */
+export const contextUid = ref('');
 
 /** 当前所在的文件夹 */
 export const currentFolder = computed(() => root().find('folder', store.render.browser.currentFolderUid) || root());
