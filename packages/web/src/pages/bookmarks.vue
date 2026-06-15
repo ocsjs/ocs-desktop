@@ -21,11 +21,6 @@
 				</div>
 			</template>
 
-			<div
-				id="data-slot"
-				style="display: none"
-			></div>
-
 			<!-- 浏览器信息卡片 -->
 			<div class="browser-info-card">
 				<div class="browser-info-header">
@@ -210,6 +205,17 @@ function iconUrl(url?: string): string {
 	return `http://localhost:${port}/icon?url=${encodeURIComponent(url)}`;
 }
 
+/** 从当前 URL 中解析 uid 参数 */
+function getCurrentUid(): string | null {
+	// 从 query string 获取: ?uid=xxx
+	const searchUid = new URLSearchParams(location.search).get('uid');
+	if (searchUid) return searchUid;
+	// 从 hash 路由参数获取: #/bookmarks?uid=xxx
+	const hashQuery = location.hash.split('?')[1];
+	if (hashQuery) return new URLSearchParams(hashQuery).get('uid');
+	return null;
+}
+
 const state = reactive({
 	loading: false,
 	warn: false,
@@ -228,7 +234,7 @@ onMounted(async () => {
 
 	document.title = 'OCS - 导航页';
 
-	// 直接同步填充数据
+	// 直接同步填充书签数据
 	for (let i = 0; i < infos.bookmark.length; i++) {
 		const bookmark = infos.bookmark[i] as BookMark;
 		console.log(`Processing bookmark[${i}]:`, bookmark);
@@ -239,26 +245,35 @@ onMounted(async () => {
 		};
 	}
 
-	setTimeout(() => {
-		const nameEl = document.querySelector('#browser-name');
-		const tagsEl = document.querySelector('#browser-tags');
-		const notesEl = document.querySelector('#browser-notes');
-		const dataTextContent = document.querySelector('#data-slot')?.textContent || '';
-		if (nameEl && tagsEl && notesEl && dataTextContent) {
-			const { name = '', tags = [], notes = '' } = JSON.parse(dataTextContent || '{}');
-			nameEl.innerHTML = name || '未知名称';
-			tagsEl.innerHTML = tags
-				.map(
-					(t) =>
-						`<span style="background: linear-gradient(135deg, ${t.color}, ${adjustColor(
-							t.color,
-							-20
-						)});" class="browser-tag">${t.name}</span>`
-				)
-				.join('');
-			notesEl.innerHTML = notes || '未知';
+	// 主动通过本地 API 获取浏览器信息
+	const uid = getCurrentUid();
+	if (uid) {
+		try {
+			const port = location.port || '15319';
+			const res = await fetch(`http://localhost:${port}/api/bookmark/browser-info?uid=${uid}`);
+			const info = await res.json();
+			if (info) {
+				const nameEl = document.querySelector('#browser-name');
+				const tagsEl = document.querySelector('#browser-tags');
+				const notesEl = document.querySelector('#browser-notes');
+				if (nameEl) nameEl.innerHTML = info.name || '未知名称';
+				if (tagsEl) {
+					tagsEl.innerHTML = (info.tags || [])
+						.map(
+							(t: { color: string; name: string }) =>
+								`<span style="background: linear-gradient(135deg, ${t.color}, ${adjustColor(
+									t.color,
+									-20
+								)});" class="browser-tag">${t.name}</span>`
+						)
+						.join('');
+				}
+				if (notesEl) notesEl.innerHTML = info.notes || '未知';
+			}
+		} catch (e) {
+			console.error('获取浏览器信息失败', e);
 		}
-	}, 500);
+	}
 });
 
 function adjustColor(hex: string, percent: number): string {
@@ -271,10 +286,14 @@ function adjustColor(hex: string, percent: number): string {
 }
 
 function openInApp() {
-	const { uid } = JSON.parse(document.querySelector('#data-slot')?.textContent || '{}');
-	fetch('http://localhost:15319/api/bookmark/show-browser-in-app?uid=' + uid);
+	const uid = getCurrentUid();
+	if (uid) {
+		const port = location.port || '15319';
+		fetch(`http://localhost:${port}/api/bookmark/show-browser-in-app?uid=${uid}`);
+	}
 }
 </script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500&display=swap');

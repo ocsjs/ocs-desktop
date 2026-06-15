@@ -202,7 +202,7 @@ export class ScriptWorker {
 
 				playwrightScripts: this.playwrightScripts,
 				bookmarksPageUrl: this.store
-					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks`
+					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks?uid=${this.uid}`
 					: undefined,
 				serverPort: this.store?.server.port || 15319,
 				closeableExtensionHomepages: [
@@ -414,18 +414,6 @@ export async function launchBrowser({
 					};
 
 					const [blankPage] = browser.pages();
-
-					// 加载浏览器数据
-					blankPage.on('load', async (page) => {
-						if (bookmarksPageUrl && blankPage.url().includes(bookmarksPageUrl)) {
-							await blankPage.evaluate((info) => {
-								const slot = document.querySelector('#data-slot');
-								if (slot) {
-									slot.textContent = JSON.stringify(info);
-								}
-							}, Object.assign(browserInfo || {}, { uid: uid }));
-						}
-					});
 
 					// 加载本地导航页
 					await blankPage.goto(bookmarksPageUrl || 'about:blank');

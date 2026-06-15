@@ -66,6 +66,47 @@ export async function startupServer() {
 		res.send(store.store.server.authToken);
 	});
 
+	/** 获取浏览器信息（供导航页主动获取） */
+	app.get('/api/bookmark/browser-info', (req, res) => {
+		const uid = req.query.uid as string;
+		if (!uid) {
+			res.status(400).json({ error: '缺少 uid 参数' });
+			return;
+		}
+		const render = getDecryptedRenderData();
+		const root = render?.browser?.root;
+		if (!root) {
+			res.json(null);
+			return;
+		}
+		// 递归查找浏览器
+		function findBrowser(children: any): any {
+			for (const key in children) {
+				if (Object.prototype.hasOwnProperty.call(children, key)) {
+					const entity = children[key];
+					if (entity.type === 'browser' && entity.uid === uid) {
+						return entity;
+					} else if (entity.type === 'folder' && entity.children) {
+						const found = findBrowser(entity.children);
+						if (found) return found;
+					}
+				}
+			}
+			return null;
+		}
+		const browser = findBrowser(root.children || {});
+		if (!browser) {
+			res.json(null);
+			return;
+		}
+		res.json({
+			uid: browser.uid,
+			name: browser.name || '',
+			notes: browser.notes || '',
+			tags: browser.tags || []
+		});
+	});
+
 	app.get('/icon', async (req, res) => {
 		const iconUrl = req.query.url as string;
 		if (!iconUrl) {
