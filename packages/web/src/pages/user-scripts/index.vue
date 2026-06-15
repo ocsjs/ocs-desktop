@@ -366,6 +366,7 @@ import ScriptList from '../../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../../types/user.script';
 import CommonSelector from '../../components/CommonSelector.vue';
 import { remote } from '../../utils/remote';
+import { Status } from '../../utils/statusBar';
 
 /** 搜索列表 */
 const engineSearchList = ref<
@@ -602,6 +603,7 @@ function getUrlVersion(url: string) {
 
 async function updateAllInfo() {
 	// 更新脚本列表信息
+	Status.loading('脚本信息更新中...');
 
 	await Promise.all(
 		store.render.scripts.map(async (script) => {
@@ -655,7 +657,7 @@ async function updateAllInfo() {
 		})
 	);
 
-	Message.success('脚本信息更新完成');
+	Status.success('脚本信息更新完成');
 }
 </script>
 

@@ -3,6 +3,7 @@
 		<span
 			v-if="statusBarState.visible"
 			class="status-bar"
+			:style="barStyle"
 		>
 			<icon-loading
 				v-if="statusBarState.loading"
@@ -18,9 +19,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import Icon from './Icon.vue';
 import { IconLoading } from '@arco-design/web-vue/es/icon';
-import { statusBarState } from '../utils/statusBar';
+import { statusBarState, getTypeColors } from '../utils/statusBar';
+
+const barStyle = computed(() => {
+	const colors = getTypeColors(statusBarState.type);
+	return {
+		color: colors.color,
+		backgroundColor: colors.bgColor
+	};
+});
 </script>
 
 <style scoped lang="less">
@@ -32,15 +42,13 @@ import { statusBarState } from '../utils/statusBar';
 	border-radius: 4px;
 	font-size: 12px;
 	line-height: 1.2;
-	background-color: #e8f3ff;
-	color: #1d2129;
 	user-select: none;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	body[arco-theme='dark'] & {
-		background-color: #1d2d44;
-		color: #e5e6eb;
+		color: v-bind('getTypeColors(statusBarState.type).darkColor');
+		background-color: v-bind('getTypeColors(statusBarState.type).darkBgColor');
 	}
 }
 

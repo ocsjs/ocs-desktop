@@ -281,13 +281,13 @@ async function deleteAll() {
 function copy() {
 	state.selectBrowsers = currentCheckedBrowsers.value;
 	state.pasteType = 'copy';
-	Status.show(`已复制 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_copy' });
+	Status.success(`已复制 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_copy' });
 }
 
 function cut() {
 	state.selectBrowsers = currentCheckedBrowsers.value;
 	state.pasteType = 'cut';
-	Status.show(`已剪切 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_cut' });
+	Status.success(`已剪切 ${currentCheckedBrowsers.value.length} 个浏览器`, { icon: 'content_cut' });
 }
 
 async function paste() {
@@ -314,7 +314,7 @@ async function paste() {
 	}
 
 	cancelAllBrowserCheck();
-	Status.show(`已粘贴 ${count} 个浏览器`, { icon: 'content_paste' });
+	Status.success(`已粘贴 ${count} 个浏览器`, { icon: 'content_paste' });
 }
 
 /**

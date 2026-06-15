@@ -14,12 +14,15 @@ interface DragState {
 	dropTargetUid: string | null;
 	/** 拖拽悬停的放置位置 */
 	dropPosition: DropPosition;
+	/** 是否为禁止放置（多选拖拽到浏览器上方） */
+	isForbidden: boolean;
 }
 
 const dragState = reactive<DragState>({
 	draggingUids: [],
 	dropTargetUid: null,
-	dropPosition: null
+	dropPosition: null,
+	isForbidden: false
 });
 
 /** 拖入的文件数量 */
@@ -29,9 +32,13 @@ export const dragCount = computed(() => dragState.draggingUids.length);
 export const isDragging = computed(() => dragState.draggingUids.length > 0);
 
 /** 监听拖拽状态，自动更新状态栏 */
-watch(isDragging, (dragging) => {
+watch([isDragging, () => dragState.isForbidden], ([dragging, forbidden]) => {
 	if (dragging) {
-		Status.show(`正在拖动 ${dragCount.value} 个文件`, { icon: 'drag_indicator', duration: 0 });
+		if (forbidden) {
+			Status.warning('多选文件仅支持拖入文件夹', { icon: 'block', duration: 0 });
+		} else {
+			Status.info(`正在拖动 ${dragCount.value} 个文件`, { icon: 'drag_indicator', duration: 0 });
+		}
 	} else {
 		Status.clear();
 	}
@@ -50,10 +57,12 @@ export function getEntityDragState(uid: string) {
 	const isDraggingEntity = dragState.draggingUids.includes(uid);
 	const isDropTarget = dragState.dropTargetUid === uid;
 	const dropPosition = isDropTarget ? dragState.dropPosition : null;
+	const isForbidden = isDropTarget && dragState.isForbidden;
 	return {
 		isDragging: isDraggingEntity,
 		isDropTarget,
-		dropPosition
+		dropPosition,
+		isForbidden
 	};
 }
 
@@ -123,6 +132,21 @@ export function onDragOver(entity: BrowserOptions | FolderOptions<FolderType, Br
 		position = y < height * 0.5 ? 'before' : 'after';
 	}
 
+	// 多选拖拽时，只允许移入文件夹，禁止排序
+	if (dragState.draggingUids.length > 1) {
+		if (entity.type === 'folder') {
+			position = 'inside';
+			dragState.isForbidden = false;
+		} else {
+			dragState.dropTargetUid = entity.uid;
+			dragState.dropPosition = null;
+			dragState.isForbidden = true;
+			return;
+		}
+	} else {
+		dragState.isForbidden = false;
+	}
+
 	dragState.dropTargetUid = entity.uid;
 	dragState.dropPosition = position;
 }
@@ -141,6 +165,7 @@ export function onDragLeave(event: DragEvent) {
 	}
 	dragState.dropTargetUid = null;
 	dragState.dropPosition = null;
+	dragState.isForbidden = false;
 }
 
 /**
@@ -153,6 +178,18 @@ export function onDrop(targetEntity: BrowserOptions | FolderOptions<FolderType, 
 
 	// 不能拖拽到自身
 	if (draggingUids.includes(targetEntity.uid)) {
+		endDrag();
+		return;
+	}
+
+	// 禁止放置区（多选拖拽到浏览器上方）
+	if (dragState.isForbidden) {
+		endDrag();
+		return;
+	}
+
+	// 多选拖拽时，禁止排序操作
+	if (draggingUids.length > 1 && dropPosition !== 'inside') {
 		endDrag();
 		return;
 	}
@@ -221,6 +258,7 @@ export function endDrag() {
 	dragState.draggingUids = [];
 	dragState.dropTargetUid = null;
 	dragState.dropPosition = null;
+	dragState.isForbidden = false;
 	parentBackDropState.isDropTarget = false;
 	parentBackDropState.pendingUids = [];
 }

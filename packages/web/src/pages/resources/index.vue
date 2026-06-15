@@ -159,6 +159,7 @@ import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
 import { getRemoteInfos } from '../../utils';
+import { Status } from '../../utils/statusBar';
 
 const { ipcRenderer } = electron;
 
@@ -179,6 +180,7 @@ const state = reactive({
 
 onActivated(() => {
 	state.loading = true;
+	Status.loading('加载资源中...');
 	getRemoteInfos()
 		.then(async (result) => {
 			resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
@@ -196,6 +198,7 @@ onActivated(() => {
 					};
 				}
 			}
+			Status.success('资源加载成功');
 		})
 		.catch((err) => {
 			// @ts-ignore
@@ -203,6 +206,7 @@ onActivated(() => {
 		})
 		.finally(() => {
 			state.loading = false;
+			Status.clear();
 		});
 });
 
