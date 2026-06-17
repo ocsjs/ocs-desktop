@@ -118,21 +118,31 @@ export class Folder<T extends FolderType = FolderType> extends Entity implements
 		this.renaming = false;
 	}
 
-	/** 将子项移动到指定索引位置 */
+	/** 将子项移动到指定索引位置（保持 children 引用不变，避免切断响应式代理） */
 	moveChildToIndex(childUid: string, targetIndex: number): void {
-		const entries = Object.entries(this.children);
-		const sourceIndex = entries.findIndex(([uid]) => uid === childUid);
+		const keys = Object.keys(this.children);
+		const sourceIndex = keys.indexOf(childUid);
 		if (sourceIndex === -1) return;
 
-		const [entry] = entries.splice(sourceIndex, 1);
-		// 限制目标索引范围
-		const clampedIndex = Math.min(targetIndex, entries.length);
-		entries.splice(clampedIndex, 0, entry);
+		// 从 keys 中移除并插入到目标位置
+		keys.splice(sourceIndex, 1);
+		const clampedIndex = Math.min(targetIndex, keys.length);
+		keys.splice(clampedIndex, 0, childUid);
 
-		// 重建 children 保持顺序
-		this.children = {};
-		for (const [uid, child] of entries) {
-			this.children[uid] = child;
+		// 暂存当前值
+		const temp: Record<string, Browser | Folder> = {};
+		for (const key of keys) {
+			temp[key] = this.children[key];
+		}
+
+		// 清空当前 children（删除旧 key），而不是赋值新对象，以保持响应式代理引用不变
+		for (const key of Object.keys(this.children)) {
+			delete this.children[key];
+		}
+
+		// 按新顺序赋值回去
+		for (const key of keys) {
+			this.children[key] = temp[key];
 		}
 	}
 
