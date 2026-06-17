@@ -8,6 +8,39 @@
 
 
 
+## [2.12.0](https://github.com/ocsjs/ocs-desktop/compare/v2.11.1...v2.12.0) (2026-06-17)
+
+
+### ✨ Features
+
+* 新增鼠标拖拽排序以及移入移出文件夹功能 ([cdcd0e5](https://github.com/ocsjs/ocs-desktop/commit/cdcd0e5d061eb4cef3941f1f0ae9ee2f9f91fe8d))
+* 添加新 API StatusBar 可为当前状态操作提供状态栏显示 ([eddbec0](https://github.com/ocsjs/ocs-desktop/commit/eddbec03b14da2b7aa9568b81fd41e62f3b028f7))
+
+
+### 🐛 Bug Fixes
+
+* 修复导航界面无法看到备注的BUG ([72bdf3b](https://github.com/ocsjs/ocs-desktop/commit/72bdf3b40ab725e17d7770a619ef61d8bd43505e))
+* 修复拖拽移动浏览器后数据错误BUG ([c3df609](https://github.com/ocsjs/ocs-desktop/commit/c3df609780655b001a3d8e2095b0aea9c9101dfd))
+* 修复本地开发时自动启动网页调试的BUG ([af9e21b](https://github.com/ocsjs/ocs-desktop/commit/af9e21b55ad120f9dda9fb0802f0f3ce5e6e53be))
+* 修复点击启动按钮会触发编辑的BUG ([2544236](https://github.com/ocsjs/ocs-desktop/commit/2544236379d12795d992e567f1dc8cf127d2cbdb))
+
+
+### ⚡ Performance
+
+* 优化OCS弹窗配置里的样式，懒加载配置信息 ([e7c60d6](https://github.com/ocsjs/ocs-desktop/commit/e7c60d6d8fdc0b856ca62dcc5aab1a578c4bf464))
+* 优化OCS弹窗配置里的样式，添加配置使用说明 ([594a582](https://github.com/ocsjs/ocs-desktop/commit/594a5825119ad09bdb3f4b8105c855dba3673a96))
+* 优化新建浏览器和文件夹名字重复的问题，额外新增序号 ([eedf2ab](https://github.com/ocsjs/ocs-desktop/commit/eedf2ab081cc3e86b1b6173e0ca8c9afa33c11cd))
+* 优化浏览器环境异常检测样式 ([e6c392b](https://github.com/ocsjs/ocs-desktop/commit/e6c392b68839148af1a4513df6c90645b3dd9345))
+* 优化状态栏API，添加多种不同类型 ([7c80f27](https://github.com/ocsjs/ocs-desktop/commit/7c80f27b495f87babcf00ea540d3b94c76377eee))
+* 优化界面显示，添加动画，优化操作添加更多下拉菜单选项 ([63abfcc](https://github.com/ocsjs/ocs-desktop/commit/63abfcc67775ddd27f53d753973f2ab13cbc6a54))
+* 修改浏览器基础信息获取方式，新增接口获取方法 ([8065f47](https://github.com/ocsjs/ocs-desktop/commit/8065f47f8b7aba705e42fec1fb6353e0b3c9f049))
+* 修改状态栏位置到 Ttile 顶部栏 ([1baf40e](https://github.com/ocsjs/ocs-desktop/commit/1baf40e5a0565ed3c8078f1f1f187c8602eb044e))
+* 将操作和列表区域区分开 ([f735f5f](https://github.com/ocsjs/ocs-desktop/commit/f735f5f285900e9a09113a8dc8eb3654623d611a))
+* 当路径栏隐藏时，显示信息统计栏包括浏览器总数，标签总数，脚本总数等等 ([d73bf14](https://github.com/ocsjs/ocs-desktop/commit/d73bf14ba415cad7c3483376825987b1a35b05d2))
+* 添加右键菜单的操作图标 ([dede775](https://github.com/ocsjs/ocs-desktop/commit/dede775f32295af0716b3b28addef793c9a3bce9))
+* 添加鼠标右键选中浏览器特殊样式 ([b6b6172](https://github.com/ocsjs/ocs-desktop/commit/b6b6172029cc7d9a677f44a2081ad6b43b8c3192))
+* 给批量操作选项添加特定图标 ([5faf5d0](https://github.com/ocsjs/ocs-desktop/commit/5faf5d0ee0f071fb1c6bf88d42cdd8755ae5b69b))
+
 ## [2.11.1](https://github.com/ocsjs/ocs-desktop/compare/v2.11.0...v2.11.1) (2026-06-10)
 
 
