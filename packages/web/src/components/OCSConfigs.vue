@@ -2,40 +2,58 @@
 <!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
 	<div>
-		<div
-			style="position: sticky; top: 0px; z-index: 99"
-			class="bg-white pb-2"
-		>
-			<a-alert class="mb-2">
-				<span
-					v-html="
-						lang(
-							'setting_ocs_sync_notes',
-							'选择不同平台进行脚本设置，然后开启同步即可全浏览器应用相同OCS脚本设置 <br /> 如果只有单个浏览器，则无需配置，直接前往浏览器设置即可。'
-						)
-					"
-				></span>
-			</a-alert>
-
-			<a-tabs
-				v-model:active-key="Store.render.setting.ocs.currentProjectName"
-				type="card-gutter"
-				hide-content
-			>
-				<a-tab-pane
-					v-for="project of state.projects
-						.filter((p) => !state.hidden_projects.includes(p.name))
-						.sort((a, b) => (a.name === state.pin_projects ? -1 : 1))"
-					:key="project.name"
-					:title="project.name"
+		<template v-if="state.err">
+			<div class="d-inline-block p-5">
+				<a-result
+					title="解析错误！请尝试重启软件"
+					:subtitle="'原因：' + state.err"
+					status="error"
 				>
-				</a-tab-pane>
-			</a-tabs>
-		</div>
-		<div
-			id="ocs-browser-configs"
-			class="mt-3 ps-2 pe-2"
-		></div>
+				</a-result>
+			</div>
+		</template>
+		<template v-else-if="state.loading">
+			<div class="d-inline-block p-5">
+				<a-spin tip="正在获取最新OCS配置..." />
+			</div>
+		</template>
+
+		<template v-else>
+			<div
+				style="position: sticky; top: 0px; z-index: 99"
+				class="bg-white pb-2"
+			>
+				<a-alert class="mb-2">
+					<span
+						v-html="
+							lang(
+								'setting_ocs_sync_notes',
+								'选择不同平台进行脚本设置，然后开启同步即可全浏览器应用相同OCS脚本设置 <br /> 如果只有单个浏览器，则无需配置，直接前往浏览器设置即可。'
+							)
+						"
+					></span>
+				</a-alert>
+
+				<a-tabs
+					v-model:active-key="Store.render.setting.ocs.currentProjectName"
+					type="card-gutter"
+					hide-content
+				>
+					<a-tab-pane
+						v-for="project of state.projects
+							.filter((p) => !state.hidden_projects.includes(p.name))
+							.sort((a, b) => (a.name === state.pin_projects ? -1 : 1))"
+						:key="project.name"
+						:title="project.name"
+					>
+					</a-tab-pane>
+				</a-tabs>
+			</div>
+			<div
+				id="ocs-browser-configs"
+				class="mt-3 ps-2 pe-2"
+			></div>
+		</template>
 	</div>
 </template>
 
@@ -56,7 +74,6 @@ const emits = defineEmits<{
 	(e: 'update:project', val: Project[]): void;
 	(e: 'loading'): void;
 	(e: 'loaded'): void;
-	(e: 'error', val: string): void;
 }>();
 
 const state = reactive({
@@ -169,9 +186,7 @@ function renderOCS() {
 						detailsList.push(details);
 						i++;
 						try {
-							script.onrender?.({ panel, header: h('header-element') })?.catch((err) => {
-								console.error(err);
-							});
+							script.onrender?.({ panel, header: h('header-element') });
 						} catch (err) {
 							console.error(err);
 						}
@@ -188,7 +203,6 @@ function renderOCS() {
 	} catch (err) {
 		state.err = String(err);
 		console.error(err);
-		emits('error', state.err);
 	}
 }
 
@@ -241,7 +255,6 @@ async function loadOCS() {
 	} catch (err) {
 		state.err = String(err);
 		console.error(err);
-		emits('error', state.err);
 	}
 
 	state.loading = false;

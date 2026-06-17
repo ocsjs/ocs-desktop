@@ -19,63 +19,42 @@
 						direction="vertical"
 					/>
 
-					<template v-if="state.err">
-						<div class="d-inline-block">
-							<a-tooltip :content="'错误：' + state.err">
-								<a-alert type="error">
-									解析错误！请尝试重启软件
-									<IconQuestionCircle />
-								</a-alert>
-							</a-tooltip>
-						</div>
-					</template>
-					<template v-else-if="state.loading">
-						<div class="d-inline-block">
-							<a-alert type="info"> <icon-loading /> 正在获取最新OCS配置 </a-alert>
-						</div>
-					</template>
-					<template v-else>
-						<a-button
-							size="small"
-							type="primary"
-							@click="state.show = true"
-						>
-							点击配置网页OCS脚本设置
-						</a-button>
-					</template>
-
-					<a-modal
-						v-model:visible="state.show"
-						title="OCS配置"
-						:footer="false"
-						width="auto"
-						:top="5"
-						:align-center="false"
-						modal-class="p-0 m-0"
-						:mask-closable="false"
-						body-style="padding: 0"
-						@close="
-							() => {
-								Message.info({
-									content: '修改全局设置后，开启左侧的同步功能才可生效哦~',
-									duration: 10 * 1000
-								});
-							}
-						"
+					<a-button
+						size="small"
+						type="primary"
+						@click="state.show = true"
 					>
-						<div
-							id="ocs-global-configs"
-							class="m-2"
+						点击配置网页OCS脚本设置
+					</a-button>
+
+					<div v-if="state.show">
+						<a-modal
+							v-model:visible="state.show"
+							title="OCS配置"
+							:footer="false"
+							width="auto"
+							:top="5"
+							:align-center="false"
+							modal-class="p-0 m-0"
+							:mask-closable="false"
+							body-style="padding: 0"
+							@close="
+								() => {
+									Message.info({
+										content: '修改全局设置后，开启左侧的同步功能才可生效哦~',
+										duration: 10 * 1000
+									});
+								}
+							"
 						>
-							<OCSConfigs
-								v-show="state.loading === false"
-								v-model:store="store.render.setting.ocs.store"
-								@error="(err) => (state.err = err)"
-								@loaded="() => (state.loading = false)"
-								@loading="() => (state.loading = true)"
-							></OCSConfigs>
-						</div>
-					</a-modal>
+							<div
+								id="ocs-global-configs"
+								class="m-2"
+							>
+								<OCSConfigs v-model:store="store.render.setting.ocs.store"></OCSConfigs>
+							</div>
+						</a-modal>
+					</div>
 				</Description>
 			</Card>
 
@@ -221,10 +200,6 @@ import { Folder } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 
 const state = reactive({
-	/** 是否加载 */
-	loading: false,
-	/** 是否加载错误 */
-	err: '',
 	show: false
 });
 
