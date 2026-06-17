@@ -1,7 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
 	<Description label="浏览器路径">
-		<div class="d-flex align-items-center flex-wrap gap-2 w-100">
+		<div class="d-flex align-items-center gap-2 w-100">
 			<div>
 				<a-tooltip position="rt">
 					<template #content>

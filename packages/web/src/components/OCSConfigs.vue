@@ -1,19 +1,40 @@
+<!-- eslint-disable max-len -->
+<!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
-	<div class="h-100">
-		<a-radio-group
-			v-model="Store.render.setting.ocs.currentProjectName"
-			type="button"
+	<div>
+		<div
+			style="position: sticky; top: 0px; z-index: 99"
+			class="bg-white pb-2"
 		>
-			<template
-				v-for="project of state.projects"
-				:key="project.name"
+			<a-alert class="mb-2">
+				<span
+					v-html="
+						lang(
+							'setting_ocs_sync_notes',
+							'选择不同平台进行脚本设置，然后开启同步即可全浏览器应用相同OCS脚本设置 <br /> 如果只有单个浏览器，则无需配置，直接前往浏览器设置即可。'
+						)
+					"
+				></span>
+			</a-alert>
+
+			<a-tabs
+				v-model:active-key="Store.render.setting.ocs.currentProjectName"
+				type="card-gutter"
+				hide-content
 			>
-				<a-radio :value="project.name">{{ project.name }}</a-radio>
-			</template>
-		</a-radio-group>
+				<a-tab-pane
+					v-for="project of state.projects
+						.filter((p) => !state.hidden_projects.includes(p.name))
+						.sort((a, b) => (a.name === state.pin_projects ? -1 : 1))"
+					:key="project.name"
+					:title="project.name"
+				>
+				</a-tab-pane>
+			</a-tabs>
+		</div>
 		<div
 			id="ocs-browser-configs"
-			class="mt-3"
+			class="mt-3 ps-2 pe-2"
 		></div>
 	</div>
 </template>
@@ -21,9 +42,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
-import { store as Store } from '../store/index';
-
-type Project = any;
+import { store as Store, lang } from '../store/index';
+import type { Project } from 'easy-us';
 
 const props = defineProps<{
 	store: object;
@@ -32,11 +52,11 @@ const props = defineProps<{
 const store = ref(props.store);
 
 const emits = defineEmits<{
-	(e: 'update:store', val: object);
-	(e: 'update:project', val: Project[]);
-	(e: 'loading');
-	(e: 'loaded');
-	(e: 'error', val: string);
+	(e: 'update:store', val: object): void;
+	(e: 'update:project', val: Project[]): void;
+	(e: 'loading'): void;
+	(e: 'loaded'): void;
+	(e: 'error', val: string): void;
 }>();
 
 const state = reactive({
@@ -47,7 +67,10 @@ const state = reactive({
 	err: '',
 	/** 当前选中的 ocs project */
 	projects: [] as Project[],
-	watchStopHandle: undefined as WatchStopHandle | undefined
+	watchStopHandle: undefined as WatchStopHandle | undefined,
+	hidden_projects: ['后台'],
+	pin_projects: '通用',
+	hidden_scripts: ['common.online-search', 'common.work-results']
 });
 
 watch(
@@ -63,6 +86,21 @@ state.watchStopHandle = watch(store, () => {
 
 let wrapper = null as HTMLElement | null;
 let root = null as ShadowRoot | null;
+
+/** 设置手风琴效果：同时只能打开一个 detail */
+function setupAccordion(detailsList: HTMLDetailsElement[]) {
+	for (const details of detailsList) {
+		details.addEventListener('toggle', () => {
+			if (details.open) {
+				for (const other of detailsList) {
+					if (other !== details && other.open) {
+						other.removeAttribute('open');
+					}
+				}
+			}
+		});
+	}
+}
 
 function renderOCS() {
 	if (!root || !wrapper) return;
@@ -83,10 +121,34 @@ function renderOCS() {
 		/** 删除阴影 */
 		root.append(h('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
 
+		/** details / summary 样式 */
+		root.append(
+			h(
+				'style',
+				[
+					'details { margin: 0 0 8px 0; border-radius: 8px; border: 1px solid #e5e6eb; background: #fafafa; overflow: hidden; transition: all 0.2s ease; }',
+					'details:hover { border-color: #c9cdd4; }',
+					'details[open] { border-color: #165dff; background: #fff; box-shadow: 0 2px 12px rgba(22,93,255,0.08); }',
+					'summary { padding: 10px 14px; font-weight: 600; font-size: 13px; color: #1d2129; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; user-select: none; outline: none; background: transparent; transition: background 0.15s; border-radius: 8px; }',
+					'summary::-webkit-details-marker { display: none; }',
+					'summary::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid #86909c; border-bottom: 1.5px solid #86909c; transform: rotate(-45deg); transition: transform 0.25s ease, margin-top 0.25s ease; margin-top: -2px; flex-shrink: 0; margin-left: 8px; }',
+					'details[open] > summary::after { transform: rotate(45deg); margin-top: 2px; border-color: #165dff; }',
+					'details[open] > summary { color: #165dff; background: rgba(22,93,255,0.04); }',
+					'summary:hover { background: rgba(0,0,0,0.02); }'
+				].join('\n')
+			)
+		);
+
 		if (project) {
+			const detailsList: HTMLDetailsElement[] = [];
+			let i = 0;
 			for (const key in project.scripts) {
 				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
 					const script = project.scripts[key];
+
+					if (script.namespace && state.hidden_scripts.includes(script.namespace)) {
+						continue;
+					}
 
 					/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
 					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
@@ -98,10 +160,14 @@ function renderOCS() {
 						Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
 						script.hideInPanel !== false
 					) {
+						const details = h('details', { open: i === 0 });
 						const panel = $ui.scriptPanel(script, $store);
-
+						details.append(h('summary', panel.name || '未知脚本'));
+						details.append(panel);
 						/** 添加到页面中，并执行 onrender 函数 */
-						root.append(panel);
+						root.append(details);
+						detailsList.push(details);
+						i++;
 						try {
 							script.onrender?.({ panel, header: h('header-element') })?.catch((err) => {
 								console.error(err);
@@ -112,6 +178,9 @@ function renderOCS() {
 					}
 				}
 			}
+
+			/** 初始化手风琴效果 */
+			setupAccordion(detailsList);
 
 			/** 挂载 ocs panel */
 			document.querySelector('#ocs-browser-configs')?.replaceChildren(wrapper);
@@ -227,5 +296,8 @@ function resolveCustomElementName<T extends HTMLElement = HTMLElement>(el: { new
 #ocs-browser-configs {
 	overflow: overlay;
 	height: calc(100% - 64px);
+}
+
+.script-panels {
 }
 </style>

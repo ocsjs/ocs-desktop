@@ -2,18 +2,7 @@
 	<div class="w-100 h-100 overflow-auto">
 		<div class="setting text-center p-2 col-12 col-lg-10">
 			<Card title="通用设置">
-				<BrowserPath></BrowserPath>
-
 				<Description label="OCS配置">
-					<div
-						v-show="state.loading === false && state.err !== ''"
-						style="color: red"
-						:title="state.err"
-					>
-						解析错误！，请尝试重启软件
-					</div>
-					<div v-show="state.loading === true && state.err === ''"><icon-loading /> 正在获取最新OCS配置</div>
-
 					<a-tooltip
 						:content="
 							lang('setting_browser_ocs_config_sync_tip', '开启后，修改OCS配置后会同步到全部由OCS桌面端启动的浏览器中')
@@ -30,29 +19,47 @@
 						direction="vertical"
 					/>
 
-					<a-button
-						v-if="state.loading === false && state.err === ''"
-						@click="state.show = true"
-					>
-						点击配置
-					</a-button>
+					<template v-if="state.err">
+						<div class="d-inline-block">
+							<a-tooltip :content="'错误：' + state.err">
+								<a-alert type="error">
+									解析错误！请尝试重启软件
+									<IconQuestionCircle />
+								</a-alert>
+							</a-tooltip>
+						</div>
+					</template>
+					<template v-else-if="state.loading">
+						<div class="d-inline-block">
+							<a-alert type="info"> <icon-loading /> 正在获取最新OCS配置 </a-alert>
+						</div>
+					</template>
+					<template v-else>
+						<a-button
+							size="small"
+							type="primary"
+							@click="state.show = true"
+						>
+							点击配置网页OCS脚本设置
+						</a-button>
+					</template>
 
 					<a-modal
 						v-model:visible="state.show"
 						title="OCS配置"
 						:footer="false"
 						width="auto"
+						:top="5"
+						:align-center="false"
 						modal-class="p-0 m-0"
 						:mask-closable="false"
 						body-style="padding: 0"
 						@close="
 							() => {
-								if (store.render.setting.ocs.openSync === false) {
-									Message.info({
-										content: '修改全局设置后，开启右侧的同步功能才可生效哦。',
-										duration: 10 * 1000
-									});
-								}
+								Message.info({
+									content: '修改全局设置后，开启左侧的同步功能才可生效哦~',
+									duration: 10 * 1000
+								});
 							}
 						"
 					>
@@ -73,6 +80,8 @@
 			</Card>
 
 			<Card title="浏览器设置">
+				<BrowserPath></BrowserPath>
+
 				<Description label="原生弹窗">
 					<a-tooltip content="启用后，浏览器中的原版弹窗可能会影响脚本运行">
 						<a-switch
@@ -255,7 +264,7 @@ function onChangeEncryption() {
 }
 
 #ocs-global-configs {
-	height: 80vh;
 	overflow: overlay;
+	max-width: 600px;
 }
 </style>
