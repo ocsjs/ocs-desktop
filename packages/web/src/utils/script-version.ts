@@ -135,9 +135,9 @@ export interface ScriptToInstall {
  *
  * 判定逻辑：
  * 1. isLocalScript → 始终安装（本地脚本可能被修改了）
- * 2. 强制更新开关开启 → 始终安装
+ * 2. 强制安装开关开启 → 始终安装
  * 3. lastInstalledVersion 未设置 → 始终安装（首次安装）
- * 4. code_url 含 ?version=xxx（用户指定了版本）→ 跳过，不检查更新
+ * 4. code_url 含 ?version=xxx（用户指定了版本）→ 比较 lastInstalledVersion 与指定版本，不同则安装
  * 5. 其他网络脚本 → fetchRemoteVersion 获取远程最新版本 → 与 lastInstalledVersion 比较
  * 6. meta.js 返回 404/403 → 使用 info.version（本地缓存）与 lastInstalledVersion 比对
  * 7. 暂时性网络异常 → 降级为安装（保守策略）
@@ -155,7 +155,7 @@ export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): P
 			continue;
 		}
 
-		// 2. 强制更新模式始终安装
+		// 2. 强制安装模式始终安装
 		if (forceUpdate) {
 			result.push({ script, latestVersion: script.info?.version || '' });
 			continue;
@@ -167,8 +167,12 @@ export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): P
 			continue;
 		}
 
-		// 4. 用户指定了版本 → 跳过，不检查更新
-		if (getSpecifiedVersion(codeUrl)) {
+		// 4. 用户指定了版本 → 比较已安装版本与指定版本，不同则安装
+		const specifiedVersion = getSpecifiedVersion(codeUrl);
+		if (specifiedVersion) {
+			if (compareVersions(script.lastInstalledVersion, specifiedVersion) !== 0) {
+				result.push({ script, latestVersion: specifiedVersion });
+			}
 			continue;
 		}
 
