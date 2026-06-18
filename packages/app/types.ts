@@ -20,4 +20,6 @@ export interface UserScripts {
 	isLocalScript: boolean;
 	/** 是否为网络链接加载的脚本 */
 	isInternetLinkScript: boolean;
+	/** 上次成功安装到浏览器的版本，undefined 表示从未通过 OCS 安装过 */
+	lastInstalledVersion?: string;
 }

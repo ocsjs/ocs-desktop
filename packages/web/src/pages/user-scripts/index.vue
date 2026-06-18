@@ -361,6 +361,7 @@ import { lang, store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
 import Icon from '../../components/Icon.vue';
 import { addScriptFromFile, addScriptFromUrl, openScriptSource } from '../../utils/user-scripts';
+import { getSpecifiedVersion } from '../../utils/script-version';
 import { Input, Modal, Message } from '@arco-design/web-vue';
 import ScriptList from '../../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../../types/user.script';
@@ -592,13 +593,11 @@ function changeScriptVersion(id: number, select_version: ScriptVersion) {
 function getVersionSelectorCurrentScriptVersion() {
 	const url = store.render.scripts.find((s) => s.id === state.versionSelector.currentScriptId)?.info?.code_url;
 	if (!url) return '';
-	const match = url.match(/version=([\d.]+)/);
-	return match ? match[1] : '';
+	return getSpecifiedVersion(url) || '';
 }
 
 function getUrlVersion(url: string) {
-	const match = url.match(/version=([\d.]+)/);
-	return match ? match[1] : '';
+	return getSpecifiedVersion(url) || '';
 }
 
 async function updateAllInfo() {

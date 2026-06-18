@@ -19,8 +19,6 @@ type BrowserInfo = { name: string; notes: string; tags: { color: string; name: s
 type BrowserConfig = {
 	/** 是否启用弹窗 */
 	enable_dialog?: boolean;
-	/** 是否强制更新脚本 */
-	force_update_script?: boolean;
 };
 
 interface Langs {
@@ -106,6 +104,8 @@ export class ScriptWorker {
 		options: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 			userDataDir: string;
 			userscripts: string[];
+			/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
+			enabledScriptCount: number;
 		}
 	) {
 		if (this.extensionPaths.length) {
@@ -342,6 +342,7 @@ export async function launchBrowser({
 	args,
 	userDataDir,
 	userscripts,
+	enabledScriptCount,
 	playwrightScripts,
 	closeableExtensionHomepages,
 	bookmarksPageUrl,
@@ -356,6 +357,8 @@ export async function launchBrowser({
 	userDataDir: string;
 	/** 自定义用户脚本URL */
 	userscripts: string[];
+	/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
+	enabledScriptCount: number;
 	/** 可关闭的浏览器拓展主页 */
 	closeableExtensionHomepages: string[];
 	/** 自动化脚本 */
@@ -426,7 +429,7 @@ export async function launchBrowser({
 					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 
 					// 安装用户脚本
-					const warn = await setupUserScripts({ browser, userscripts, step, config });
+					const warn = await setupUserScripts({ browser, userscripts, step, enabledScriptCount });
 
 					// 监听网络请求
 					browserNetworkRoute(authToken, browser);
@@ -454,7 +457,7 @@ export async function launchBrowser({
  * 安装/更新脚本
  *
  */
-async function initScripts(urls: string[], browser: BrowserContext, config?: BrowserConfig) {
+async function initScripts(urls: string[], browser: BrowserContext) {
 	console.log('install ', urls);
 	let installCont = 0;
 	let retryCount = 0;
@@ -478,29 +481,15 @@ async function initScripts(urls: string[], browser: BrowserContext, config?: Bro
 				// 置顶页面，防止点击安装失败
 				await installPage.bringToFront();
 				await sleep(1000);
-				const closed = await installPage.evaluate((config) => {
+				const closed = await installPage.evaluate(() => {
 					const btn = (document.querySelector('[class*="primary"]') ||
 						document.querySelector('[type*="button"]')) as HTMLElement;
-					if (config?.force_update_script) {
-						btn?.click();
-					} else {
-						if (
-							['更新', '安装', '添加', '降级', 'install', 'update', 'add', 'downgrade'].some((text) =>
-								(btn?.textContent || btn?.getAttribute('value') || '')
-									.trim()
-									.toLocaleLowerCase()
-									.includes(text.trim().toLocaleLowerCase())
-							)
-						) {
-							btn?.click();
-						} else {
-							return false;
-						}
-					}
+					// （由渲染进程版本检查过滤），直接点击按钮安装/更新
+					btn?.click();
 					if (!btn) {
 						return false;
 					}
-				}, config);
+				});
 
 				if (!closed) {
 					await sleep(1000).then(() => installPage.close());
@@ -559,9 +548,9 @@ async function setupUserScripts(opts: {
 	browser: BrowserContext;
 	userscripts: string[];
 	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
-	config?: BrowserConfig;
+	enabledScriptCount: number;
 }) {
-	const { userscripts, browser, step } = opts;
+	const { userscripts, browser, step, enabledScriptCount } = opts;
 
 	const warn: string[] = [];
 	// 安装用户脚本
@@ -569,14 +558,17 @@ async function setupUserScripts(opts: {
 		await step('正在安装用户脚本...（如长时间未完成请尝试重启浏览器 ）');
 		// 载入本地脚本
 		try {
-			await initScripts(userscripts, browser, opts.config);
+			await initScripts(userscripts, browser);
 		} catch (e) {
 			// @ts-ignore
 			console.error('脚本安装失败：', e.message);
 			// await html('脚本载入失败，请手动更新，或者忽略。' + e.message);
 		}
 	} else {
-		warn.push('检测到您的软件中并未安装任何用户脚本，或者全部脚本处于不加载状态，可能会导致预期脚本不运行。');
+		if (enabledScriptCount === 0) {
+			warn.push('检测到您的软件中并未开启任何用户脚本，可能会导致预期脚本不运行。');
+		}
+		// enabledScriptCount > 0 且 userscripts 为空 → 所有脚本均为最新，无需更新，无需提示
 	}
 
 	return warn;

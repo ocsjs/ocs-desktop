@@ -10,6 +10,7 @@ import EventEmitter from 'events';
 import { child_process } from './node';
 import { notify } from './notify';
 import { Status } from './statusBar';
+import { filterScriptsNeedingInstall } from './script-version';
 
 export type RemoteScriptWorker = <W extends keyof ScriptWorker = keyof ScriptWorker>(
 	event: W,
@@ -121,77 +122,102 @@ export class Process extends EventEmitter {
 			},
 			config: {
 				enable_dialog: store.render.setting.browser.enableDialog,
-				force_update_script: store.render.setting.browser.forceUpdateScript
+				
 			},
 			langs: store.render.langs as any
 		});
 	}
 
+	async launchPreCheck() {
+		// 检查
+		if (!this.launchOptions.executablePath) {
+			Message.error('浏览器路径为空，请在软件设置中修改');
+			return;
+		}
+
+		try {
+			const exists = await remote.fs.call('existsSync', this.launchOptions.executablePath);
+			if (!exists) {
+				Message.error('浏览器路径不存在，请在软件设置中修改');
+				return;
+			}
+
+			// 脚本检查
+			Status.loading('正在检查本地脚本...');
+			const enabledUserScripts = store.render.scripts.filter((s) => s.enable);
+			for (const s of enabledUserScripts) {
+				if (!s.url.startsWith('http')) {
+					const res = await remote.fs.call('existsSync', s.info?.code_url || s.url);
+					if (!res) {
+						notify(
+							'本地脚本不存在',
+							lang('error_when_script_not_found', `本地脚本 ${s.info?.name}：(${s.url})\n不存在，请检查脚本路径`, {
+								name: s.info?.name || '',
+								url: s.url
+							}),
+							'process_launch_error_' + s.url,
+							{
+								duration: 60 * 1000,
+								type: 'warning',
+								copy: true
+							}
+						);
+					}
+				}
+			}
+
+			Status.loading('正在检查脚本更新...');
+			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts);
+			if (scriptsToInstall.length > 0) {
+				Status.loading(`正在启动 ${this.browser.name}（需更新/安装 ${scriptsToInstall.length} 个脚本）...`);
+			} else {
+				Status.loading(`正在启动 ${this.browser.name}（脚本均为最新，无需更新）...`);
+			}
+			this.once('launched', () => {
+				// 安装成功后更新 lastInstalledVersion
+				for (const item of scriptsToInstall) {
+					item.script.lastInstalledVersion = item.latestVersion;
+				}
+				Status.clear();
+			});
+			this.shell?.once('exit', (code) => {
+				Status.clear();
+			});
+			return { scriptsToInstall, enabledScriptCount: enabledUserScripts.length };
+		} catch (err) {
+			Message.error('浏览器路径读取错误 : ' + String(err));
+		}
+	}
+
 	/** 启动文件 */
 	launch() {
 		return new Promise<void | number | null>((resolve, reject) => {
-			// 检查
-			if (!this.launchOptions.executablePath) {
-				return Message.error('浏览器路径为空，请在软件设置中修改');
-			}
-
-			remote.fs
-				.call('existsSync', this.launchOptions.executablePath)
-				.then(async (result) => {
+			this.status = 'launching';
+			this.launchPreCheck()
+				.then((result) => {
 					if (result) {
-						const enabledUserScripts = store.render.scripts.filter((s) => s.enable);
-						for (const s of enabledUserScripts) {
-							if (!s.url.startsWith('http')) {
-								const res = await remote.fs.call('existsSync', s.info?.code_url || s.url);
-								if (!res) {
-									notify(
-										'本地脚本不存在',
-										lang(
-											'error_when_script_not_found',
-											`本地脚本 ${s.info?.name}：(${s.url})\n不存在，请检查脚本路径`,
-											{ name: s.info?.name || '', url: s.url }
-										),
-										'process_launch_error_' + s.url,
-										{
-											duration: 60 * 1000,
-											type: 'warning',
-											copy: true
-										}
-									);
-								}
-							}
-						}
-
-						this.status = 'launching';
-						Status.loading(`正在启动 ${this.browser.name}...`);
-
 						this.once('launched', () => {
-							Status.clear();
 							resolve();
 						});
 						this.shell?.once('exit', (code) => {
-							Status.clear();
 							resolve(code);
 						});
 						this.worker?.('launch', {
 							userDataDir: this.browser.cachePath,
 							// 这里要加密编码，防止路径中有中文等特殊字符，会无法安装脚本
-							userscripts: enabledUserScripts.map((s) =>
-								s.isLocalScript
+							enabledScriptCount: result.enabledScriptCount,
+							userscripts: result.scriptsToInstall.map((item) =>
+								item.script.isLocalScript
 									? `http://localhost:${store.server.port}/api/local-userscript?path=${encodeURIComponent(
-											s.info?.code_url || s.url
+											item.script.info?.code_url || item.script.url
 									  )}`
-									: s.info?.code_url || s.url
+									: item.script.info?.code_url || item.script.url
 							),
 							...this.launchOptions
 						});
-					} else {
-						Message.error('浏览器路径不存在，请在软件设置中修改');
 					}
 				})
-				.catch((err) => {
-					Message.error('浏览器路径读取错误 : ', err);
-				});
+				.catch(reject);
 		});
 	}
 

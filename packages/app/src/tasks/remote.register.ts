@@ -90,6 +90,8 @@ let win: BrowserWindow | undefined;
 const methods = {
 	autoLaunch,
 	get: (url: string, config?: AxiosRequestConfig<any> | undefined) => axios.get(url, config).then((res) => res.data),
+	getWithStatus: (url: string, config?: AxiosRequestConfig<any> | undefined) =>
+		axios.get(url, { ...config, validateStatus: () => true }).then((res) => ({ status: res.status, data: res.data })),
 	post: (url: string, config?: AxiosRequestConfig<any> | undefined) => axios.post(url, config).then((res) => res.data),
 	download: (channel: string, url: string, dest: string) => {
 		/** 下载文件 */

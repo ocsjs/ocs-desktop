@@ -70,8 +70,8 @@
 					</a-tooltip>
 				</Description>
 
-				<Description label="强制更新脚本">
-					<a-tooltip content="启用后，安装脚本时果版本没有更新依然会强制重新安装">
+				<Description label="强制安装脚本">
+					<a-tooltip content="启用后，启动浏览器时将跳过版本检查，强制安装所有启用的脚本">
 						<a-switch
 							v-model="store.render.setting.browser.forceUpdateScript"
 							size="small"
