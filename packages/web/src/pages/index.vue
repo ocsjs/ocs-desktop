@@ -127,6 +127,7 @@ import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import { Modal, Tooltip } from '@arco-design/web-vue';
 import BrowserPanel from '../components/browsers/BrowserPanel.vue';
 import { currentBrowser } from '../fs';
+import { root } from '../fs/folder';
 import { inBrowser, electron } from '../utils/node';
 import { getWindowsRelease } from '../utils/os';
 import cloneDeep from 'lodash/cloneDeep';
@@ -232,29 +233,29 @@ onMounted(async () => {
 			}
 		);
 
-		/**
-		 * 监听 store 变化，自动存储，不要每个变化都存储，MAC版本中每次都会触发权限获取才能存储，可能会导致严重卡顿
-		 */
-		watch(
-			[
-				() => store.render.setting.ocs.openSync,
-				() => store.render.setting.launchOptions.executablePath,
-				() => store.render.setting.browser.enableDialog,
-				() => store.render.setting.browser.forceUpdateScript
-			],
-			async () => {
-				saveStoreToLocal(store);
-			}
-		);
+		// 准实时持久化：极短防抖 + 保存期间跳过 + 脏标记重试
+		// 加密已优化为内存中 AES-256-GCM（<1ms），不再依赖系统密钥环
+		let saveInFlight = false;
+		let dirtyWhileSaving = false;
 
-		// 使用防抖，避免频繁触发存储
-		watch(
-			[() => store.render],
-			debounce(() => {
-				saveStoreToLocal(store).catch(console.error);
-			}, 1000),
-			{ deep: true }
-		);
+		async function performSave() {
+			if (saveInFlight) {
+				dirtyWhileSaving = true;
+				return;
+			}
+			saveInFlight = true;
+			try {
+				await saveStoreToLocal(store);
+			} finally {
+				saveInFlight = false;
+				if (dirtyWhileSaving) {
+					dirtyWhileSaving = false;
+					performSave();
+				}
+			}
+		}
+
+		watch([() => store.render], debounce(performSave, 100), { deep: true });
 
 		watch(() => store.window.autoLaunch, setAutoLaunch);
 		watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
@@ -279,7 +280,9 @@ ipcRenderer.on('close', async () => {
 	}
 	console.log('保存数据中...');
 	const m = Modal.info({ content: '正在保存数据...', closable: false, maskClosable: false, footer: false });
-	await saveStoreToLocal(store);
+	// 同步文件树到 store，确保最新数据被持久化
+	store.render.browser.root = JSON.parse(JSON.stringify(root()));
+	saveStoreToLocalSync(store);
 	m.close();
 	console.log('数据已保存');
 	remote.app.call('exit', 0);
@@ -290,24 +293,28 @@ function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 	remote.win.call('setTitle', `OCS - ${route.meta.title}`);
 }
 
+/** 异步保存，用于实时持久化（单次 IPC 调用，加密+写入在主进程完成） */
 async function saveStoreToLocal(_store: typeof store) {
 	try {
 		if (inBrowser) {
 			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
 		} else {
-			if (remote.methods.callSync('isEncryptionAvailable') && _store.app.data_encryption) {
-				const resolved_store: typeof store = JSON.parse(JSON.stringify(_store));
-				// 加密
-				Reflect.set(
-					resolved_store,
-					'render',
-					await remote.methods.call('encryptString', JSON.stringify(resolved_store.render))
-				);
-				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolved_store)));
-			} else {
-				// 不加密
-				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(_store)));
-			}
+			const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+			await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
+		}
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+/** 同步版本保存，用于关闭时确保数据写入磁盘（单次 IPC 调用） */
+function saveStoreToLocalSync(_store: typeof store) {
+	try {
+		if (inBrowser) {
+			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
+		} else {
+			const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+			remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
 		}
 	} catch (e) {
 		console.error(e);

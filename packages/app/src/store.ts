@@ -1,6 +1,7 @@
-import { app, safeStorage } from 'electron';
+import { app } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
+import { getDecryptedRenderData } from './crypto';
 
 // IO操作只能在 app.getPath('userData') 下进行，否则会有权限问题。
 
@@ -23,8 +24,7 @@ export const OriginalAppStore = {
 	},
 	/** 软件设置 */
 	app: {
-		video_frame_rate: 1,
-		data_encryption: false
+		video_frame_rate: 1
 	},
 	/** 窗口设置 */
 	window: {
@@ -51,9 +51,4 @@ export const store = new Store<typeof OriginalAppStore>();
 /**
  * 获取解密后的渲染进程数据
  */
-export function getDecryptedRenderData(): (typeof OriginalAppStore)['render'] {
-	if (typeof store?.store?.render === 'string') {
-		return JSON.parse(safeStorage.decryptString(Buffer.from(store?.store?.render, 'base64')));
-	}
-	return store?.store?.render || {};
-}
+export { getDecryptedRenderData };

@@ -3,7 +3,8 @@ import { Logger } from '../logger';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
-import { getDecryptedRenderData, store } from '../store';
+import { store } from '../store';
+import { getDecryptedRenderData } from '../crypto';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID } from 'crypto';
@@ -40,20 +41,20 @@ export async function startupServer() {
 	});
 
 	app.get('/ocs-global-setting', (req, res) => {
-		const render = getDecryptedRenderData();
+		const render = getDecryptedRenderData(store);
 		res.json(render.setting.ocs);
 	});
 
 	/** 获取 browser 数据 */
 	app.get('/browser', (req, res) => {
-		const render = getDecryptedRenderData();
+		const render = getDecryptedRenderData(store);
 		// 如果开启了同步配置，就返回，否则返回空对象
 		const data = render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {};
 		res.json(data);
 	});
 
 	app.get('/is-browser-config-sync', (req, res) => {
-		const render = getDecryptedRenderData();
+		const render = getDecryptedRenderData(store);
 		res.end(String(render.setting.ocs.openSync));
 	});
 
@@ -73,7 +74,7 @@ export async function startupServer() {
 			res.status(400).json({ error: '缺少 uid 参数' });
 			return;
 		}
-		const render = getDecryptedRenderData();
+		const render = getDecryptedRenderData(store);
 		const root = render?.browser?.root;
 		if (!root) {
 			res.json(null);

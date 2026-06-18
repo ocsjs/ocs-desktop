@@ -182,10 +182,12 @@ export const root = () => {
 	}
 };
 
-/** 实时存储文件树 */
+/** 实时同步文件树到 store，确保所有深层变更都能被追踪并触发持久化 */
 watch(
-	() => _root,
+	() => JSON.stringify(_root),
 	() => {
-		store.render.browser.root = JSON.parse(JSON.stringify(root));
+		if (_root) {
+			store.render.browser.root = JSON.parse(JSON.stringify(_root));
+		}
 	}
 );

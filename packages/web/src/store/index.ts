@@ -6,7 +6,6 @@ import { CommonUserScript } from '../types/user.script';
 import { FolderOptions } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
-import { inBrowser } from '../utils/node';
 
 export type StoreUserScript = { info?: CommonUserScript } & Omit<UserScripts, 'info'>;
 
@@ -86,87 +85,80 @@ export type WebStore = {
 	};
 };
 
-const _store: AppStore & { render: WebStore } = defaultsDeep(
-	inBrowser ? JSON.parse(localStorage.getItem('ocs-app-store') || '{}') : remote['electron-store'].get('store'),
-	{
-		render: {
-			scripts: [],
-			notifies: [],
-			browser: {
-				currentFolderUid: '',
-				currentBrowserUid: '',
-				root: {
-					name: '根目录',
-					parent: undefined,
-					createTime: Date.now(),
-					type: 'root',
-					uid: 'root-folder',
-					children: {},
-					renaming: false
-				},
-				tags: {},
-				search: {
-					value: '',
-					tags: [],
-					results: undefined
-				}
+const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-store'].get('store'), {
+	render: {
+		scripts: [],
+		notifies: [],
+		browser: {
+			currentFolderUid: '',
+			currentBrowserUid: '',
+			root: {
+				name: '根目录',
+				parent: undefined,
+				createTime: Date.now(),
+				type: 'root',
+				uid: 'root-folder',
+				children: {},
+				renaming: false
 			},
-			dashboard: {
-				details: {
-					tags: false,
-					notes: false
-				},
-				num: 4,
-				video: {
-					aspectRatio: 0
-				}
-			},
-			setting: {
-				browserType: 'diy',
-				showSideBarText: true,
-				launchOptions: {
-					custom: false,
-					executablePath: ''
-				},
-				theme: {
-					dark: false
-				},
-				ocs: {
-					currentProjectName: '',
-					store: {},
-					openSync: false
-				},
-				browser: {
-					cachesSizeWarningPoint: 10,
-					enableDialog: false,
-					forceUpdateScript: false
-				}
-			},
-			langs: {},
-			state: {
-				first: true,
-				setup: true,
-				mini: false,
-				responsive: 'small',
-				height: document.documentElement.clientHeight,
-				read_record: {}
+			tags: {},
+			search: {
+				value: '',
+				tags: [],
+				results: undefined
 			}
-		} as WebStore
-	}
-);
+		},
+		dashboard: {
+			details: {
+				tags: false,
+				notes: false
+			},
+			num: 4,
+			video: {
+				aspectRatio: 0
+			}
+		},
+		setting: {
+			browserType: 'diy',
+			showSideBarText: true,
+			launchOptions: {
+				custom: false,
+				executablePath: ''
+			},
+			theme: {
+				dark: false
+			},
+			ocs: {
+				currentProjectName: '',
+				store: {},
+				openSync: false
+			},
+			browser: {
+				cachesSizeWarningPoint: 10,
+				enableDialog: false,
+				forceUpdateScript: false
+			}
+		},
+		langs: {},
+		state: {
+			first: true,
+			setup: true,
+			mini: false,
+			responsive: 'small',
+			height: document.documentElement.clientHeight,
+			read_record: {}
+		}
+	} as WebStore
+});
 
-// 解密数据
+// 解密数据（兼容新旧加密格式）
+// @ts-ignore - render 在磁盘上可能是加密后的字符串
 if (typeof _store.render === 'string') {
 	try {
-		const data = JSON.parse(
-			remote.methods.callSync(
-				'decryptString',
-				// @ts-ignore
-				_store.render
-			)
-		);
-		console.log(data);
-		// 解密
+		console.log('_store', _store);
+		// @ts-ignore
+		const renderStr = _store.render as string;
+		const data = JSON.parse(remote.methods.callSync('decryptRenderString' as any, renderStr));
 		Reflect.set(_store, 'render', data);
 	} catch (e) {
 		console.error('数据解密失败：' + e);

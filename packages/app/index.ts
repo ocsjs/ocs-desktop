@@ -10,6 +10,7 @@ import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
 import { store } from './src/store';
+import { initAesKey } from './src/crypto';
 
 app.setName('ocs');
 
@@ -36,10 +37,13 @@ function bootstrap() {
 	task('OCS启动程序', () =>
 		Promise.all([
 			task('初始化错误处理', () => handleError()),
-			task('初始化本地设置', async () => {
-				initStore();
-				await task('启动接口服务', () => startupServer());
-			}),
+			// 密钥初始化必须在 initStore 之前完成（initStore 同步调用 getDecryptedRenderData）
+			task('初始化加密密钥', () => initAesKey()).then(() =>
+				task('初始化本地设置', async () => {
+					initStore();
+					await task('启动接口服务', () => startupServer());
+				})
+			),
 			task('初始化自动启动', () => autoLaunch()),
 			task('启动渲染进程', async () => {
 				// 设置 webrtc 的影像帧率比例，最高100，太高会造成卡顿，参数默认50

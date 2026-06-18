@@ -125,6 +125,13 @@ function importData() {
 					const text = await remote.fs.call('readFileSync', filePaths[0], { encoding: 'utf8' });
 					const _store: typeof store = JSON.parse(text.toString());
 
+					// 如果 render 是加密字符串，先解密为明文再导入
+					if (typeof _store.render === 'string') {
+						const renderStr = _store.render as string;
+						const data = JSON.parse(remote.methods.callSync('decryptRenderString' as any, renderStr) as string);
+						(_store as any).render = data;
+					}
+
 					const root = _store.render.browser.root;
 					// 遍历文件夹，将每个浏览器的缓存路径解析为用户数据目录下的文件夹
 					const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
@@ -203,6 +210,21 @@ function exportData() {
 								}
 							}
 						}
+
+						// 导出前加密 render 数据，防止明文泄露
+						if (typeof _store.render !== 'string') {
+							(_store as any).render = remote.methods.callSync(
+								'encryptRenderString' as any,
+								JSON.stringify(_store.render)
+							) as string;
+						}
+
+						// 删除多余数据
+						const filter_keys: (keyof typeof _store)[] = ['paths', 'app', 'window', 'server'];
+						for (const key of filter_keys) {
+							delete _store[key];
+						}
+
 						await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
 						Message.success('导出成功！');
 					}

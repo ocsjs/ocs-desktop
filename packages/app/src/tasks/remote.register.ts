@@ -16,6 +16,8 @@ import { updateApp } from './updater';
 import { scripts } from '../scripts';
 import { PlaywrightScript } from '../scripts/script';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
+import { AppStore } from '../../types';
+import { encryptRenderString, decryptRenderString } from '../crypto';
 
 export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
 
@@ -106,10 +108,6 @@ const methods = {
 	getPlatform: () => process.platform,
 	updateApp: updateApp,
 	moveWindowToTop: moveWindowToTop,
-	encryptString: (text: string) => safeStorage.encryptString(text).toString('base64'),
-	decryptString: (text: string) => {
-		return safeStorage.decryptString(Buffer.from(text, 'base64'));
-	},
 	isEncryptionAvailable: () => {
 		return safeStorage.isEncryptionAvailable();
 	},
@@ -117,8 +115,21 @@ const methods = {
 	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[],
 	captureDesktopScreen: () => {
 		return desktopCapturer.getSources({ types: ['window'] });
+	},
+	encryptRenderString,
+	decryptRenderString,
+	/** 一次性完成加密和存储，避免二次 IPC 调用 */
+	saveStore: (plainStoreJson: string, shouldEncrypt: boolean): void => {
+		const storeData: AppStore = JSON.parse(plainStoreJson);
+		if (shouldEncrypt && safeStorage.isEncryptionAvailable()) {
+			// @ts-ignore
+			storeData.render = encryptRenderString(JSON.stringify(storeData.render));
+		}
+		store.store = storeData;
 	}
 };
+
+export type RemoteMethods = typeof methods;
 
 /**
  * 初始化远程通信
@@ -140,8 +151,6 @@ export function remoteRegister(_win: BrowserWindow) {
 	registerRemoteEvent('logger', Logger('render'));
 	registerRemoteEvent('desktopCapturer', desktopCapturer);
 }
-
-export type RemoteMethods = typeof methods;
 
 const _registerRemoteEvent = registerRemoteEvent;
 export { _registerRemoteEvent as registerRemoteEvent };
