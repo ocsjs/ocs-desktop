@@ -47,7 +47,7 @@
 							<template #content>
 								<a-doption
 									size="mini"
-									@click="updateAllInfo"
+									@click="updateAllInfo(true)"
 								>
 									更新全部脚本信息
 								</a-doption>
@@ -600,7 +600,13 @@ function getUrlVersion(url: string) {
 	return getSpecifiedVersion(url) || '';
 }
 
-async function updateAllInfo() {
+async function updateAllInfo(force = false) {
+	if (!force) {
+		// 检查是否所有脚本都在1小时内更新过信息
+		if (store.render.scripts.every((s) => s.lastInfoUpdateTime && Date.now() - s.lastInfoUpdateTime < 3600000)) {
+			return;
+		}
+	}
 	// 更新脚本列表信息
 	Status.loading('脚本信息更新中...');
 
@@ -616,6 +622,11 @@ async function updateAllInfo() {
 				return;
 			}
 			if (script.isInternetLinkScript) {
+				return;
+			}
+
+			// 非强制更新时，1小时内更新过的脚本跳过
+			if (!force && script.lastInfoUpdateTime && Date.now() - script.lastInfoUpdateTime < 3600000) {
 				return;
 			}
 
@@ -643,6 +654,7 @@ async function updateAllInfo() {
 						url.searchParams.set('version', current_script_version);
 						script.info.code_url = decodeURIComponent(url.toString());
 					}
+					script.lastInfoUpdateTime = Date.now();
 					state.script_status[script.id] = 'done';
 					// 一秒后删除状态
 					setTimeout(() => {

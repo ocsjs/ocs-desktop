@@ -22,4 +22,6 @@ export interface UserScripts {
 	isInternetLinkScript: boolean;
 	/** 上次成功安装到浏览器的版本，undefined 表示从未通过 OCS 安装过 */
 	lastInstalledVersion?: string;
+	/** 脚本信息上次更新时间（最新版本、描述等信息），0 表示从未更新 */
+	lastInfoUpdateTime?: number;
 }
