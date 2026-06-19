@@ -109,7 +109,11 @@ export const config = reactive({
 					{
 						url: `https://scriptcat.org/users/${info.user_id}`,
 						name: info.username,
-						avatar: info.avatar ? `https://scriptcat.org${info.avatar}` : undefined
+						avatar: info.avatar
+							? info.avatar.startsWith('/')
+								? `https://scriptcat.org${info.avatar}`
+								: info.avatar
+							: undefined
 					}
 				];
 				script.description = info.description;

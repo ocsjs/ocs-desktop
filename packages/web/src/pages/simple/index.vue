@@ -6,7 +6,7 @@
 		:style="{ display: 'block' }"
 	>
 		<div class="simple-mode-container">
-			<div class="p-2 d-flex justify-content-center">
+			<div class="p-2 d-flex justify-content-center tabs">
 				<a-tabs
 					v-model:active-key="state.activeTab"
 					type="rounded"
@@ -27,7 +27,7 @@
 			<div class="container-md">
 				<!-- 浏览器面板 -->
 				<div
-					v-show="state.activeTab === 'browsers'"
+					v-if="state.activeTab === 'browsers'"
 					class="overflow-auto"
 				>
 					<!-- 环境检测提示 -->
@@ -141,7 +141,7 @@
 
 				<!-- 脚本面板 -->
 				<div
-					v-show="state.activeTab === 'scripts'"
+					v-if="state.activeTab === 'scripts'"
 					class="overflow-auto"
 				>
 					<UserScripts />
@@ -282,7 +282,7 @@ onMounted(() => {
 }
 
 .browser-card {
-	background: #fff;
+	background: transparent;
 	border: 1px solid #e5e6eb;
 	border-radius: 8px;
 	padding: 16px;
@@ -382,7 +382,7 @@ body[arco-theme='dark'] & {
 	}
 
 	.browser-card {
-		background: #232324;
+		background: transparent;
 		border-color: #3d3d3f;
 
 		&:hover {
@@ -425,7 +425,9 @@ body[arco-theme='dark'] & {
 	}
 }
 
-:deep(.arco-tabs-tab) {
-	border: 1px solid rgb(235, 235, 235);
+.tabs {
+	:deep(.arco-tabs-tab) {
+		border: 1px solid rgb(235, 235, 235);
+	}
 }
 </style>

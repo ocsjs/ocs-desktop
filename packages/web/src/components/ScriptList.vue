@@ -57,15 +57,16 @@
 				>
 					<a
 						v-for="(author, i) of script.info.authors"
-						:key="i"
+						:key="script.info.id + '_' + i"
 						:href="author.url"
 						class="user-script-author"
 						target="_blank"
 					>
 						<img
-							v-if="author.avatar"
+							v-if="author.avatar && !avatarErrors.has(author.avatar)"
 							:src="author.avatar"
 							class="user-script-icon"
+							@error="onAvatarError(author.avatar)"
 						/>
 						<Icon
 							v-else
@@ -158,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRefs } from 'vue';
+import { ref, reactive, toRefs } from 'vue';
 import { StoreUserScript } from '../store';
 import { store } from '../store/index';
 import Icon from './Icon.vue';
@@ -173,6 +174,14 @@ const { scripts } = toRefs(props);
 
 /** 选中的脚本 */
 const selectedScript = ref<number>(0);
+
+/** 加载失败的头像URL集合 */
+const avatarErrors = reactive(new Set<string>());
+
+/** 头像加载失败回调 */
+function onAvatarError(avatar: string) {
+	avatarErrors.add(avatar);
+}
 
 /**
  * 根据指定的t，获取t距离现在过去了多少时间
