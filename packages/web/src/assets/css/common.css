@@ -286,3 +286,8 @@ body[arco-theme='dark'] .ps-table .arco-table-tr .ps-table-index {
 .arco-message-list {
   top: 52px;
 }
+.user-script-search-modal {
+  max-width: 1200px;
+  min-width: 600px;
+  overflow: auto;
+}

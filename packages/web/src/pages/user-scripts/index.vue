@@ -1,316 +1,332 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-	<div class="col-12 p-2 m-auto h-100">
-		<a-tabs
-			v-model:active-key="state.activeKey"
-			class="overflow-auto h-100"
-		>
-			<a-tab-pane
-				key="web"
-				title="脚本列表"
-			>
-				<div
-					class="text-secondary markdown mb-2"
-					v-html="lang('notice_user_scripts_page_usage', '')"
-				></div>
+	<div class="container-md h-100 overflow-auto">
+		<div
+			class="text-secondary markdown mb-2"
+			v-html="lang('notice_user_scripts_page_usage', '')"
+		></div>
 
-				<div class="mb-2">
-					<a-space>
-						<a-tooltip content="从本地文件添加脚本，必须是以 .user.js 结尾的文件">
-							<a-button
-								size="mini"
-								type="outline"
-								@click="addScriptFromFile"
-							>
-								+ 添加本地脚本
-							</a-button>
-						</a-tooltip>
-						<a-tooltip content="使用网络链接添加脚本，通常以 http 开头，并以 .user.js 结尾的链接">
-							<a-button
-								size="mini"
-								type="outline"
-								@click="addScriptFromURL"
-							>
-								+ 添加网络脚本
-							</a-button>
-						</a-tooltip>
-						<a-button
+		<div class="mb-3 d-flex align-items-center">
+			<a-space>
+				<a-tooltip content="从本地文件添加脚本，必须是以 .user.js 结尾的文件">
+					<a-button
+						size="mini"
+						type="outline"
+						@click="addScriptFromFile"
+					>
+						+ 添加本地脚本
+					</a-button>
+				</a-tooltip>
+				<a-tooltip content="使用网络链接添加脚本，通常以 http 开头，并以 .user.js 结尾的链接">
+					<a-button
+						size="mini"
+						type="outline"
+						@click="addScriptFromURL"
+					>
+						+ 添加网络脚本
+					</a-button>
+				</a-tooltip>
+				<a-dropdown trigger="hover">
+					<a-button size="mini"> <icon-apps class="me-1" /> 快捷操作 </a-button>
+
+					<template #content>
+						<a-doption
 							size="mini"
-							type="outline"
-							@click="state.activeKey = 'search'"
+							@click="updateAllInfo(true)"
 						>
-							<Icon type="search">搜索网络脚本</Icon>
-						</a-button>
-						<a-dropdown trigger="hover">
-							<a-button size="mini"> <icon-apps class="me-1" /> 快捷操作 </a-button>
-
-							<template #content>
-								<a-doption
-									size="mini"
-									@click="updateAllInfo(true)"
-								>
-									更新全部脚本信息
-								</a-doption>
-								<a-doption
-									size="mini"
-									@click="enableAll"
-								>
-									全部开启-自动安装
-								</a-doption>
-								<a-doption
-									size="mini"
-									@click="closeAll"
-								>
-									全部关闭-自动安装
-								</a-doption>
-							</template>
-						</a-dropdown>
-					</a-space>
-				</div>
-
-				<div
-					v-if="store.render.scripts.length === 0"
-					style="height: 50vh"
-					class="d-flex"
+							更新全部脚本信息
+						</a-doption>
+						<a-doption
+							size="mini"
+							@click="enableAll"
+						>
+							全部开启-自动安装
+						</a-doption>
+						<a-doption
+							size="mini"
+							@click="closeAll"
+						>
+							全部关闭-自动安装
+						</a-doption>
+					</template>
+				</a-dropdown>
+			</a-space>
+			<div class="ms-auto">
+				<a-button
+					type="primary"
+					@click="state.searchModalVisible = true"
 				>
-					<a-empty
-						class="m-auto"
-						description="暂无数据, 请在上方“搜索脚本”中选择喜欢的脚本进行添加哦~"
+					<Icon type="search" /> 搜索脚本
+				</a-button>
+			</div>
+		</div>
+
+		<div
+			v-if="store.render.scripts.length === 0"
+			style="height: 50vh"
+			class="d-flex"
+		>
+			<a-empty
+				class="m-auto"
+				description='暂无数据, 请点击上方"搜索脚本"搜索并添加喜欢的脚本哦~'
+			/>
+		</div>
+		<div
+			v-else
+			class="pb-3 ms-1 me-1"
+		>
+			<a-divider />
+
+			<ScriptList :scripts="paginatedScripts">
+				<template #script-name-prefix="{ script }">
+					<a-tooltip v-if="state.script_status[script.id]">
+						<a-tag
+							class="me-2"
+							:color="
+								state.script_status[script.id] === 'loading'
+									? 'blue'
+									: state.script_status[script.id] === 'done'
+									? 'green'
+									: 'red'
+							"
+						>
+							<icon-refresh
+								v-if="state.script_status[script.id] === 'loading'"
+								spin
+							>
+								正在更新脚本信息...
+							</icon-refresh>
+							<icon-check v-else-if="state.script_status[script.id] === 'done'"> </icon-check>
+							<icon-close v-else-if="state.script_status[script.id] === 'error'"> </icon-close>
+							<icon-exclamation v-else-if="state.script_status[script.id] === 'not_found'"> </icon-exclamation>
+						</a-tag>
+						<template #content>
+							<div v-if="state.script_status[script.id] === 'loading'">正在更新脚本信息...</div>
+							<div v-else-if="state.script_status[script.id] === 'done'">脚本信息更新完成</div>
+							<div v-else-if="state.script_status[script.id] === 'error'">脚本信息更新失败，可能是网络问题</div>
+							<div v-else-if="state.script_status[script.id] === 'not_found'">本地脚本已不存在，请检查文件路径</div>
+						</template>
+					</a-tooltip>
+				</template>
+
+				<template #infos="{ script }">
+					<a-popover
+						position="rt"
+						:content-style="{ maxWidth: '400px' }"
+					>
+						<a-tag>
+							<Icon type="info" />
+						</a-tag>
+						<template #content>
+							<a-descriptions
+								size="mini"
+								:label-style="{ verticalAlign: 'top' }"
+								:value-style="{}"
+								:column="1"
+							>
+								<a-descriptions-item label="脚本名"> {{ script.info?.name || '' }} </a-descriptions-item>
+								<a-descriptions-item label="脚本简介">
+									<a-tooltip :content="script.info?.description || ''">
+										<div class="large-text">
+											{{ script.info?.description || '' }}
+										</div>
+									</a-tooltip>
+								</a-descriptions-item>
+								<a-descriptions-item
+									v-if="script.info?.url"
+									label="脚本主页"
+								>
+									<a
+										href="javascript:void(0)"
+										@click="openScriptSource(script)"
+									>
+										{{ script.info!.url }}
+									</a>
+								</a-descriptions-item>
+								<a-descriptions-item label="脚本链接"> {{ script.info?.code_url || '' }}</a-descriptions-item>
+							</a-descriptions>
+						</template>
+					</a-popover>
+
+					<a-tooltip>
+						<template #content>
+							脚本来源
+							<div v-if="script.isLocalScript">
+								本地脚本：当前脚本处于您计算机本地，因此不能实时获取网络数据进行更新，但软件依然会尝试重复加载以保证您的文件修改后的代码仍能同步到浏览器中，不具备版本切换功能。
+							</div>
+							<div v-else-if="script.isInternetLinkScript">
+								网络脚本：通过网络链接直接加载到软件中的脚本，不具备版本切换功能。
+							</div>
+						</template>
+						<a-tag>
+							<template v-if="script.isLocalScript">本地脚本</template>
+							<template v-else-if="script.isInternetLinkScript">网络脚本</template>
+							<template v-else>{{ translateSourceType(getSourceType(script)) }}</template>
+						</a-tag>
+					</a-tooltip>
+				</template>
+
+				<template #actions="{ script }">
+					<a-button
+						v-if="
+							!script.isLocalScript &&
+							!script.isInternetLinkScript &&
+							['greasyfork', 'scriptcat'].includes(getSourceType(script))
+						"
+						size="mini"
+						type="outline"
+						class="user-script-action"
+						style="background: white"
+						:disabled="state.versionSelector.loading"
+						@click="showScriptVersionList(script)"
+					>
+						<template v-if="state.versionSelector.currentScriptId === script.id && state.versionSelector.loading">
+							<icon-loading />
+						</template>
+						<template v-else>
+							<a-tooltip>
+								<template #content>
+									切换脚本版本，启动浏览器后会强制安装此版本<br />
+									如果选择最新版本，那么每次都会同步最新版本
+								</template>
+								<span> <icon-swap /> 版本 </span>
+							</a-tooltip>
+						</template>
+					</a-button>
+
+					<a-tooltip>
+						<template #content>
+							<div style="color: white; font-weight: bold">
+								<template v-if="script.enable"> 关闭脚本自动安装 </template>
+								<template v-else>开启脚本自动安装 </template>
+							</div>
+
+							<a-divider class="mt-1 mb-1" />
+							<div
+								v-if="script.enable"
+								style="color: white"
+							>
+								如果想禁止脚本运行，请在浏览器拓展中禁止。
+							</div>
+							<div
+								v-else
+								style="color: white"
+							>
+								<div>浏览器启动后会自动安装此脚本，</div>
+								<div>如果此脚本没有在浏览器中安装，则会自动安装，</div>
+								<div>如果已安装则会自动更新以及重新安装</div>
+							</div>
+						</template>
+
+						<a-switch
+							v-model="script.enable"
+							style="width: 84px"
+							class="user-script-action"
+						>
+							<template #checked> 自动安装 </template>
+							<template #unchecked> 自动安装 </template>
+						</a-switch>
+					</a-tooltip>
+
+					<a-tooltip content="移除脚本">
+						<a-popconfirm @ok="onRemoveScript(script)">
+							<template #content>
+								<div>删除后将不能恢复数据！</div>
+								<div>请您记住此脚本名，方便后续查找。</div>
+							</template>
+							<a-button
+								size="mini"
+								status="danger"
+								class="user-script-action"
+							>
+								<Icon type="delete" />
+							</a-button>
+						</a-popconfirm>
+					</a-tooltip>
+				</template>
+			</ScriptList>
+
+			<div
+				v-if="store.render.scripts.length > state.pageSize"
+				class="d-flex justify-content-center mt-3"
+			>
+				<a-pagination
+					v-model:current="state.currentPage"
+					:total="store.render.scripts.length"
+					:page-size="state.pageSize"
+					:show-size-changer="false"
+					:show-quick-jumper="true"
+					:hide-on-single-page="true"
+				/>
+			</div>
+		</div>
+
+		<!-- 搜索网络脚本弹窗 -->
+		<a-modal
+			v-model:visible="state.searchModalVisible"
+			title="搜索网络脚本"
+			:footer="false"
+			width="auto"
+			:esc-to-close="true"
+			:mask-closable="false"
+			unmount-on-close
+			modal-class="user-script-search-modal"
+		>
+			<div class="container">
+				<div class="col-12 actions d-flex mb-2">
+					<a-input-search
+						v-model:value="state.searchValue"
+						placeholder="输入脚本名进行搜索"
+						search-button
+						@change="onSearch"
 					/>
 				</div>
-				<div
-					v-else
-					class="pb-3 ms-1 me-1"
-				>
-					<ScriptList :scripts="store.render.scripts">
-						<template #script-name-prefix="{ script }">
-							<a-tooltip v-if="state.script_status[script.id]">
-								<a-tag
-									class="me-2"
-									:color="
-										state.script_status[script.id] === 'loading'
-											? 'blue'
-											: state.script_status[script.id] === 'done'
-											? 'green'
-											: 'red'
-									"
-								>
-									<icon-refresh
-										v-if="state.script_status[script.id] === 'loading'"
-										spin
-									>
-										正在更新脚本信息...
-									</icon-refresh>
-									<icon-check v-else-if="state.script_status[script.id] === 'done'"> </icon-check>
-									<icon-close v-else-if="state.script_status[script.id] === 'error'"> </icon-close>
-									<icon-exclamation v-else-if="state.script_status[script.id] === 'not_found'"> </icon-exclamation>
-								</a-tag>
-								<template #content>
-									<div v-if="state.script_status[script.id] === 'loading'">正在更新脚本信息...</div>
-									<div v-else-if="state.script_status[script.id] === 'done'">脚本信息更新完成</div>
-									<div v-else-if="state.script_status[script.id] === 'error'">脚本信息更新失败，可能是网络问题</div>
-									<div v-else-if="state.script_status[script.id] === 'not_found'">本地脚本已不存在，请检查文件路径</div>
-								</template>
-							</a-tooltip>
-						</template>
 
-						<template #infos="{ script }">
-							<a-popover
-								position="rt"
-								:content-style="{ maxWidth: '400px' }"
+				<div class="col-12">
+					<a-tabs v-model:active-key="state.engineKey">
+						<a-tab-pane
+							v-for="item of engineSearchList"
+							:key="item.engine.name"
+							:title="item.engine.name"
+						>
+							<div v-if="item.loading">
+								<a-skeleton animation>
+									<a-skeleton-line :rows="3" />
+								</a-skeleton>
+							</div>
+							<div v-else-if="item.error">
+								<a-empty description="请求出错，可能是服务器问题，或者网络问题，请重新尝试。" />
+							</div>
+							<div v-else-if="item.list.length === 0">
+								<a-empty description="暂无数据" />
+							</div>
+							<div
+								v-else
+								class="user-script-list pt-0 p-2"
 							>
-								<a-tag>
-									<Icon type="info" />
-								</a-tag>
-								<template #content>
-									<a-descriptions
-										size="mini"
-										:label-style="{ verticalAlign: 'top' }"
-										:value-style="{}"
-										:column="1"
-									>
-										<a-descriptions-item label="脚本名"> {{ script.info?.name || '' }} </a-descriptions-item>
-										<a-descriptions-item label="脚本简介">
-											<a-tooltip :content="script.info?.description || ''">
-												<div class="large-text">
-													{{ script.info?.description || '' }}
-												</div>
-											</a-tooltip>
-										</a-descriptions-item>
-										<a-descriptions-item
-											v-if="script.info?.url"
-											label="脚本主页"
+								<div class="text-secondary markdown mb-1">搜索的脚本数据均来自互联网</div>
+
+								<ScriptList :scripts="item.list">
+									<template #actions="data">
+										<a-button
+											size="mini"
+											class="user-script-action"
+											:disabled="data.alreadyInstalled"
+											:type="data.alreadyInstalled ? undefined : 'outline'"
+											@click="onAddScript(data.script)"
 										>
-											<a
-												href="javascript:void(0)"
-												@click="openScriptSource(script)"
-											>
-												{{ script.info!.url }}
-											</a>
-										</a-descriptions-item>
-										<a-descriptions-item label="脚本链接"> {{ script.info?.code_url || '' }}</a-descriptions-item>
-									</a-descriptions>
-								</template>
-							</a-popover>
-
-							<a-tooltip>
-								<template #content>
-									脚本来源
-									<div v-if="script.isLocalScript">
-										本地脚本：当前脚本处于您计算机本地，因此不能实时获取网络数据进行更新，但软件依然会尝试重复加载以保证您的文件修改后的代码仍能同步到浏览器中，不具备版本切换功能。
-									</div>
-									<div v-else-if="script.isInternetLinkScript">
-										网络脚本：通过网络链接直接加载到软件中的脚本，不具备版本切换功能。
-									</div>
-								</template>
-								<a-tag>
-									<template v-if="script.isLocalScript">本地脚本</template>
-									<template v-else-if="script.isInternetLinkScript">网络脚本</template>
-									<template v-else>{{ translateSourceType(getSourceType(script)) }}</template>
-								</a-tag>
-							</a-tooltip>
-						</template>
-
-						<template #actions="{ script }">
-							<a-button
-								v-if="
-									!script.isLocalScript &&
-									!script.isInternetLinkScript &&
-									['greasyfork', 'scriptcat'].includes(getSourceType(script))
-								"
-								size="mini"
-								type="outline"
-								class="user-script-action"
-								style="background: white"
-								:disabled="state.versionSelector.loading"
-								@click="showScriptVersionList(script)"
-							>
-								<template v-if="state.versionSelector.currentScriptId === script.id && state.versionSelector.loading">
-									<icon-loading />
-								</template>
-								<template v-else>
-									<a-tooltip>
-										<template #content>
-											切换脚本版本，启动浏览器后会强制安装此版本<br />
-											如果选择最新版本，那么每次都会同步最新版本
-										</template>
-										<span> <icon-swap /> 版本 </span>
-									</a-tooltip>
-								</template>
-							</a-button>
-
-							<a-tooltip>
-								<template #content>
-									<div style="color: white; font-weight: bold">
-										<template v-if="script.enable"> 关闭脚本自动安装 </template>
-										<template v-else>开启脚本自动安装 </template>
-									</div>
-
-									<a-divider class="mt-1 mb-1" />
-									<div
-										v-if="script.enable"
-										style="color: white"
-									>
-										如果想禁止脚本运行，请在浏览器拓展中禁止。
-									</div>
-									<div
-										v-else
-										style="color: white"
-									>
-										<div>浏览器启动后会自动安装此脚本，</div>
-										<div>如果此脚本没有在浏览器中安装，则会自动安装，</div>
-										<div>如果已安装则会自动更新以及重新安装</div>
-									</div>
-								</template>
-
-								<a-switch
-									v-model="script.enable"
-									style="width: 84px"
-									class="user-script-action"
-								>
-									<template #checked> 自动安装 </template>
-									<template #unchecked> 自动安装 </template>
-								</a-switch>
-							</a-tooltip>
-
-							<a-tooltip content="移除脚本">
-								<a-popconfirm @ok="onRemoveScript(script)">
-									<template #content>
-										<div>删除后将不能恢复数据！</div>
-										<div>请您记住此脚本名，方便后续查找。</div>
+											<Icon type="add" /> {{ data.alreadyInstalled ? '已添加' : '添加' }}
+										</a-button>
 									</template>
-									<a-button
-										size="mini"
-										status="danger"
-										class="user-script-action"
-									>
-										<Icon type="delete" />
-									</a-button>
-								</a-popconfirm>
-							</a-tooltip>
-						</template>
-					</ScriptList>
+								</ScriptList>
+							</div>
+						</a-tab-pane>
+					</a-tabs>
 				</div>
-			</a-tab-pane>
-			<a-tab-pane
-				key="search"
-				title="脚本搜索"
-			>
-				<div class="user-script-page">
-					<div class="col-12 actions d-flex">
-						<a-input-search
-							v-model:value="state.searchValue"
-							placeholder="输入脚本名进行搜索"
-							search-button
-							@change="onSearch"
-						/>
-					</div>
+			</div>
+		</a-modal>
 
-					<div class="col-12">
-						<a-tabs v-model:active-key="state.engineKey">
-							<a-tab-pane
-								v-for="item of engineSearchList"
-								:key="item.engine.name"
-								:title="item.engine.name"
-							>
-								<div v-if="item.loading">
-									<a-skeleton animation>
-										<a-skeleton-line :rows="3" />
-									</a-skeleton>
-								</div>
-								<div v-else-if="item.error">
-									<a-empty description="请求出错，可能是服务器问题，或者网络问题，请重新尝试。" />
-								</div>
-								<div v-else-if="item.list.length === 0">
-									<a-empty description="暂无数据" />
-								</div>
-								<div
-									v-else
-									class="user-script-list pt-0 p-2"
-								>
-									<div class="text-secondary markdown mb-1">搜索的脚本数据均来自互联网</div>
-
-									<ScriptList :scripts="item.list">
-										<template #actions="data">
-											<a-button
-												size="mini"
-												class="user-script-action"
-												:disabled="data.alreadyInstalled"
-												:type="data.alreadyInstalled ? undefined : 'outline'"
-												@click="onAddScript(data.script)"
-											>
-												<Icon type="add" /> {{ data.alreadyInstalled ? '已添加' : '添加' }}
-											</a-button>
-										</template>
-									</ScriptList>
-								</div>
-							</a-tab-pane>
-						</a-tabs>
-					</div>
-				</div>
-			</a-tab-pane>
-		</a-tabs>
-
+		<!-- 版本切换弹窗 -->
 		<a-modal
 			v-model:visible="state.versionSelector.visible"
 			title="版本切换"
@@ -355,7 +371,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, reactive, onMounted } from 'vue';
+import { ref, h, reactive, computed, onMounted } from 'vue';
 import { config } from '../../config';
 import { lang, store, StoreUserScript } from '../../store';
 import { ScriptSearchEngine } from '../../types/search';
@@ -380,12 +396,16 @@ const engineSearchList = ref<
 >(config.scriptSearchEngines.map((engine) => ({ engine, list: [] })));
 
 const state = reactive({
-	/** 标签页 */
-	activeKey: 'web',
+	/** 搜索弹窗显示状态 */
+	searchModalVisible: false,
 	/** 搜索引擎标签 */
 	engineKey: config.scriptSearchEngines[0].name,
 	/** 搜索值 */
 	searchValue: '',
+
+	/** 分页 */
+	currentPage: 1,
+	pageSize: 10,
 
 	/**
 	 * 版本切换器
@@ -398,6 +418,13 @@ const state = reactive({
 		list: [] as ScriptVersion[]
 	},
 	script_status: {} as Record<string, 'loading' | 'error' | 'done' | 'not_found'>
+});
+
+/** 分页后的脚本列表 */
+const paginatedScripts = computed(() => {
+	const start = (state.currentPage - 1) * state.pageSize;
+	const end = start + state.pageSize;
+	return store.render.scripts.slice(start, end);
 });
 
 onMounted(() => {
