@@ -9,9 +9,9 @@ html,
 	max-height: 100%;
 	min-width: 500px;
 	min-height: 300px;
+	--title-height: 32px;
 }
 
-/** 兼容 win11 以下的软件不会自动带有阴影和边框 */
 html.window-frame {
 	border: 1px solid #e1e1e1;
 	overflow: hidden;
@@ -374,7 +374,7 @@ body[arco-theme='dark'] {
 /** 防止被标题栏遮挡 */
 .arco-drawer-container,
 .arco-modal-container {
-	top: 32px;
+	top: var(--title-height) !important;
 }
 
 .arco-notification-list,

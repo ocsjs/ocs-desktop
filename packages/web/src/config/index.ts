@@ -81,6 +81,16 @@ export const config = reactive({
 				/** 隐藏在左侧菜单栏 */
 				hideInMenu: true
 			}
+		},
+		{
+			name: 'simple',
+			path: '/simple',
+			component: () => import('@/pages/simple/index.vue'),
+			meta: {
+				icon: 'view_list',
+				title: '简洁模式',
+				hideInMenu: true
+			}
 		}
 	] as RouteRecordRaw[],
 	/** 主题预设 */

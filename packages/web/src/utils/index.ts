@@ -301,3 +301,7 @@ export function errorFilter(str: string) {
 		return true;
 	}
 }
+
+export function goto(link: string) {
+	window.open(link, '_blank');
+}

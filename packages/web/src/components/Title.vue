@@ -67,33 +67,52 @@
 			</template>
 		</a-dropdown>
 
-		<a-divider
-			v-if="statusBarState.visible"
-			direction="vertical"
-		/>
+		<span
+			class="title-item mode-switch"
+			@click="toggleMode"
+		>
+			<Icon
+				:type="isSimpleMode ? 'arrow_back' : 'arrow_forward'"
+				style="font-size: 14px; vertical-align: middle"
+			></Icon>
+			{{ isSimpleMode ? '专业模式' : '简洁模式' }}
+		</span>
 
 		<StatusBar />
 	</div>
 </template>
 
 <script setup lang="ts">
+import { computed, h } from 'vue';
 import { fetchRemoteNotify, date, about, getRemoteInfos } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { store } from '../store/index';
+import { router } from '../route';
 import { electron } from '../utils/node';
 import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities } from '../fs/index';
 import { Folder, root } from '../fs/folder';
-import { h } from 'vue';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
 import Icon from './Icon.vue';
 import StatusBar from './StatusBar.vue';
-import { statusBarState } from '../utils/statusBar';
 
 const { shell } = electron;
+
+const isSimpleMode = computed(() => router.currentRoute.value.path === '/simple');
+
+/** 切换模式 */
+function toggleMode() {
+	if (isSimpleMode.value) {
+		store.render.setting.mode = 'professional';
+		router.push('/browsers');
+	} else {
+		store.render.setting.mode = 'simple';
+		router.push('/simple');
+	}
+}
 
 // 重启
 function relaunch() {
@@ -311,7 +330,7 @@ async function showVersionLogs() {
 	display: flex;
 	align-items: center;
 	/** 系统自带控件高度为 32 */
-	height: 32px;
+	height: var(--title-height);
 	cursor: default;
 	border-bottom: 1px solid #f3f3f3;
 
@@ -327,6 +346,18 @@ async function showVersionLogs() {
 
 		&:hover {
 			background-color: #f0f0f0;
+		}
+	}
+
+	.mode-switch {
+		color: #86909c;
+		font-size: 12px;
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+
+		&:hover {
+			color: #165dff;
 		}
 	}
 

@@ -41,6 +41,8 @@ export type WebStore = {
 	};
 	setting: {
 		browserType: 'diy' | 'local' | 'setup';
+		/** 界面模式：简洁模式 / 专业模式 */
+		mode: 'simple' | 'professional';
 		/** 是否显示侧边栏文字 */
 		showSideBarText: boolean;
 		/** 浏览器启动参数 */
@@ -120,6 +122,7 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 		},
 		setting: {
 			browserType: 'diy',
+			mode: 'simple' as const,
 			showSideBarText: true,
 			launchOptions: {
 				custom: false,
