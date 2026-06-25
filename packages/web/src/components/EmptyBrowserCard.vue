@@ -4,7 +4,7 @@
 			class="p-3 m-auto text-center"
 			status="404"
 		>
-			<div class="text-secondary">请先创建浏览器，然后启动即可~</div>
+			<a-alert>请先创建浏览器，然后启动即可~</a-alert>
 		</a-result>
 
 		<div>
@@ -39,6 +39,7 @@
 <script lang="ts" setup>
 import { about, goto } from '../utils';
 import { newBrowser } from '../utils/browser';
+import Icon from './Icon.vue';
 </script>
 
 <style scoped></style>

@@ -137,7 +137,9 @@
 							></BrowserList>
 						</div>
 						<!-- 右键菜单提示 -->
-						<div class="context-hint"><icon-right-circle /> 右键浏览器/空白处可打开菜单</div>
+						<div class="text-end">
+							<ContextHint></ContextHint>
+						</div>
 					</div>
 				</Transition>
 			</div>
@@ -158,8 +160,9 @@ import { Environment } from '../../utils//environment';
 import { reactive, onActivated, watch, computed } from 'vue';
 import type { ValidBrowser } from '../../../../common/lib/src/interface';
 import Setup from '../../components/Setup.vue';
-import { IconRightCircle, IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
+import { IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
 import { lang, store } from '../../store';
+import ContextHint from '../../components/ContextHint.vue';
 
 const stats = computed(() => {
 	const r = root();
@@ -245,7 +248,6 @@ async function updateEnvironmentDetect() {
 	flex: 1;
 	min-height: 0;
 	position: relative;
-	overflow: hidden;
 }
 
 .entities-container {
@@ -254,7 +256,6 @@ async function updateEnvironmentDetect() {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 }
@@ -265,15 +266,6 @@ async function updateEnvironmentDetect() {
 	overflow: overlay;
 
 	padding: 4px 12px 0;
-}
-
-.context-hint {
-	flex-shrink: 0;
-	font-size: 11px;
-	color: #aaa;
-	text-align: right;
-	padding: 4px 4px 8px 0;
-	user-select: none;
 }
 
 .stats-bar {

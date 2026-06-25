@@ -61,6 +61,11 @@
 					</div>
 
 					<div class="cards-area entities">
+						<!-- 右键菜单提示 -->
+						<div class="text-center">
+							<ContextHint> </ContextHint>
+						</div>
+
 						<template v-if="allBrowsers.length === 0">
 							<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
 								<EmptyBrowserCard />
@@ -180,6 +185,7 @@ import { Browser } from '../../fs/browser';
 import { BrowserOptions } from '../../fs/interface';
 import { newBrowser } from '../../utils/browser';
 import EmptyBrowserCard from '../../components/EmptyBrowserCard.vue';
+import ContextHint from '../../components/ContextHint.vue';
 import SettingPanel from '../../components/SettingPanel.vue';
 
 const state = reactive({
@@ -284,9 +290,8 @@ onMounted(() => {
 	padding: 8px 16px;
 	flex-shrink: 0;
 }
-
 .cards-area {
-	padding: 16px 20px 20px;
+	padding: 4px 20px 20px 16px;
 }
 
 .cards-grid {
