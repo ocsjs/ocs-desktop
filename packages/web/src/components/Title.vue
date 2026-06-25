@@ -197,7 +197,7 @@ function importData() {
 function exportData() {
 	Modal.confirm({
 		title: '导出数据',
-		content: '数据中包含自动化脚本的配置（例如账号密码），请小心保存防止泄露。导出后可在其他电脑中恢复数据。',
+		content: '数据中包含自动化程序的配置（例如账号密码），请小心保存防止泄露。导出后可在其他电脑中恢复数据。',
 		okText: '确认',
 		cancelText: '取消',
 		onOk() {

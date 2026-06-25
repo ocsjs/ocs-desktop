@@ -1,8 +1,8 @@
 import { Page } from 'playwright-core';
 import { breakSliderVerify, getBase64, slowType } from '../../utils';
-import { PlaywrightScript } from '../../script';
+import { AutomationScript } from '../../script';
 
-export const ZHSUnitLoginScript = new PlaywrightScript(
+export const ZHSUnitLoginScript = new AutomationScript(
 	{
 		schoolname: {
 			label: '学校',
@@ -79,7 +79,7 @@ export const ZHSUnitLoginScript = new PlaywrightScript(
 	}
 );
 
-export const ZHSPhoneLoginScript = new PlaywrightScript(
+export const ZHSPhoneLoginScript = new AutomationScript(
 	{
 		phone: {
 			label: '手机号',

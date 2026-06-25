@@ -1,7 +1,7 @@
 import { Page } from 'playwright-core';
-import { PlaywrightScript } from '../../script';
+import { AutomationScript } from '../../script';
 
-export const ICVELoginScript = new PlaywrightScript(
+export const ICVELoginScript = new AutomationScript(
 	{
 		username: {
 			label: '账号',

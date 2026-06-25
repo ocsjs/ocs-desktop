@@ -1,6 +1,6 @@
 <template>
 	<template
-		v-for="(script, index) of playwrightScripts"
+		v-for="(script, index) of automationScripts"
 		:key="index"
 	>
 		<div class="shadow-sm rounded ps">
@@ -29,14 +29,14 @@
 </template>
 
 <script setup lang="ts">
-import { RawPlaywrightScript } from './index';
+import { RawAutomationScript } from './index';
 
 defineProps<{
-	playwrightScripts: RawPlaywrightScript[];
+	automationScripts: RawAutomationScript[];
 }>();
 
 defineEmits<{
-	(e: 'update:playwrightScripts', playwrightScripts: RawPlaywrightScript[]);
+	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]);
 }>();
 </script>
 

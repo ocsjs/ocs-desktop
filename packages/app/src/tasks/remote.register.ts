@@ -14,12 +14,12 @@ import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
 import { scripts } from '../scripts';
-import { PlaywrightScript } from '../scripts/script';
+import { AutomationScript } from '../scripts/script';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { AppStore } from '../../types';
 import { encryptRenderString, decryptRenderString } from '../crypto';
 
-export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
+export type RawAutomationScript = Pick<AutomationScript, 'configs' | 'name'>;
 
 /**
  * 注册主进程远程通信事件
@@ -114,7 +114,7 @@ const methods = {
 		return safeStorage.isEncryptionAvailable();
 	},
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
-	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawPlaywrightScript[],
+	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawAutomationScript[],
 	captureDesktopScreen: () => {
 		return desktopCapturer.getSources({ types: ['window'] });
 	},

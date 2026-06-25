@@ -28,8 +28,8 @@ export abstract class CollectorScript<
 	E extends EventsRecord = EventsRecord
 > extends Script<RF, E> {}
 
-/** 自动化脚本 */
-export abstract class AutomationScript<
+/** 自动化程序基类 */
+export abstract class BaseAutomationScript<
 	RF extends RunFunction = RunFunction,
 	E extends EventsRecord = EventsRecord
 > extends Script<RF, E> {}
@@ -38,7 +38,7 @@ export class ConfigsRequiredAutomationScript<
 	C extends Record<string, Config> = Record<string, Config>,
 	RF extends RunFunction = RunFunction,
 	E extends EventsRecord = EventsRecord
-> extends AutomationScript<RF, E> {
+> extends BaseAutomationScript<RF, E> {
 	name: string;
 	configs: C;
 
@@ -51,13 +51,13 @@ export class ConfigsRequiredAutomationScript<
 }
 
 /** 脚本运行方法类型声明 */
-export type PlaywrightScriptRunFunction<C extends Record<string, Config> = Record<string, Config>> = {
+export type AutomationScriptRunFunction<C extends Record<string, Config> = Record<string, Config>> = {
 	// 第一个，和第二个参数类型固定，剩下的参数类型由实例化时方法的参数类型决定
 	(page: Page, configs: ConfigValueRecord<C>, ...args: any[]): void | Promise<void>;
 };
 
-/** 自动化PW脚本 */
-export class PlaywrightScript<
+/** 自动化程序（需要配置的自动化程序） */
+export class AutomationScript<
 	C extends Record<string, Config> = Record<string, Config>,
-	RF extends PlaywrightScriptRunFunction<C> = PlaywrightScriptRunFunction<C>
+	RF extends AutomationScriptRunFunction<C> = AutomationScriptRunFunction<C>
 > extends ConfigsRequiredAutomationScript<C, RF, BaseAutomationEvents> {}

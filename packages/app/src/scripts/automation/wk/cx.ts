@@ -1,8 +1,8 @@
 import type { Page } from 'playwright-core';
 import { breakSliderVerify, breakVerifyCode, getBase64, slowType } from '../../utils';
-import { PlaywrightScript } from '../../script';
+import { AutomationScript } from '../../script';
 
-export const CXUnitLoginScript = new PlaywrightScript(
+export const CXUnitLoginScript = new AutomationScript(
 	{
 		unit: {
 			label: '学校/单位',
@@ -51,7 +51,7 @@ export const CXUnitLoginScript = new PlaywrightScript(
 	}
 );
 
-export const CXPhoneLoginScript = new PlaywrightScript(
+export const CXPhoneLoginScript = new AutomationScript(
 	{
 		phone: {
 			label: '手机号',

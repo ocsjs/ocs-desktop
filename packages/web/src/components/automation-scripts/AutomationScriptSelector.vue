@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue';
-import { RawPlaywrightScript } from './index';
+import { RawAutomationScript } from './index';
 import CommonSelector from '../CommonSelector.vue';
 import { remote } from '../../utils/remote';
 
@@ -47,27 +47,27 @@ const state = reactive({
 
 const props = withDefaults(
 	defineProps<{
-		playwrightScripts: RawPlaywrightScript[];
+		automationScripts: RawAutomationScript[];
 		multiple?: boolean;
 	}>(),
 	{
-		playwrightScripts: () => [],
+		automationScripts: () => [],
 		multiple: true
 	}
 );
 
 const emits = defineEmits<{
-	(e: 'update:playwrightScripts', playwrightScripts: RawPlaywrightScript[]);
+	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]);
 	(e: 'confirm');
 }>();
 
 const RawScripts = remote.methods.callSync('getRawScripts');
 console.log('RawScripts', RawScripts);
-const scripts = computed<RawPlaywrightScript[]>(() => RawScripts.filter((s) => s.name.includes(state.search)));
+const scripts = computed<RawAutomationScript[]>(() => RawScripts.filter((s) => s.name.includes(state.search)));
 
-function confirm(selectedScripts: RawPlaywrightScript[]) {
+function confirm(selectedScripts: RawAutomationScript[]) {
 	// 使用拷贝消除响应式特性
-	emits('update:playwrightScripts', JSON.parse(JSON.stringify(selectedScripts)));
+	emits('update:automationScripts', JSON.parse(JSON.stringify(selectedScripts)));
 	emits('confirm');
 }
 </script>

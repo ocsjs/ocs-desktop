@@ -9,8 +9,8 @@
 			</a-button>
 			<template #content>
 				<a-doption @click="newFolder"> <Icon type="folder">新建文件夹</Icon> </a-doption>
-				<a-doption @click="state.showPlaywrightScriptSelector = true">
-					<Icon type="add"> 批量创建-自动化脚本浏览器</Icon>
+				<a-doption @click="state.showAutomationScriptSelector = true">
+					<Icon type="add"> 批量创建-自动化程序浏览器</Icon>
 				</a-doption>
 				<a-doption @click="state.remove_tags_modal.visible = true"> <Icon type="delete">批量删除标签</Icon> </a-doption>
 			</template>
@@ -25,33 +25,33 @@
 		</a-button>
 
 		<a-modal
-			v-model:visible="state.showPlaywrightScriptSelector"
+			v-model:visible="state.showAutomationScriptSelector"
 			:footer="false"
 		>
 			<template #title> 选择模板进行批量创建 </template>
-			<PlaywrightScriptSelector
-				v-model:playwright-scripts="state.playwrightScripts"
+			<AutomationScriptSelector
+				v-model:automation-scripts="state.automationScripts"
 				style="max-height: 70vh; overflow: overlay"
 				:multiple="false"
-				@confirm="(state.showPlaywrightScriptSelector = false), showMultipleCreateTable()"
-			></PlaywrightScriptSelector>
+				@confirm="(state.showAutomationScriptSelector = false), showMultipleCreateTable()"
+			></AutomationScriptSelector>
 		</a-modal>
 
 		<a-modal
-			v-model:visible="state.showPlaywrightScriptTable"
+			v-model:visible="state.showAutomationScriptTable"
 			:footer="false"
 			:closable="true"
 			:mask-closable="false"
 			width="auto"
 		>
-			<template #title> 批量创建：{{ state.selectedPS?.name }} </template>
-			<PlaywrightScriptTable
-				v-if="state.selectedPS"
+			<template #title> 批量创建：{{ state.selectedAS?.name }} </template>
+			<AutomationScriptTable
+				v-if="state.selectedAS"
 				style="max-width: 800px"
-				:raw-playwright-script="state.selectedPS"
-				@cancel="state.showPlaywrightScriptTable = false"
+				:raw-automation-script="state.selectedAS"
+				@cancel="state.showAutomationScriptTable = false"
 				@confirm="multipleCreate"
-			></PlaywrightScriptTable>
+			></AutomationScriptTable>
 			<a-empty
 				v-else
 				description="请选择模板"
@@ -97,9 +97,9 @@
 <script setup lang="ts">
 import Icon from '../Icon.vue';
 import { reactive, h } from 'vue';
-import { RawPlaywrightScript } from '../playwright-scripts';
-import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSelector.vue';
-import PlaywrightScriptTable from '../playwright-scripts/PlaywrightScriptTable.vue';
+import { RawAutomationScript } from '../automation-scripts';
+import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
+import AutomationScriptTable from '../automation-scripts/AutomationScriptTable.vue';
 import { newBrowser, newFolder } from '../../utils/browser';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
@@ -107,10 +107,10 @@ import { Browser } from '../../fs/browser';
 import { Modal, Message, Tag } from '@arco-design/web-vue';
 
 const state = reactive({
-	showPlaywrightScriptSelector: false,
-	showPlaywrightScriptTable: false,
-	playwrightScripts: [] as RawPlaywrightScript[],
-	selectedPS: undefined as RawPlaywrightScript | undefined,
+	showAutomationScriptSelector: false,
+	showAutomationScriptTable: false,
+	automationScripts: [] as RawAutomationScript[],
+	selectedAS: undefined as RawAutomationScript | undefined,
 	remove_tags_modal: {
 		visible: false,
 		tags: [] as string[]
@@ -118,18 +118,18 @@ const state = reactive({
 });
 
 function showMultipleCreateTable() {
-	state.showPlaywrightScriptTable = true;
-	state.selectedPS = state.playwrightScripts[0];
+	state.showAutomationScriptTable = true;
+	state.selectedAS = state.automationScripts[0];
 }
 
 async function multipleCreate(
-	raw: RawPlaywrightScript,
-	configsList: (RawPlaywrightScript['configs'] & { browserName: string })[]
+	raw: RawAutomationScript,
+	configsList: (RawAutomationScript['configs'] & { browserName: string })[]
 ) {
 	for (const configs of configsList) {
 		newBrowser({
 			name: configs.browserName,
-			playwrightScripts: [
+			automationScripts: [
 				{
 					name: raw.name,
 					configs: configs
@@ -138,7 +138,7 @@ async function multipleCreate(
 		});
 	}
 
-	state.showPlaywrightScriptTable = false;
+	state.showAutomationScriptTable = false;
 }
 
 function removeTags() {

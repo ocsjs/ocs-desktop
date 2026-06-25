@@ -1,4 +1,4 @@
-import { RawPlaywrightScript } from '../components/playwright-scripts';
+import { RawAutomationScript } from '../components/automation-scripts';
 
 export type FolderType = 'folder' | 'root';
 export type BrowserType = 'browser';
@@ -48,8 +48,8 @@ export interface BrowserOptions extends EntityOptions {
 	renaming: boolean;
 	/** 历史 */
 	histories: BrowserOperateHistory[];
-	/** 自动化脚本列表 */
-	playwrightScripts: RawPlaywrightScript[];
+	/** 自动化程序列表 */
+	automationScripts: RawAutomationScript[];
 }
 
 /**

@@ -4,7 +4,7 @@ import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request } from 'playwright-core';
 import { AppStore } from '../../types';
-import { scripts as PlaywrightScripts } from '../scripts/index';
+import { scripts as AutomationScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
 import _get from 'lodash/get';
 import child_process from 'child_process';
@@ -37,8 +37,8 @@ export class ScriptWorker {
 	logger?: LoggerCore;
 	/** 拓展路径 */
 	extensionPaths: string[] = [];
-	/** 执行的自动化脚本列表 */
-	playwrightScripts: PS[] = [];
+	/** 执行的自动化程序列表 */
+	automationScripts: PS[] = [];
 	/** 可关闭的浏览器拓展主页 */
 	store?: AppStore;
 	/** 浏览器中软件设置的名字 */
@@ -65,7 +65,7 @@ export class ScriptWorker {
 		store,
 		uid,
 		cachePath,
-		playwrightScripts,
+		automationScripts,
 		browserInfo,
 		config,
 		langs
@@ -73,7 +73,7 @@ export class ScriptWorker {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
-		playwrightScripts: PS[];
+		automationScripts: PS[];
 		browserInfo: BrowserInfo;
 		config: BrowserConfig;
 		langs: Langs;
@@ -87,8 +87,8 @@ export class ScriptWorker {
 		// 拓展文件夹路径
 		this.extensionPaths = getExtensionPaths(store.paths.extensionsFolder);
 
-		// 自动化脚本
-		this.playwrightScripts = playwrightScripts;
+		// 自动化程序
+		this.automationScripts = automationScripts;
 
 		// 初始化日志
 		this.logger = new LoggerCore(store.paths['logs-path'], false, 'script', path.basename(cachePath));
@@ -200,7 +200,7 @@ export class ScriptWorker {
 					send('launched');
 				},
 
-				playwrightScripts: this.playwrightScripts,
+				automationScripts: this.automationScripts,
 				bookmarksPageUrl: this.store
 					? `http://localhost:${this.store?.server.port || 15319}/index.html#/bookmarks?uid=${this.uid}`
 					: undefined,
@@ -343,7 +343,7 @@ export async function launchBrowser({
 	userDataDir,
 	userscripts,
 	enabledScriptCount,
-	playwrightScripts,
+	automationScripts,
 	closeableExtensionHomepages,
 	bookmarksPageUrl,
 	serverPort,
@@ -361,8 +361,8 @@ export async function launchBrowser({
 	enabledScriptCount: number;
 	/** 可关闭的浏览器拓展主页 */
 	closeableExtensionHomepages: string[];
-	/** 自动化脚本 */
-	playwrightScripts: PS[];
+	/** 自动化程序 */
+	automationScripts: PS[];
 	/** 初始导航页地址 */
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
@@ -434,8 +434,8 @@ export async function launchBrowser({
 					// 监听网络请求
 					browserNetworkRoute(authToken, browser);
 
-					// 运行自动化脚本
-					await runPlaywrightScripts({ browser, playwrightScripts, serverPort, step });
+					// 运行自动化程序
+					await runAutomationScripts({ browser, automationScripts, serverPort, step });
 
 					await step(['浏览器初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
 
@@ -575,27 +575,27 @@ async function setupUserScripts(opts: {
 }
 
 /**
- * 运行自动化脚本
+ * 运行自动化程序
  */
-async function runPlaywrightScripts(opts: {
+async function runAutomationScripts(opts: {
 	browser: BrowserContext;
 	serverPort: number;
-	playwrightScripts: PS[];
+	automationScripts: PS[];
 	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
 }) {
-	const { playwrightScripts, browser, serverPort, step } = opts;
+	const { automationScripts, browser, serverPort, step } = opts;
 
-	if (playwrightScripts.length) {
-		// 执行自动化脚本
-		for (const ps of playwrightScripts) {
-			await step(`正在执行自动化脚本 - ${ps.name} ...`);
+	if (automationScripts.length) {
+		// 执行自动化程序
+		for (const ps of automationScripts) {
+			await step(`正在执行自动化程序 - ${ps.name} ...`);
 			const configs = transformScriptConfigToRaw(ps.configs);
 
-			for (const script of PlaywrightScripts) {
+			for (const script of AutomationScripts) {
 				if (script.name === ps.name) {
 					script.on('script-data', (...msg) => console.log(...msg));
 					script.on('script-error', (...msg) =>
-						console.error('自动化脚本错误：', ...msg.map((m) => ScriptWorker.getTransformedErrorMessage(m)))
+						console.error('自动化程序错误：', ...msg.map((m) => ScriptWorker.getTransformedErrorMessage(m)))
 					);
 					try {
 						await script.run(await browser.newPage(), configs, {
@@ -606,7 +606,7 @@ async function runPlaywrightScripts(opts: {
 						});
 					} catch (err) {
 						console.error(
-							'自动化脚本错误：',
+							'自动化程序错误：',
 							ScriptWorker.getTransformedErrorMessage(err instanceof Error ? err.message : String(err))
 						);
 					}

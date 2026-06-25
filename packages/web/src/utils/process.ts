@@ -114,15 +114,14 @@ export class Process extends EventEmitter {
 			store,
 			cachePath: this.browser.cachePath,
 			uid: this.uid,
-			playwrightScripts: this.browser.playwrightScripts,
+			automationScripts: this.browser.automationScripts,
 			browserInfo: {
 				name: this.browser.name,
 				notes: this.browser.notes,
 				tags: this.browser.tags
 			},
 			config: {
-				enable_dialog: store.render.setting.browser.enableDialog,
-				
+				enable_dialog: store.render.setting.browser.enableDialog
 			},
 			langs: store.render.langs as any
 		});

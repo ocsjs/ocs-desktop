@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, toRefs, onDeactivated, computed, watch, onMounted } from 'vue';
-import { RawPlaywrightScript } from '.';
+import { RawAutomationScript } from '.';
 import { Modal, TableColumnData } from '@arco-design/web-vue';
 import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
@@ -108,21 +108,21 @@ import { remote } from '../../utils/remote';
 import xlsx from 'xlsx';
 
 const props = defineProps<{
-	rawPlaywrightScript: RawPlaywrightScript;
+	rawAutomationScript: RawAutomationScript;
 }>();
 
 const emits = defineEmits<{
-	(e: 'confirm', raw: RawPlaywrightScript, configsList: (RawPlaywrightScript['configs'] & { browserName: string })[]);
+	(e: 'confirm', raw: RawAutomationScript, configsList: (RawAutomationScript['configs'] & { browserName: string })[]);
 	(e: 'cancel');
 }>();
 
-const { rawPlaywrightScript } = toRefs(props);
+const { rawAutomationScript } = toRefs(props);
 
 /** 将 configs 对象转换成 config 数组 */
 const arrayLikeConfigs = computed(() =>
-	Object.keys(rawPlaywrightScript.value.configs)
-		.filter((k) => !rawPlaywrightScript.value.configs[k].hide)
-		.map((k) => ({ ...rawPlaywrightScript.value.configs[k], key: k }))
+	Object.keys(rawAutomationScript.value.configs)
+		.filter((k) => !rawAutomationScript.value.configs[k].hide)
+		.map((k) => ({ ...rawAutomationScript.value.configs[k], key: k }))
 );
 
 const state = reactive({
@@ -142,7 +142,7 @@ const data = ref<any[]>(createData());
 const columns = ref<TableColumnData[]>();
 const tableRef = ref();
 
-watch(rawPlaywrightScript, () => {
+watch(rawAutomationScript, () => {
 	data.value = createData();
 	initColumns();
 	state.browserNameFields = arrayLikeConfigs.value.map((c) => c.key);
@@ -216,10 +216,10 @@ function getValidData() {
 function onConfirm() {
 	const validData = getValidData();
 
-	const configsList: (RawPlaywrightScript['configs'] & { browserName: string })[] = [];
+	const configsList: (RawAutomationScript['configs'] & { browserName: string })[] = [];
 
 	for (const obj of validData) {
-		const configs: RawPlaywrightScript['configs'] & { browserName: string } = Object.create({});
+		const configs: RawAutomationScript['configs'] & { browserName: string } = Object.create({});
 		const object: Record<string, any> & { browserName: string } = JSON.parse(JSON.stringify(obj));
 
 		Reflect.deleteProperty(object, 'index');
@@ -228,8 +228,8 @@ function onConfirm() {
 		for (const key in object) {
 			if (Object.prototype.hasOwnProperty.call(object, key)) {
 				Reflect.set(configs, key, {
-					hide: !!rawPlaywrightScript.value.configs[key]?.hide,
-					label: rawPlaywrightScript.value.configs[key]?.label,
+					hide: !!rawAutomationScript.value.configs[key]?.hide,
+					label: rawAutomationScript.value.configs[key]?.label,
 					value: object[key]
 				} as Config);
 			}
@@ -238,7 +238,7 @@ function onConfirm() {
 		configsList.push(configs);
 	}
 
-	emits('confirm', props.rawPlaywrightScript, configsList);
+	emits('confirm', props.rawAutomationScript, configsList);
 }
 
 function exportTemplateExcel() {
@@ -256,7 +256,7 @@ function exportTemplateExcel() {
 				list: [template]
 			}
 		],
-		`${props.rawPlaywrightScript.name} 创建模板.xlsx`
+		`${props.rawAutomationScript.name} 创建模板.xlsx`
 	);
 }
 

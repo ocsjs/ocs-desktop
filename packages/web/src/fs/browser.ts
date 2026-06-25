@@ -7,7 +7,7 @@ import { Entity } from './entity';
 import { Folder, root } from './folder';
 import { BrowserOptions, BrowserOperateHistory, Tag, BrowserType, EntityOptions } from './interface';
 import { remote } from '../utils/remote';
-import { RawPlaywrightScript } from '../components/playwright-scripts';
+import { RawAutomationScript } from '../components/automation-scripts';
 import { child_process } from '../utils/node';
 
 export class Browser extends Entity implements BrowserOptions {
@@ -18,7 +18,7 @@ export class Browser extends Entity implements BrowserOptions {
 	cachePath: string;
 	histories: BrowserOperateHistory[];
 	parent: string;
-	playwrightScripts: RawPlaywrightScript[];
+	automationScripts: RawAutomationScript[];
 
 	constructor(opts: BrowserOptions & EntityOptions) {
 		super(opts);
@@ -28,7 +28,8 @@ export class Browser extends Entity implements BrowserOptions {
 		this.checked = opts.checked;
 		this.histories = opts.histories;
 		this.parent = opts.parent;
-		this.playwrightScripts = opts.playwrightScripts;
+		// 兼容旧字段 playwrightScripts
+		this.automationScripts = opts.automationScripts ?? (opts as any).playwrightScripts ?? [];
 		this.cachePath = opts.cachePath;
 	}
 

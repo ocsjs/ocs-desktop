@@ -10,7 +10,7 @@ import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
 import { Entity } from '../fs/entity';
 import { currentFolder } from '../fs';
-import { RawPlaywrightScript } from '@ocs-desktop/app/lib/src/tasks/remote.register';
+import { RawAutomationScript } from '@ocs-desktop/app/lib/src/tasks/remote.register';
 import { resetSearch } from './entity';
 const { shell } = electron;
 
@@ -61,7 +61,7 @@ export function newFolder() {
 	});
 	currentFolder.value.children[id] = folder;
 }
-export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywrightScript[]; store?: object }) {
+export function newBrowser(opts?: { name: string; automationScripts?: RawAutomationScript[]; store?: object }) {
 	if (!store?.render?.setting?.launchOptions?.executablePath) {
 		Message.error('检测到浏览器路径未填写，请在左侧软件设置中设置，然后重新创建浏览器！');
 		return;
@@ -94,7 +94,7 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 			? userDataDirsFolder + id
 			: userDataDirsFolder + path_sep + id,
 		tags: [],
-		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
+		automationScripts: opts?.automationScripts ? JSON.parse(JSON.stringify(opts?.automationScripts)) : []
 	});
 }
 

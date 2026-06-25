@@ -12,7 +12,7 @@
 				<template #content>
 					启动浏览器 <br />
 					- 并自动安装脚本 <br />
-					- 以及执行自动化脚本等一系列操作。
+					- 以及执行自动化程序等一系列操作。
 				</template>
 
 				<a-button

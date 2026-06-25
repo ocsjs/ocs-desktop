@@ -87,30 +87,30 @@
 				/>
 			</a-descriptions-item>
 
-			<a-descriptions-item label="自动化脚本">
+			<a-descriptions-item label="自动化程序">
 				<div
-					id="bp-playwright-scripts"
-					data-label="自动化脚本"
+					id="bp-automation-scripts"
+					data-label="自动化程序"
 				>
 					<a-tooltip>
 						<template #content>
-							启动浏览器后会运行 “自动化脚本”。每个自动化脚本会开启一个新的页面。 选择并确定后,
+							启动浏览器后会运行 “自动化程序”。每个自动化程序会开启一个新的页面。 选择并确定后,
 							需要在浏览器设置里修改配置。
 							<a-divider class="mt-1 mb-1" />
-							提示1：自动化脚本拥有操控页面的所有权限，与用户脚本不同的是，用户脚本是运行在页面中，权限比较少。<br />
+							提示1：自动化程序拥有操控页面的所有权限，与用户脚本不同的是，用户脚本是运行在页面中，权限比较少。<br />
 							提示2：通常用来辅助用户脚本一起配合运行。<br />
 							提示3：输入的配置例如账号密码将由软件加密存储，以保证数据安全。
 						</template>
 
 						<a-button
 							size="mini"
-							@click="state.showPlaywrightScriptSelector = true"
+							@click="state.showAutomationScriptSelector = true"
 						>
 							设置 <icon-settings />
 						</a-button>
 					</a-tooltip>
 					<div class="mt-2">
-						<PlaywrightScripts v-model:playwright-scripts="instance.playwrightScripts"></PlaywrightScripts>
+						<AutomationScripts v-model:automation-scripts="instance.automationScripts"></AutomationScripts>
 					</div>
 				</div>
 			</a-descriptions-item>
@@ -226,15 +226,15 @@
 		</a-descriptions>
 
 		<a-modal
-			v-model:visible="state.showPlaywrightScriptSelector"
+			v-model:visible="state.showAutomationScriptSelector"
 			:footer="false"
 		>
-			<template #title> 选择自动化脚本 </template>
-			<PlaywrightScriptSelector
-				v-model:playwright-scripts="instance.playwrightScripts"
+			<template #title> 选择自动化程序 </template>
+			<AutomationScriptSelector
+				v-model:automation-scripts="instance.automationScripts"
 				style="max-height: 70vh; overflow: overlay"
-				@confirm="state.showPlaywrightScriptSelector = false"
-			></PlaywrightScriptSelector>
+				@confirm="state.showAutomationScriptSelector = false"
+			></AutomationScriptSelector>
 		</a-modal>
 	</div>
 </template>
@@ -249,8 +249,8 @@ import { BrowserOptions, Tag } from '../../fs/interface';
 import { Folder } from '../../fs/folder';
 import { currentBrowser } from '../../fs/index';
 import { reactive, onMounted, nextTick, ref } from 'vue';
-import PlaywrightScriptSelector from '../playwright-scripts/PlaywrightScriptSelector.vue';
-import PlaywrightScripts from '../playwright-scripts/PlaywrightScriptList.vue';
+import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
+import AutomationScripts from '../automation-scripts/AutomationScriptList.vue';
 import XTerm from '../XTerm.vue';
 const props = defineProps<{
 	browser: BrowserOptions;
@@ -263,7 +263,7 @@ const profileElement = ref<HTMLElement>();
 const state = reactive({
 	showCode: false,
 	renaming: false,
-	showPlaywrightScriptSelector: false
+	showAutomationScriptSelector: false
 });
 
 function createTag(tag: Tag) {

@@ -555,7 +555,7 @@
 ### Bug Fixes
 
 * **web:** 修复标签颜色问题 ([83b735f](https://github.com/ocsjs/ocs-desktop/commit/83b735ffc3dc1e559680a97767ccae76dff64b02))
-* **web:** 优化自动化脚本填写后自动去前后空格 ([70d3edb](https://github.com/ocsjs/ocs-desktop/commit/70d3edbec62958f9e537bb7048ad789cd1c69efd))
+* **web:** 优化自动化程序填写后自动去前后空格 ([70d3edb](https://github.com/ocsjs/ocs-desktop/commit/70d3edbec62958f9e537bb7048ad789cd1c69efd))
 
 
 
@@ -774,7 +774,7 @@
 
 ### Features
 
-* **app:** 新增职教云-账号密码登录自动化脚本 ([685fcf5](https://github.com/ocsjs/ocs-desktop/commit/685fcf54feed8d5df09a557b6fa6e685a8a7e4a0))
-* **app:** 新增智慧职教-账号密码登录自动化脚本 ([96d2eb1](https://github.com/ocsjs/ocs-desktop/commit/96d2eb1bfe6befd65dd71e527758ed58d71cf0fe))
+* **app:** 新增职教云-账号密码登录自动化程序 ([685fcf5](https://github.com/ocsjs/ocs-desktop/commit/685fcf54feed8d5df09a557b6fa6e685a8a7e4a0))
+* **app:** 新增智慧职教-账号密码登录自动化程序 ([96d2eb1](https://github.com/ocsjs/ocs-desktop/commit/96d2eb1bfe6befd65dd71e527758ed58d71cf0fe))
 * **web:** 添加浏览器缓存清除功能 ([52431c3](https://github.com/ocsjs/ocs-desktop/commit/52431c3f41a7cbc2f7168bbeba4f70c0e2e4a438))
 * **web:** 新增可添加网络脚本的功能 ([e2919fe](https://github.com/ocsjs/ocs-desktop/commit/e2919fe894df82f663936926f5205d6fae890c8a))

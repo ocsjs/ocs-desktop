@@ -1,6 +1,6 @@
-import { PlaywrightScript } from '../../script';
+import { AutomationScript } from '../../script';
 
-export const NewPageScript = new PlaywrightScript(
+export const NewPageScript = new AutomationScript(
 	{
 		url: {
 			label: '网页链接',
