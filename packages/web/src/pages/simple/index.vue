@@ -13,14 +13,21 @@
 					hide-content
 					size="small"
 				>
-					<a-tab-pane
-						key="browsers"
-						:title="allBrowsers.length > 0 ? `浏览器 - ${allBrowsers.length}` : '浏览器'"
-					/>
-					<a-tab-pane
-						key="scripts"
-						:title="store.render.scripts.length > 0 ? `用户脚本 - ${store.render.scripts.length}` : '脚本'"
-					/>
+					<a-tab-pane key="browsers">
+						<template #title>
+							<Icon type="language"> {{ allBrowsers.length > 0 ? `浏览器 - ${allBrowsers.length}` : '浏览器' }} </Icon>
+						</template>
+					</a-tab-pane>
+					<a-tab-pane key="scripts">
+						<template #title>
+							<Icon type="code">
+								{{ store.render.scripts.length > 0 ? `用户脚本 - ${store.render.scripts.length}` : '脚本' }}
+							</Icon>
+						</template>
+					</a-tab-pane>
+					<a-tab-pane key="setting">
+						<template #title> <Icon type="settings">软件设置 </Icon> </template>
+					</a-tab-pane>
 				</a-tabs>
 			</div>
 
@@ -142,9 +149,17 @@
 				<!-- 脚本面板 -->
 				<div
 					v-if="state.activeTab === 'scripts'"
-					class="overflow-auto"
+					class="overflow-auto p-2"
 				>
 					<UserScripts />
+				</div>
+
+				<!-- 软件设置面板 -->
+				<div
+					v-if="state.activeTab === 'setting'"
+					class="overflow-auto p-2"
+				>
+					<SettingPanel simple />
 				</div>
 			</div>
 		</div>
@@ -165,6 +180,7 @@ import { Browser } from '../../fs/browser';
 import { BrowserOptions } from '../../fs/interface';
 import { newBrowser } from '../../utils/browser';
 import EmptyBrowserCard from '../../components/EmptyBrowserCard.vue';
+import SettingPanel from '../../components/SettingPanel.vue';
 
 const state = reactive({
 	setupVisible: false,

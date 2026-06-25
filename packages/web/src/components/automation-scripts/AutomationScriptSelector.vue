@@ -57,8 +57,8 @@ const props = withDefaults(
 );
 
 const emits = defineEmits<{
-	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]);
-	(e: 'confirm');
+	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]): void;
+	(e: 'confirm'): void;
 }>();
 
 const RawScripts = remote.methods.callSync('getRawScripts');

@@ -21,7 +21,7 @@ export const config = reactive({
 		{
 			name: 'index',
 			path: '/',
-			redirect: '/browsers',
+			redirect: '/simple',
 			component: shallowRef(page),
 			children: [
 				{

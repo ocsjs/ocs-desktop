@@ -94,6 +94,7 @@
 import { ref, reactive } from 'vue';
 import { store } from '../store';
 import { Tag } from '../fs/interface';
+// @ts-ignore
 import ColorPicker from 'colorpicker-v3'; // 注册组件
 import 'colorpicker-v3/style.css'; // 引入样式文件
 const object = Object;

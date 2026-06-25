@@ -13,7 +13,7 @@
 			</div>
 		</template>
 		<template v-else-if="state.loading">
-			<div class="d-inline-block p-5">
+			<div class="p-5 text-center">
 				<a-spin tip="正在获取最新OCS配置..." />
 			</div>
 		</template>
@@ -74,6 +74,7 @@ const emits = defineEmits<{
 	(e: 'update:project', val: Project[]): void;
 	(e: 'loading'): void;
 	(e: 'loaded'): void;
+	(e: 'error', err: string): void;
 }>();
 
 const state = reactive({
@@ -255,6 +256,7 @@ async function loadOCS() {
 	} catch (err) {
 		state.err = String(err);
 		console.error(err);
+		emits('error', String(err));
 	}
 
 	state.loading = false;

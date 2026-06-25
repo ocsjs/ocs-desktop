@@ -156,14 +156,20 @@ function importData() {
 					const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
 					while (folders.length) {
 						const folder = folders.shift();
-						if (Object.keys(folder?.children || {}).length) {
-							for (const key in folder?.children) {
-								if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
-									const entity = folder?.children[key];
+						if (!folder) continue;
+						if (Object.keys(folder.children || {}).length) {
+							for (const key in folder.children) {
+								if (Object.prototype.hasOwnProperty.call(folder.children, key)) {
+									const entity = folder.children[key];
+									if (!entity) continue;
 									if (entity.type === 'folder') {
-										folders.push(entity);
-									} else if (entity.type === 'browser' && entity.cachePath === '$CACHE_PATH') {
-										entity.cachePath = await remote.path.call('join', store.paths.userDataDirsFolder, entity.uid);
+										folders.push(entity as any);
+									} else if (entity.type === 'browser' && (entity as any).cachePath === '$CACHE_PATH') {
+										(entity as any).cachePath = await remote.path.call(
+											'join',
+											store.paths.userDataDirsFolder,
+											entity.uid
+										);
 									}
 								}
 							}
@@ -216,14 +222,16 @@ function exportData() {
 						const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
 						while (folders.length) {
 							const folder = folders.shift();
-							if (Object.keys(folder?.children || {}).length) {
-								for (const key in folder?.children) {
-									if (Object.prototype.hasOwnProperty.call(folder?.children, key)) {
-										const entity = folder?.children[key];
+							if (!folder) continue;
+							if (Object.keys(folder.children || {}).length) {
+								for (const key in folder.children) {
+									if (Object.prototype.hasOwnProperty.call(folder.children, key)) {
+										const entity = folder.children[key];
+										if (!entity) continue;
 										if (entity.type === 'folder') {
-											folders.push(entity);
+											folders.push(entity as any);
 										} else if (entity.type === 'browser') {
-											entity.cachePath = '$CACHE_PATH';
+											(entity as any).cachePath = '$CACHE_PATH';
 										}
 									}
 								}

@@ -36,7 +36,7 @@ defineProps<{
 }>();
 
 defineEmits<{
-	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]);
+	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]): void;
 }>();
 </script>
 

@@ -4,7 +4,7 @@
 			flex="160px"
 			class="desc-label"
 		>
-			{{ label }} :
+			<slot name="label">{{ label }}</slot> :
 		</a-col>
 
 		<a-col
@@ -26,11 +26,12 @@
 <script setup lang="ts">
 import { toRefs } from 'vue';
 interface DescriptionProps {
-	label: string;
+	label?: string;
 	desc?: any;
 	textClass?: any;
 }
 const props = withDefaults(defineProps<DescriptionProps>(), {
+	label: '',
 	desc: '',
 	textClass: ''
 });

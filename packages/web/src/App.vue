@@ -233,7 +233,8 @@ onUnmounted(() => {
 
 /** 简洁模式路由守卫 */
 router.beforeEach((to) => {
-	if (store.render.setting.mode === 'simple' && !store.render.state.setup) {
+	// 2.11 新版本软件 更新/安装 后自动跳转简洁模式
+	if (store.render.setting.mode === 'simple') {
 		if (to.path !== '/simple') {
 			return '/simple';
 		}
@@ -269,6 +270,10 @@ function onResize() {
 
 .arco-notification-list {
 	top: calc(20px + var(--title-height)) !important;
+}
+
+.arco-message-list {
+	top: calc(40px + var(--title-height)) !important;
 }
 
 /* 新手教程遮罩层 */
