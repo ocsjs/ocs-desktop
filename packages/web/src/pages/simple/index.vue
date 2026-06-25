@@ -41,23 +41,7 @@
 					class="overflow-aut mb-3o"
 				>
 					<!-- 环境检测提示 -->
-					<div v-if="!environmentState.isReady">
-						<a-alert
-							type="warning"
-							show-icon
-						>
-							软件环境存在问题，可能影响浏览器正常启动
-							<template #action>
-								<a-button
-									size="mini"
-									type="primary"
-									@click="state.setupVisible = true"
-								>
-									一键修复
-								</a-button>
-							</template>
-						</a-alert>
-					</div>
+					<EnvironmentAlert class="mb-3" />
 
 					<UsageAlertCollapse
 						v-model:collapse="store.render.state.read_record.browser_usage"
@@ -191,7 +175,6 @@ import Icon from '../../components/Icon.vue';
 import Tags from '../../components/Tags.vue';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
 import CommonEditActionDropdown from '../../components/CommonEditActionDropdown.vue';
-import { Environment } from '../../utils/environment';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
@@ -202,17 +185,10 @@ import SettingPanel from '../../components/SettingPanel.vue';
 import { lang } from '../../store/index';
 import UsageAlertCollapse from '../../components/UsageAlertCollapse.vue';
 import UserScriptListPage from '../../components/UserScriptListPage.vue';
+import EnvironmentAlert from '../../components/EnvironmentAlert.vue';
 
 const state = reactive({
-	setupVisible: false,
 	activeTab: 'browsers'
-});
-
-const environmentState = reactive({
-	isReady: true,
-	supportedBrowser: null as any,
-	supportedExtension: null as any,
-	validUserScript: null as any
 });
 
 /** 获取所有浏览器（递归） */
@@ -246,22 +222,6 @@ function handleRenameFinish(browser: BrowserOptions) {
 	}
 }
 
-/** 环境检测 */
-async function updateEnvironmentDetect() {
-	await Environment.init();
-	const [isCurrentBrowserSupported, supportedBrowser, supportedExtension, validUserScript] = await Promise.all([
-		Environment.isCurrentBrowserSupported(),
-		Environment.getSupportedBrowser(),
-		Environment.getSupportedExtension(),
-		Environment.getValidUserScript()
-	]);
-	environmentState.isReady =
-		isCurrentBrowserSupported && !!supportedBrowser && !!supportedExtension && !!validUserScript;
-	environmentState.supportedBrowser = supportedBrowser;
-	environmentState.supportedExtension = supportedExtension;
-	environmentState.validUserScript = validUserScript;
-}
-
 /** 监听重命名状态，初始化值并自动聚焦输入框 */
 watch(
 	() => allBrowsers.value.find((b) => getBrowserInstance(b.uid)?.renaming),
@@ -279,17 +239,9 @@ watch(
 	}
 );
 
-watch(
-	() => [store.render.state.setup, state.setupVisible],
-	() => {
-		updateEnvironmentDetect();
-	}
-);
-
 onMounted(() => {
 	// 确保专业模式的面板已关闭
 	store.render.browser.currentBrowserUid = '';
-	updateEnvironmentDetect();
 });
 </script>
 

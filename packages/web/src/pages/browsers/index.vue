@@ -3,147 +3,79 @@
 		id="browsers"
 		class="h-100 browsers-page"
 	>
-		<a-spin
-			class="w-100 h-100 browsers-spin"
-			:loading="
-				!state.isCurrentBrowserSupported ||
-				state.supportedBrowser === undefined ||
-				state.supportedExtension === undefined ||
-				state.validUserScript === undefined
-			"
+		<!-- ====================== 浏览器列表内容部分 ======================-->
+
+		<a-card
+			class="operations-card"
+			:bordered="true"
+			size="small"
 		>
-			<!-- ====================== 环境修复部分 ====================== -->
-
-			<template #icon>
-				<div class="shadow">
-					<a-alert
-						title="警告"
-						style="width: 600px"
-						class="rounded"
-						type="warning"
-						show-icon
-					>
-						<div>{{ lang('browser_page_environment_error_notice', '软件环境存在问题，将会影响浏览器的正常启动') }}</div>
-
-						<div class="text-black fw-bold">
-							<template v-if="!state.isCurrentBrowserSupported">
-								<div>
-									原因：{{
-										lang('browser_page_environment_error_current_browser_not_supported', '当前浏览器版本不受支持')
-									}}
-								</div>
-							</template>
-							<template v-else-if="!state.supportedBrowser">
-								<div>
-									原因：{{ lang('browser_page_environment_error_no_browser_detected', '未检测到可用的浏览器') }}
-								</div>
-							</template>
-							<template v-else-if="!state.supportedExtension">
-								<div>原因：{{ lang('browser_page_environment_error_no_extension_detected', '未安装脚本管理器') }}</div>
-							</template>
-						</div>
-
-						<div class="text-end">
-							<a-button
-								class="mt-2"
-								size="mini"
-								type="primary"
-								@click="state.setupVisible = true"
-							>
-								一键修复
-							</a-button>
-						</div>
-					</a-alert>
-				</div>
-			</template>
-
-			<Setup
-				v-if="state.setupVisible"
-				v-model:visible="state.setupVisible"
-				confirm-text="开始修复"
-				cancel-text="稍后再说"
-				title="环境修复"
-				:create-new-browser="false"
-				@close="
-					async () => {
-						state.setupVisible = false;
-						await updateEnvironmentDetect();
-					}
-				"
-			></Setup>
-
-			<!-- ====================== 浏览器列表内容部分 ======================-->
-
-			<a-card
-				class="operations-card"
-				:bordered="true"
-				size="small"
-			>
-				<div class="operations">
-					<!-- 路径栏 / 统计栏 -->
-					<FileBreadcrumb
-						v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
-						:key="currentFolder.uid"
-					></FileBreadcrumb>
-					<div
-						v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
-						class="stats-bar"
-					>
-						<span><icon-desktop /> {{ stats.browsers }}</span>
-						<span><icon-code /> {{ stats.scripts }}</span>
-						<span><icon-folder /> {{ stats.folders }}</span>
-						<span><icon-tag /> {{ stats.tags }}</span>
-					</div>
-					<!-- 撑开间距，将搜索和筛选推到最右边 -->
-					<div class="flex-grow-1"></div>
-					<!-- 文件筛选 -->
-					<FileFilters></FileFilters>
-
-					<!-- 搜索时禁止文件操作 -->
-					<template v-if="currentSearchedEntities">
-						<a-button
-							size="mini"
-							@click="resetSearch"
-						>
-							<Icon type="restart_alt"> 重置 </Icon>
-						</a-button>
-					</template>
-				</div>
-
-				<!-- 文件操作 -->
-				<FileMultipleOperators></FileMultipleOperators>
-			</a-card>
-
-			<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
-				<a-empty
-					class="p-3"
-					description="暂无浏览器搜索结果"
-				></a-empty>
-			</template>
-
-			<div class="entities-wrapper">
-				<Transition
-					name="entities-slide"
-					appear
+			<div class="operations">
+				<!-- 路径栏 / 统计栏 -->
+				<FileBreadcrumb
+					v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
+					:key="currentFolder.uid"
+				></FileBreadcrumb>
+				<div
+					v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
+					class="stats-bar"
 				>
-					<div
-						:key="currentFolder.uid"
-						class="entities-container"
+					<span><icon-desktop /> {{ stats.browsers }}</span>
+					<span><icon-code /> {{ stats.scripts }}</span>
+					<span><icon-folder /> {{ stats.folders }}</span>
+					<span><icon-tag /> {{ stats.tags }}</span>
+				</div>
+				<!-- 撑开间距，将搜索和筛选推到最右边 -->
+				<div class="flex-grow-1"></div>
+				<!-- 文件筛选 -->
+				<FileFilters></FileFilters>
+
+				<!-- 搜索时禁止文件操作 -->
+				<template v-if="currentSearchedEntities">
+					<a-button
+						size="mini"
+						@click="resetSearch"
 					>
-						<!-- 显示浏览器以及文件夹列表 -->
-						<div class="entities">
-							<BrowserList
-								:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
-							></BrowserList>
-						</div>
-						<!-- 右键菜单提示 -->
-						<div class="text-end">
-							<RightClickOpenMenuTip />
-						</div>
-					</div>
-				</Transition>
+						<Icon type="restart_alt"> 重置 </Icon>
+					</a-button>
+				</template>
 			</div>
-		</a-spin>
+
+			<!-- 文件操作 -->
+			<FileMultipleOperators></FileMultipleOperators>
+		</a-card>
+
+		<EnvironmentAlert class="p-2"> </EnvironmentAlert>
+
+		<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
+			<a-empty
+				class="p-3"
+				description="暂无浏览器搜索结果"
+			></a-empty>
+		</template>
+
+		<div class="entities-wrapper">
+			<Transition
+				name="entities-slide"
+				appear
+			>
+				<div
+					:key="currentFolder.uid"
+					class="entities-container"
+				>
+					<!-- 显示浏览器以及文件夹列表 -->
+					<div class="entities">
+						<BrowserList
+							:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
+						></BrowserList>
+					</div>
+					<!-- 右键菜单提示 -->
+					<div class="text-end">
+						<RightClickOpenMenuTip />
+					</div>
+				</div>
+			</Transition>
+		</div>
 	</div>
 </template>
 
@@ -156,19 +88,16 @@ import { currentEntities, currentSearchedEntities, currentFolder } from '../../f
 import { root } from '../../fs/folder';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import BrowserList from '../../components/BrowserList.vue';
-import { Environment } from '../../utils//environment';
-import { reactive, onActivated, watch, computed } from 'vue';
-import type { ValidBrowser } from '../../../../common/lib/src/interface';
-import Setup from '../../components/Setup.vue';
+import { computed } from 'vue';
 import { IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
-import { lang, store } from '../../store';
+import { store } from '../../store';
 import RightClickOpenMenuTip from '../../components/RightClickOpenMenuTip.vue';
+import EnvironmentAlert from '../../components/EnvironmentAlert.vue';
 
 const stats = computed(() => {
 	const r = root();
 	const allBrowsers = r.findAll((e) => e.type === 'browser');
 	const allFolders = r.findAll((e) => e.type === 'folder');
-	console.log(allBrowsers);
 
 	const tagSet = new Set<string>();
 	for (const b of allBrowsers) {
@@ -183,51 +112,12 @@ const stats = computed(() => {
 		scripts: store.render.scripts.length
 	};
 });
-
-const state = reactive({
-	isCurrentBrowserSupported: true,
-	supportedBrowser: null as ValidBrowser | undefined | null,
-	supportedExtension: null as any | undefined | null,
-	validUserScript: null as any | undefined | null,
-	setupVisible: false
-});
-
-watch(
-	() => [store.render.state.setup, state.setupVisible],
-	() => {
-		updateEnvironmentDetect();
-	}
-);
-
-onActivated(() => {
-	updateEnvironmentDetect();
-});
-
-async function updateEnvironmentDetect() {
-	await Environment.init();
-	const [isCurrentBrowserSupported, supportedBrowser, supportedExtension, validUserScript] = await Promise.all([
-		Environment.isCurrentBrowserSupported(),
-		Environment.getSupportedBrowser(),
-		Environment.getSupportedExtension(),
-		Environment.getValidUserScript()
-	]);
-	state.isCurrentBrowserSupported = isCurrentBrowserSupported;
-	state.supportedBrowser = supportedBrowser;
-	state.supportedExtension = supportedExtension;
-	state.validUserScript = validUserScript;
-}
 </script>
 
 <style scoped lang="less">
 .browsers-page {
 	display: flex;
 	flex-direction: column;
-}
-
-.browsers-spin {
-	display: flex;
-	flex-direction: column;
-	min-height: 0;
 }
 
 .operations-card {

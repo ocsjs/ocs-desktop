@@ -122,8 +122,6 @@ import { reactive, watch, nextTick, onMounted } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { installExtensions } from '../utils/extension';
 import { addScriptFromUrl } from '../utils/user-scripts';
-import { root } from '../fs/folder';
-import { newBrowser } from '../utils/browser';
 import { child_process } from '../utils/node';
 import { Environment } from '../utils/environment';
 
@@ -147,14 +145,12 @@ const props = withDefaults(
 		confirmText?: string;
 		cancelText?: string;
 		title?: string;
-		createNewBrowser?: boolean;
 	}>(),
 	{
 		visible: false,
 		confirmText: '一键初始化',
 		cancelText: '稍后手动设置',
-		title: '初始化软件设置',
-		createNewBrowser: true
+		title: '初始化软件设置'
 	}
 );
 
@@ -396,31 +392,12 @@ function prepare() {
 			}
 		});
 
-		if (props.createNewBrowser) {
-			state.steps.push({
-				title: '新建浏览器',
-				action(step) {
-					const children = root().listChildren();
-					if (children.length !== 0) {
-						step.description = '已存在浏览器，无需重复创建。';
-						return;
-					}
-					const name = '未命名浏览器';
-					newBrowser({
-						name: name
-					});
-
-					step.description = `已创建浏览器：${name}，可稍后在左侧软件设置中修改名称`;
-				}
-			});
-
-			state.steps.push({
-				title: '初始化完成',
-				async action(step) {
-					step.description = lang('setup_finish_notice', '');
-				}
-			});
-		}
+		state.steps.push({
+			title: '初始化完成',
+			async action(step) {
+				step.description = lang('setup_finish_notice', '');
+			}
+		});
 	} catch (err) {
 		console.error(err);
 		Message.error(String(err));

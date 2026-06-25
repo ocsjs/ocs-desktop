@@ -29,7 +29,7 @@
 				{{ title }}
 			</a-alert>
 			<a-alert
-				v-if="collapse"
+				v-if="!collapse"
 				class="mb-3 border-top"
 				:banner="banner ?? false"
 				:center="center ?? false"
@@ -51,6 +51,7 @@ import { AlertInstance } from '@arco-design/web-vue';
 
 defineProps<{
 	title: string;
+	/** 是否折叠 */
 	collapse: boolean;
 	html?: string;
 	text?: string;

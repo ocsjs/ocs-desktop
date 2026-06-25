@@ -77,7 +77,7 @@ export type WebStore = {
 	state: {
 		/** 是否第一次打开 */
 		first: boolean;
-		/** 是否展示一键安装  */
+		/** 是否展示初始化设置  */
 		setup: boolean;
 		mini: boolean;
 		responsive: 'mini' | 'small';
