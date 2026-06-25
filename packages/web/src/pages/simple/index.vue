@@ -15,7 +15,7 @@
 				>
 					<a-tab-pane key="browsers">
 						<template #title>
-							<Icon type="language"> {{ allBrowsers.length > 0 ? `浏览器 - ${allBrowsers.length}` : '浏览器' }} </Icon>
+							<Icon type="web"> {{ allBrowsers.length > 0 ? `浏览器 - ${allBrowsers.length}` : '浏览器' }} </Icon>
 						</template>
 					</a-tab-pane>
 					<a-tab-pane key="scripts">
@@ -31,20 +31,19 @@
 				</a-tabs>
 			</div>
 
-			<div class="container-md">
+			<div
+				class="container-md"
+				style="max-width: 800px"
+			>
 				<!-- 浏览器面板 -->
 				<div
-					v-if="state.activeTab === 'browsers'"
-					class="overflow-auto"
+					v-show="state.activeTab === 'browsers'"
+					class="overflow-aut mb-3o"
 				>
 					<!-- 环境检测提示 -->
-					<div
-						v-if="!environmentState.isReady"
-						class="env-warning"
-					>
+					<div v-if="!environmentState.isReady">
 						<a-alert
 							type="warning"
-							closable
 							show-icon
 						>
 							软件环境存在问题，可能影响浏览器正常启动
@@ -60,12 +59,15 @@
 						</a-alert>
 					</div>
 
-					<div class="cards-area entities">
-						<!-- 右键菜单提示 -->
-						<div class="text-center">
-							<ContextHint> </ContextHint>
-						</div>
+					<UsageAlertCollapse
+						v-model:collapse="store.render.state.read_record.browser_usage"
+						class="mb-2"
+						banner
+						title="使用提示"
+						:html="lang('simple_mode_index_browser_usage', '启动浏览器、打开任意网课后即可自动执行脚本。')"
+					/>
 
+					<div class="cards-area entities">
 						<template v-if="allBrowsers.length === 0">
 							<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
 								<EmptyBrowserCard />
@@ -74,66 +76,78 @@
 						<template v-else>
 							<div class="cards-grid">
 								<!-- 浏览器卡片 -->
-								<div
+								<template
 									v-for="browser in allBrowsers"
 									:key="browser.uid"
-									class="browser-card entity"
-									:data-uid="browser.uid"
-									@click="selectBrowser(browser)"
 								>
-									<div class="card-header">
-										<div class="card-name">
-											<Icon
-												type="language"
-												class="card-icon"
-											/>
-											<div class="card-name-text">
-												<!-- 重命名状态 -->
-												<template v-if="getBrowserInstance(browser.uid)?.renaming">
-													<a-input
-														v-model="renameValue"
-														size="mini"
-														@click.stop
-														@blur="handleRenameFinish(browser)"
-														@keyup.enter="handleRenameFinish(browser)"
-													/>
-												</template>
-												<template v-else>
-													{{ browser.name }}
-												</template>
+									<a-card
+										:data-uid="browser.uid"
+										class="browser-card entity"
+										@click="selectBrowser(browser)"
+									>
+										<template #extra>
+											<div class="d-flex align-items-end">
+												<BrowserOperators
+													:browser="browser"
+													icon-class="fs-5"
+												/>
 											</div>
-										</div>
-										<div
-											class="card-operators"
-											@click.stop
-										>
-											<BrowserOperators
-												:browser="browser"
-												icon-class="fs-5"
-											/>
-										</div>
-									</div>
+										</template>
 
-									<!-- 标签 -->
-									<div
-										v-if="browser.tags.length"
-										class="card-tags"
-									>
-										<Tags
-											:tags="browser.tags"
-											:read-only="true"
-											size="small"
-										/>
-									</div>
+										<template #title>
+											<div class="card-name-text">
+												<Icon type="web">
+													<!-- 重命名状态 -->
+													<template v-if="getBrowserInstance(browser.uid)?.renaming">
+														<a-input
+															v-model="renameValue"
+															size="mini"
+															@click.stop
+															@blur="handleRenameFinish(browser)"
+															@keyup.enter="handleRenameFinish(browser)"
+														/>
+													</template>
+													<template v-else>
+														{{ browser.name }}
+													</template>
+												</Icon>
+											</div>
+										</template>
 
-									<!-- 备注/描述 -->
-									<div
-										v-if="browser.notes?.trim()"
-										class="card-notes"
-									>
-										{{ browser.notes }}
-									</div>
-								</div>
+										<a-card-meta>
+											<template #description>
+												<!-- 备注/描述 -->
+												<div
+													v-if="browser.notes?.trim()"
+													class="card-notes"
+												>
+													{{ browser.notes }}
+												</div>
+												<div
+													v-else
+													style="font-size: 12px"
+													class="text-center text-secondary"
+												>
+													<IconInfoCircleFill /> 点击启动按钮运行浏览器。
+												</div>
+											</template>
+
+											<template #avatar>
+												<!-- 标签 -->
+												<div
+													v-if="browser.tags.length"
+													class="card-tags"
+												>
+													<Tags
+														:tags="browser.tags"
+														:read-only="true"
+														size="small"
+													/>
+												</div>
+											</template>
+										</a-card-meta>
+									</a-card>
+								</template>
 
 								<!-- 新增浏览器卡片 -->
 								<div
@@ -153,16 +167,16 @@
 
 				<!-- 脚本面板 -->
 				<div
-					v-if="state.activeTab === 'scripts'"
-					class="overflow-auto p-2"
+					v-show="state.activeTab === 'scripts'"
+					class="overflow-auto"
 				>
-					<UserScripts />
+					<UserScriptListPage />
 				</div>
 
 				<!-- 软件设置面板 -->
 				<div
-					v-if="state.activeTab === 'setting'"
-					class="overflow-auto p-2"
+					v-show="state.activeTab === 'setting'"
+					class="overflow-auto"
 				>
 					<SettingPanel simple />
 				</div>
@@ -177,7 +191,6 @@ import Icon from '../../components/Icon.vue';
 import Tags from '../../components/Tags.vue';
 import BrowserOperators from '../../components/browsers/BrowserOperators.vue';
 import CommonEditActionDropdown from '../../components/CommonEditActionDropdown.vue';
-import UserScripts from '../user-scripts/index.vue';
 import { Environment } from '../../utils/environment';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
@@ -185,8 +198,10 @@ import { Browser } from '../../fs/browser';
 import { BrowserOptions } from '../../fs/interface';
 import { newBrowser } from '../../utils/browser';
 import EmptyBrowserCard from '../../components/EmptyBrowserCard.vue';
-import ContextHint from '../../components/ContextHint.vue';
 import SettingPanel from '../../components/SettingPanel.vue';
+import { lang } from '../../store/index';
+import UsageAlertCollapse from '../../components/UsageAlertCollapse.vue';
+import UserScriptListPage from '../../components/UserScriptListPage.vue';
 
 const state = reactive({
 	setupVisible: false,
@@ -286,10 +301,6 @@ onMounted(() => {
 	overflow: auto;
 }
 
-.env-warning {
-	padding: 8px 16px;
-	flex-shrink: 0;
-}
 .cards-area {
 	padding: 4px 20px 20px 16px;
 }
@@ -306,42 +317,25 @@ onMounted(() => {
 	background: transparent;
 	border: 1px solid #e5e6eb;
 	border-radius: 8px;
-	padding: 16px;
 	cursor: pointer;
 	transition: all 0.2s ease;
 
 	&:hover {
 		border-color: #bedaff;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-		transform: translateY(-1px);
+		transform: translateY(-2px);
 	}
 
 	&:active {
 		transform: translateY(0);
 	}
 
-	.card-header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		margin-bottom: 8px;
-	}
-
-	.card-name {
-		font-size: 15px;
-		font-weight: 600;
-		color: #1d2129;
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		flex: 1;
-		min-width: 0;
-	}
-
 	.card-name-text {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		max-width: 300px;
+		font-size: 14px;
 	}
 
 	.card-icon {
@@ -386,13 +380,13 @@ onMounted(() => {
 
 	.add-icon {
 		font-size: 32px;
-		color: #c9cdd4;
+		color: #165dff;
 		margin-bottom: 8px;
 	}
 
 	.add-text {
 		font-size: 13px;
-		color: #86909c;
+		color: #165dff;
 	}
 }
 
@@ -450,5 +444,9 @@ body[arco-theme='dark'] & {
 	:deep(.arco-tabs-tab) {
 		border: 1px solid rgb(235, 235, 235);
 	}
+}
+
+:deep(.arco-card-meta-footer) {
+	align-items: start !important;
 }
 </style>

@@ -138,7 +138,7 @@
 						</div>
 						<!-- 右键菜单提示 -->
 						<div class="text-end">
-							<ContextHint></ContextHint>
+							<RightClickOpenMenuTip />
 						</div>
 					</div>
 				</Transition>
@@ -162,7 +162,7 @@ import type { ValidBrowser } from '../../../../common/lib/src/interface';
 import Setup from '../../components/Setup.vue';
 import { IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
 import { lang, store } from '../../store';
-import ContextHint from '../../components/ContextHint.vue';
+import RightClickOpenMenuTip from '../../components/RightClickOpenMenuTip.vue';
 
 const stats = computed(() => {
 	const r = root();

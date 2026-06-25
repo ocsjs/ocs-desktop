@@ -83,7 +83,10 @@ export type WebStore = {
 		responsive: 'mini' | 'small';
 		height: number;
 		/** 已读的提示记录 */
-		read_record: Record<string, boolean>;
+		read_record: {
+			user_script_usage: boolean;
+			browser_usage: boolean;
+		};
 	};
 };
 
@@ -149,7 +152,10 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 			mini: false,
 			responsive: 'small',
 			height: document.documentElement.clientHeight,
-			read_record: {}
+			read_record: {
+				user_script_usage: false,
+				browser_usage: false
+			}
 		}
 	} as WebStore
 });
