@@ -370,24 +370,27 @@
 				</template>
 			</CommonSelector>
 		</a-modal>
+
+		<AddNetworkScriptModal v-model:visible="state.addNetworkScriptVisible" />
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref, h, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { config } from '../config';
 import { lang, store, StoreUserScript } from '../store';
 import { ScriptSearchEngine } from '../types/search';
 import Icon from '../components/Icon.vue';
-import { addScriptFromFile, addScriptFromUrl, openScriptSource } from '../utils/user-scripts';
+import { addScriptFromFile, openScriptSource } from '../utils/user-scripts';
 import { getSpecifiedVersion } from '../utils/script-version';
-import { Input, Modal, Message } from '@arco-design/web-vue';
+import { Message } from '@arco-design/web-vue';
 import ScriptList from '../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../types/user.script';
 import CommonSelector from '../components/CommonSelector.vue';
 import { remote } from '../utils/remote';
 import { Status } from '../utils/statusBar';
 import UsageAlertCollapse from '../components/UsageAlertCollapse.vue';
+import AddNetworkScriptModal from '../components/AddNetworkScriptModal.vue';
 
 /** 搜索列表 */
 const engineSearchList = ref<
@@ -421,7 +424,8 @@ const state = reactive({
 		visible: false,
 		list: [] as ScriptVersion[]
 	},
-	script_status: {} as Record<string, 'loading' | 'error' | 'done' | 'not_found'>
+	script_status: {} as Record<string, 'loading' | 'error' | 'done' | 'not_found'>,
+	addNetworkScriptVisible: false
 });
 
 /** 分页后的脚本列表 */
@@ -481,26 +485,7 @@ function closeAll() {
 }
 
 function addScriptFromURL() {
-	const url = ref('');
-	Modal.confirm({
-		title: '加载网络脚本',
-		simple: false,
-		content: () =>
-			h('div', [
-				h(Input, {
-					placeholder: '输入脚本链接（通常以http开头，并以 .user.js 结尾的链接）',
-					onChange(value) {
-						url.value = value;
-					}
-				})
-			]),
-		async onOk() {
-			Message.info('正在下载脚本，请稍后...');
-			if (await addScriptFromUrl(url.value)) {
-				Message.success('脚本下载完成');
-			}
-		}
-	});
+	state.addNetworkScriptVisible = true;
 }
 
 function getSourceType(script: StoreUserScript): ScriptSourceType {
