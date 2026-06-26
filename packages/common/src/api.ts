@@ -39,6 +39,13 @@ export interface NotifyResource {
 	content: string[];
 }
 
+/** Banner 通知 */
+export interface BannerResource {
+	title: string;
+	content: string;
+	type?: 'info' | 'warning' | 'success' | 'error';
+}
+
 /** 版本更新信息 */
 export interface UpdateInformationResource {
 	tag: string;
@@ -69,6 +76,7 @@ export interface Infos {
 	resourceGroups: ResourceGroup[];
 	bookmark: BookmarkResource[];
 	notify: NotifyResource[];
+	banners: BannerResource[];
 	versions: UpdateInformationResource[];
 }
 

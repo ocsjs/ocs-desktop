@@ -42,6 +42,8 @@
 				>
 					<!-- 环境检测提示 -->
 					<EnvironmentAlert class="mb-3" />
+					<!-- Banner 提示 -->
+					<NotificationBanner class="mb-3" />
 
 					<UsageAlertCollapse
 						v-model:collapse="store.render.state.read_record.browser_usage"
@@ -186,6 +188,7 @@ import { lang } from '../../store/index';
 import UsageAlertCollapse from '../../components/UsageAlertCollapse.vue';
 import UserScriptListPage from '../../components/UserScriptListPage.vue';
 import EnvironmentAlert from '../../components/EnvironmentAlert.vue';
+import NotificationBanner from '../../components/NotificationBanner.vue';
 
 const state = reactive({
 	activeTab: 'browsers'
