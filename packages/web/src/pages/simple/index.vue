@@ -396,6 +396,10 @@ body[arco-theme='dark'] & {
 }
 
 .tabs {
+	position: sticky;
+	background-color: white;
+	top: 0px;
+	z-index: 99;
 	:deep(.arco-tabs-tab) {
 		border: 1px solid rgb(235, 235, 235);
 	}

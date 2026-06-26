@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div v-if="!closed">
 		<a-tooltip
 			:content="collapse ? '点击收起' : '点击展开'"
 			position="bottom"
@@ -35,6 +35,12 @@
 				:center="center ?? false"
 				:type="type || 'info'"
 				:show-icon="false"
+				closable
+				@close="
+					() => {
+						closed = true;
+					}
+				"
 			>
 				<div
 					v-if="html"
@@ -48,6 +54,9 @@
 
 <script lang="ts" setup>
 import { AlertInstance } from '@arco-design/web-vue';
+import { ref } from 'vue';
+
+const closed = ref(false);
 
 defineProps<{
 	title: string;
