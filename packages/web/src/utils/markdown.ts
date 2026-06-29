@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import Emoji from 'markdown-it-emoji';
 import { markdownContainer } from '../utils/markdown.container';
+import hljs from 'highlight.js';
 
 // @ts-ignore full options list (defaults)
 export const markdownIt: MarkdownIt = MarkdownIt({
@@ -10,7 +11,20 @@ export const markdownIt: MarkdownIt = MarkdownIt({
 	langPrefix: 'language-',
 	linkify: true,
 	typographer: true,
-	quotes: '“”‘’'
+	quotes: '“”‘’',
+	highlight: function (str, lang) {
+		if (lang && hljs.getLanguage(lang)) {
+			try {
+				return (
+					'<pre class="hljs"><code>' +
+					hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+					'</code></pre>'
+				);
+			} catch (__) {}
+		}
+
+		return '<pre class="hljs"><code>' + markdownIt.utils.escapeHtml(str) + '</code></pre>';
+	}
 });
 
 markdownIt

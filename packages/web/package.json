@@ -19,6 +19,7 @@
 		"dayjs": "^1.10.7",
 		"easy-us": "^0.0.56",
 		"events": "^3.3.0",
+		"highlight.js": "^11.11.1",
 		"markdown-it": "^13.0.1",
 		"markdown-it-anchor": "^8.6.7",
 		"markdown-it-container": "^3.0.0",
