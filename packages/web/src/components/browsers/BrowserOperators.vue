@@ -18,7 +18,7 @@
 				<a-button
 					size="mini"
 					type="text"
-					@click="instance?.launch()"
+					@click.stop="instance?.launch()"
 				>
 					<Icon
 						type="play_circle"
@@ -38,7 +38,7 @@
 				<a-button
 					type="text"
 					size="mini"
-					@click="instance?.bringToFront()"
+					@click.stop="instance?.bringToFront()"
 				>
 					<Icon
 						type="push_pin"
@@ -55,7 +55,7 @@
 				<a-button
 					type="text"
 					size="mini"
-					@click="instance?.relaunch()"
+					@click.stop="instance?.relaunch()"
 				>
 					<Icon
 						type="sync"
@@ -72,7 +72,7 @@
 				<a-button
 					type="text"
 					size="mini"
-					@click="instance?.close()"
+					@click.stop="instance?.close()"
 				>
 					<Icon
 						type="cancel"

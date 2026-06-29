@@ -386,6 +386,14 @@ body[arco-theme='dark'] & {
 			color: #86909c;
 		}
 	}
+
+	.tabs {
+		background-color: #17171a;
+
+		:deep(.arco-tabs-tab) {
+			border-color: #3d3d3f;
+		}
+	}
 }
 
 /** 响应式：小屏幕单列 */
