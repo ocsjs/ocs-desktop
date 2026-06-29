@@ -193,17 +193,11 @@
 import { onMounted, ref, reactive } from 'vue';
 import { OCSApi } from '@ocs-desktop/common/src/api';
 import { BookmarkResource } from '../../../common/src/api';
+import { iconUrl } from '../utils/index';
 
 type BookMark = BookmarkResource;
 
 const bookmarks = ref<BookMark[]>([]);
-
-/** 通过本地服务代理加载图标，解决跨域问题 */
-function iconUrl(url?: string): string {
-	if (!url) return '';
-	const port = location.port || 15319;
-	return `http://localhost:${port}/icon?url=${encodeURIComponent(url)}`;
-}
 
 /** 从当前 URL 中解析 uid 参数 */
 function getCurrentUid(): string | null {

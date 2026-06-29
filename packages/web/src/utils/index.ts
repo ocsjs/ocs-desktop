@@ -305,3 +305,10 @@ export function errorFilter(str: string) {
 export function goto(link: string) {
 	window.open(link, '_blank');
 }
+
+/** 通过本地服务代理加载图标，解决跨域问题 */
+export function iconUrl(url?: string): string {
+	if (!url) return '';
+	const port = 15319;
+	return `http://localhost:${port}/icon?url=${encodeURIComponent(url)}`;
+}

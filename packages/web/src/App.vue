@@ -58,12 +58,11 @@ import { watch, onMounted, onUnmounted } from 'vue';
 import { store } from './store';
 import { remote } from './utils/remote';
 import { root } from './fs/folder';
-import { inBrowser, electron } from './utils/node';
+import { electron } from './utils/node';
 import { closeAllBrowser, showClearBrowserCachesModal } from './utils/browser';
 import { about, changeTheme, fetchRemoteNotify, fetchRemoteLangs, setAlwaysOnTop, setAutoLaunch } from './utils';
 import { activeIpcRenderListener } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
-import { router } from './route';
 import { currentBrowser } from './fs';
 import { Modal } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
@@ -79,12 +78,8 @@ const { ipcRenderer } = electron;
 /** 异步保存，用于实时持久化（单次 IPC 调用，加密+写入在主进程完成） */
 async function saveStoreToLocal(_store: typeof store) {
 	try {
-		if (inBrowser) {
-			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
-		} else {
-			const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
-			await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
-		}
+		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
 	}
@@ -93,12 +88,8 @@ async function saveStoreToLocal(_store: typeof store) {
 /** 同步版本保存，用于关闭时确保数据写入磁盘（单次 IPC 调用） */
 function saveStoreToLocalSync(_store: typeof store) {
 	try {
-		if (inBrowser) {
-			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
-		} else {
-			const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
-			remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
-		}
+		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
 	}
@@ -117,22 +108,6 @@ onMounted(async () => {
 			}
 		}
 	});
-
-	/** 检测浏览器环境 */
-	// @ts-ignore
-	if (inBrowser) {
-		store.render.state.setup = false;
-		Modal.warning({
-			content: '下载桌面版软件才能体验全部功能！',
-			title: '警告',
-			simple: true,
-			hideCancel: false,
-			okText: '前往官网下载',
-			onOk() {
-				window.open('https://docs.ocsjs.com/docs/资源下载/app-downloads', '_blank');
-			}
-		});
-	}
 
 	/** 初始化标题 */
 	remote.win.call('setTitle', `OCS - 首页`);
@@ -229,17 +204,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
 	closeAllBrowser();
-});
-
-/** 简洁模式路由守卫 */
-router.beforeEach((to) => {
-	// 2.11 新版本软件 更新/安装 后自动跳转简洁模式
-	if (store.render.setting.mode === 'simple') {
-		if (to.path !== '/simple') {
-			return '/simple';
-		}
-	}
-	return true;
 });
 
 /** 屏幕响应式检测 */
