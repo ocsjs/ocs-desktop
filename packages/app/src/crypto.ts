@@ -68,13 +68,24 @@ export function getAesKey(): Buffer {
 // ────────────────────────────────────────────
 
 /**
+ * 将 Buffer 转为 TS 5.7+ 兼容的 Uint8Array<ArrayBuffer>
+ *
+ * TS 5.7+ 将 Buffer 视为 Uint8Array<ArrayBufferLike>（.buffer 可能为 SharedArrayBuffer），
+ * 无法赋给期望 ArrayBufferView<ArrayBuffer> 的 crypto API 形参（CipherKey / BinaryLike 等）。
+ * 这里拷贝为一份新的 Uint8Array<ArrayBuffer> 以满足类型签名。
+ */
+function toBytes(buf: Buffer): Uint8Array {
+	return new Uint8Array(buf);
+}
+
+/**
  * AES-256-GCM 加密
  * @returns 格式: iv:authTag:ciphertext（base64 编码）
  */
 export function encryptAes(plaintext: string): string {
 	const key = getAesKey();
 	const iv = crypto.randomBytes(12);
-	const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+	const cipher = crypto.createCipheriv('aes-256-gcm', toBytes(key), toBytes(iv));
 	let encrypted = cipher.update(plaintext, 'utf8', 'base64');
 	encrypted += cipher.final('base64');
 	const authTag = cipher.getAuthTag();
@@ -91,8 +102,8 @@ export function decryptAes(ciphertext: string): string {
 	const iv = Buffer.from(parts[0], 'base64');
 	const authTag = Buffer.from(parts[1], 'base64');
 	const data = parts.slice(2).join(':');
-	const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-	decipher.setAuthTag(authTag);
+	const decipher = crypto.createDecipheriv('aes-256-gcm', toBytes(key), toBytes(iv));
+	decipher.setAuthTag(toBytes(authTag));
 	let decrypted = decipher.update(data, 'base64', 'utf8');
 	decrypted += decipher.final('utf8');
 	return decrypted;

@@ -13,7 +13,7 @@ import { store } from '../store';
 import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
-import { scripts } from '../scripts';
+import { AutomationScripts } from '../scripts';
 import { AutomationScript } from '../scripts/script';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { AppStore } from '../../types';
@@ -114,7 +114,7 @@ const methods = {
 		return safeStorage.isEncryptionAvailable();
 	},
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
-	getRawScripts: () => JSON.parse(JSON.stringify(scripts)) as RawAutomationScript[],
+	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	captureDesktopScreen: () => {
 		return desktopCapturer.getSources({ types: ['window'] });
 	},

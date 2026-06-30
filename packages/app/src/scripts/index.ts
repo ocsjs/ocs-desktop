@@ -4,7 +4,7 @@ import { ICVELoginScript } from './automation/wk/icve';
 import { ZJYLoginScript } from './automation/wk/zjy';
 import { NewPageScript } from './automation/common';
 
-export const scripts = [
+export const AutomationScripts = [
 	CXPhoneLoginScript,
 	CXUnitLoginScript,
 	ZHSPhoneLoginScript,

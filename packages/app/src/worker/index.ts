@@ -4,7 +4,7 @@ import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request } from 'playwright-core';
 import { AppStore } from '../../types';
-import { scripts as AutomationScripts } from '../scripts/index';
+import { AutomationScripts } from '../scripts/index';
 import { Config } from '../scripts/interface';
 import _get from 'lodash/get';
 import child_process from 'child_process';
@@ -12,7 +12,7 @@ import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
-type PS = { name: string; configs: Record<string, Config> };
+type AS = { name: string; configs: Record<string, Config> };
 
 type BrowserInfo = { name: string; notes: string; tags: { color: string; name: string }[] };
 
@@ -38,7 +38,7 @@ export class ScriptWorker {
 	/** 拓展路径 */
 	extensionPaths: string[] = [];
 	/** 执行的自动化程序列表 */
-	automationScripts: PS[] = [];
+	automationScripts: AS[] = [];
 	/** 可关闭的浏览器拓展主页 */
 	store?: AppStore;
 	/** 浏览器中软件设置的名字 */
@@ -73,7 +73,7 @@ export class ScriptWorker {
 		store: AppStore;
 		uid: string;
 		cachePath: string;
-		automationScripts: PS[];
+		automationScripts: AS[];
 		browserInfo: BrowserInfo;
 		config: BrowserConfig;
 		langs: Langs;
@@ -362,7 +362,7 @@ export async function launchBrowser({
 	/** 可关闭的浏览器拓展主页 */
 	closeableExtensionHomepages: string[];
 	/** 自动化程序 */
-	automationScripts: PS[];
+	automationScripts: AS[];
 	/** 初始导航页地址 */
 	bookmarksPageUrl?: string;
 	/** OCS服务器端口 */
@@ -531,7 +531,7 @@ function sleep(t: number) {
  * 将脚本配置转换为可用的对象配置
  * @param configs
  */
-function transformScriptConfigToRaw(configs: PS['configs']) {
+function transformScriptConfigToRaw(configs: AS['configs']) {
 	const raw = Object.create({});
 	for (const key in configs) {
 		if (Object.prototype.hasOwnProperty.call(configs, key)) {
@@ -580,7 +580,7 @@ async function setupUserScripts(opts: {
 async function runAutomationScripts(opts: {
 	browser: BrowserContext;
 	serverPort: number;
-	automationScripts: PS[];
+	automationScripts: AS[];
 	step: (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
 }) {
 	const { automationScripts, browser, serverPort, step } = opts;

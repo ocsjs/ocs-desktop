@@ -112,8 +112,12 @@ const props = defineProps<{
 }>();
 
 const emits = defineEmits<{
-	(e: 'confirm', raw: RawAutomationScript, configsList: (RawAutomationScript['configs'] & { browserName: string })[]);
-	(e: 'cancel');
+	(
+		e: 'confirm',
+		raw: RawAutomationScript,
+		configsList: (RawAutomationScript['configs'] & { browserName: string })[]
+	): void;
+	(e: 'cancel'): void;
 }>();
 
 const { rawAutomationScript } = toRefs(props);
