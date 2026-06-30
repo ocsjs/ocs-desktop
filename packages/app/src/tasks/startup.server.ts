@@ -10,6 +10,58 @@ import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID } from 'crypto';
 const logger = Logger('server');
 
+/** 图标内存缓存 */
+const iconCache = new Map<string, { data: Buffer; contentType: string }>();
+const ICON_CACHE_MAX = 200;
+
+/** 从 URL 中提取域名 */
+function extractDomain(url: string): string | null {
+	try {
+		return new URL(url).hostname;
+	} catch {
+		return null;
+	}
+}
+
+/** 1x1 透明 GIF 降级图标 */
+const FALLBACK_ICON = {
+	data: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+	contentType: 'image/gif'
+};
+
+/** 获取网站图标 — 三级降级策略：直接请求 → Google Favicon API → 降级图标 */
+async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: string }> {
+	// 第一级：直接请求原图标 URL
+	try {
+		const response = await axios.get(iconUrl, {
+			responseType: 'arraybuffer',
+			timeout: 5000
+		});
+		return {
+			data: response.data,
+			contentType: response.headers['content-type'] || 'image/png'
+		};
+	} catch {}
+
+	// 第二级：Google Favicon API 动态解析
+	const domain = extractDomain(iconUrl);
+	if (domain) {
+		try {
+			const response = await axios.get(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`, {
+				responseType: 'arraybuffer',
+				timeout: 5000
+			});
+			return {
+				data: response.data,
+				contentType: response.headers['content-type'] || 'image/png'
+			};
+		} catch {}
+	}
+
+	// 第三级：降级图标
+	return FALLBACK_ICON;
+}
+
 export async function startupServer() {
 	const app = express();
 
@@ -108,26 +160,36 @@ export async function startupServer() {
 		});
 	});
 
+	/** 获取网站图标（带内存缓存） */
 	app.get('/icon', async (req, res) => {
 		const iconUrl = req.query.url as string;
 		if (!iconUrl) {
 			res.status(400).send('Missing url parameter');
 			return;
 		}
-		try {
-			const response = await axios.get(iconUrl, {
-				responseType: 'arraybuffer',
-				timeout: 5000
-			});
-			const contentType = response.headers['content-type'] || 'image/png';
-			res.setHeader('Content-Type', contentType);
+
+		// 查缓存
+		const cached = iconCache.get(iconUrl);
+		if (cached) {
+			res.setHeader('Content-Type', cached.contentType);
 			res.setHeader('Cache-Control', 'public, max-age=86400');
-			res.send(response.data);
-		} catch (err) {
-			// 返回 1x1 透明 GIF 作为降级图标
-			res.setHeader('Content-Type', 'image/gif');
-			res.send(Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'));
+			res.send(cached.data);
+			return;
 		}
+
+		// 缓存未命中，走三级降级获取
+		const result = await fetchIcon(iconUrl);
+
+		// 写入缓存（降级图标也缓存，避免重复降级）
+		if (iconCache.size >= ICON_CACHE_MAX) {
+			const firstKey = iconCache.keys().next().value;
+			if (firstKey !== undefined) iconCache.delete(firstKey);
+		}
+		iconCache.set(iconUrl, result);
+
+		res.setHeader('Content-Type', result.contentType);
+		res.setHeader('Cache-Control', 'public, max-age=86400');
+		res.send(result.data);
 	});
 
 	/** 请求转发 */
