@@ -140,10 +140,7 @@
 			</Description>
 		</Card>
 
-		<Card
-			v-if="!simple"
-			title="路径设置"
-		>
+		<Card title="路径设置">
 			<Path
 				label="浏览器缓存路径"
 				name="userDataDirsFolder"

@@ -3,10 +3,12 @@ import { createApp } from 'vue';
 import ArcoVue, { Icon } from '@arco-design/web-vue';
 import ArcoVueIcon from '@arco-design/web-vue/es/icon';
 import App from './App.vue';
+import AppInBrowser from './AppInBrowser.vue';
 import '@arco-design/web-vue/dist/arco.css';
 import { router } from './route';
 import { notify } from './utils/notify';
 import 'material-icons/iconfont/material-icons.css';
+import { inBrowser } from './utils/node';
 
 window.addEventListener('error', function (e) {
 	console.error(e);
@@ -52,14 +54,34 @@ function errorFilter(str: string) {
 	}
 }
 
-createApp(App)
-	.use(router)
-	.use(ArcoVue)
-	.use(ArcoVueIcon)
-	.component('IconFont', Icon.addFromIconFontCn({ src: 'js/acro.font.js' }))
-	.directive('focus', {
-		mounted(el) {
-			el.focus();
-		}
-	})
-	.mount('#app');
+(() => {
+	/**
+	 * 区分浏览器环境和electron渲染进程环境
+	 */
+	if (inBrowser) {
+		createApp(AppInBrowser)
+			.use(router)
+			.use(ArcoVue)
+			.use(ArcoVueIcon)
+			.component('IconFont', Icon.addFromIconFontCn({ src: 'js/acro.font.js' }))
+			.directive('focus', {
+				mounted(el) {
+					el.focus();
+				}
+			})
+			.mount('#app');
+		return;
+	}
+
+	createApp(App)
+		.use(router)
+		.use(ArcoVue)
+		.use(ArcoVueIcon)
+		.component('IconFont', Icon.addFromIconFontCn({ src: 'js/acro.font.js' }))
+		.directive('focus', {
+			mounted(el) {
+				el.focus();
+			}
+		})
+		.mount('#app');
+})();

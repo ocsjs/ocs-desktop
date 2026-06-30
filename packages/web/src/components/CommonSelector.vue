@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<template v-if="props.list.length === 0">
-			<a-empty description="暂无数据" />
+			<a-empty :description="emptyText" />
 		</template>
 		<template v-else>
 			<template
@@ -38,21 +38,15 @@
 				</a-pagination>
 			</div>
 
-			<div class="mt-3 float-end">
-				<a-space>
-					<span
-						v-if="props.multiple"
-						style="font-size: 12px"
-						class="text-secondary float-end"
-					>
-						共选中 {{ selected.length }} 个
-					</span>
+			<div class="mt-3">
+				<a-space class="d-flex justify-content-between">
+					<span v-if="props.multiple"> 共选中 {{ selected.length }} 个 </span>
 					<a-button
 						style="width: 100px"
 						type="primary"
 						@click="confirm"
 					>
-						确定
+						{{ confirmText }}
 					</a-button>
 				</a-space>
 			</div>
@@ -63,11 +57,21 @@
 <script setup lang="ts" generic="Item extends {key: string}  ">
 import { Ref, ref, reactive } from 'vue';
 
-const props = defineProps<{
-	list: Item[];
-	onSelect: (items: Item[]) => void;
-	multiple: boolean;
-}>();
+const props = withDefaults(
+	defineProps<{
+		list: Item[];
+		onSelect?: (items: Item[]) => void;
+		multiple?: boolean;
+		confirmText?: string;
+		emptyText?: string;
+	}>(),
+	{
+		onSelect: () => {},
+		multiple: false,
+		confirmText: '确定',
+		emptyText: '暂无数据'
+	}
+);
 
 const selected = ref<Item[]>([]) as Ref<Item[]>;
 
