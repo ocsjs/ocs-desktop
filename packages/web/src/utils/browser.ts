@@ -237,8 +237,8 @@ export async function closeAllBrowser() {
 						footer: false
 					});
 
-					// 最久5秒后关闭
-					const timeout = setTimeout(close, 5000);
+					// 最久5秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗
+					const timeout = setTimeout(() => remote.app.call('exit', 0), 5000);
 					try {
 						for (const process of processes) {
 							await process.close();

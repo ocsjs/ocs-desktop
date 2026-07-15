@@ -185,10 +185,15 @@ onMounted(async () => {
 	watch([() => store.render], debounce(performSave, 100), { deep: true });
 
 	/** 全局唯一关闭处理 */
+	let isExiting = false;
 	ipcRenderer.on('close', async () => {
+		// 防重入：避免重复点击关闭按钮或 window.close 循环导致并发触发关闭流程、重复弹窗
+		if (isExiting) return;
+		isExiting = true;
 		console.log('关闭浏览器中...');
 		const res = await closeAllBrowser();
 		if (res === false) {
+			isExiting = false;
 			console.log('有浏览器拒绝关闭，取消退出');
 			return;
 		}
