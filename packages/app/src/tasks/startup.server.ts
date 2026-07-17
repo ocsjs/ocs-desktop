@@ -23,42 +23,106 @@ function extractDomain(url: string): string | null {
 	}
 }
 
-/** 1x1 透明 GIF 降级图标 */
+/** 默认网站图标（地球 SVG），所有源都取不到时返回，避免出现空白图标 */
 const FALLBACK_ICON = {
-	data: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
-	contentType: 'image/gif'
+	data: Buffer.from(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#86909c" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>`,
+		'utf8'
+	),
+	contentType: 'image/svg+xml'
 };
 
-/** 获取网站图标 — 三级降级策略：直接请求 → Google Favicon API → 降级图标 */
-async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: string }> {
-	// 第一级：直接请求原图标 URL
-	try {
-		const response = await axios.get(iconUrl, {
-			responseType: 'arraybuffer',
-			timeout: 5000
-		});
-		return {
-			data: response.data,
-			contentType: response.headers['content-type'] || 'image/png'
-		};
-	} catch {}
+/**
+ * 校验 buffer 是否为可解析的图片数据。
+ * 通过文件头魔数判定常见图片格式，避免把 HTML 404 页等非图片内容当作图标返回。
+ */
+function isImageBuffer(data: Buffer, contentType: string): boolean {
+	if (!data || data.length < 4) return false;
 
-	// 第二级：Google Favicon API 动态解析
+	// PNG: 89 50 4E 47
+	if (data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) return true;
+	// JPEG: FF D8 FF
+	if (data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return true;
+	// GIF: 47 49 46 38 (GIF8)
+	if (data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x38) return true;
+	// BMP: 42 4D
+	if (data[0] === 0x42 && data[1] === 0x4d) return true;
+	// ICO: 00 00 01 00
+	if (data[0] === 0x00 && data[1] === 0x00 && data[2] === 0x01 && data[3] === 0x00) return true;
+	// WEBP: RIFF....WEBP
+	if (
+		data.length >= 12 &&
+		data[0] === 0x52 &&
+		data[1] === 0x49 &&
+		data[2] === 0x46 &&
+		data[3] === 0x46 &&
+		data[8] === 0x57 &&
+		data[9] === 0x45 &&
+		data[10] === 0x42 &&
+		data[11] === 0x50
+	) {
+		return true;
+	}
+	// SVG（文本）：以 <?xml 或 <svg 开头，或 content-type 声明为 svg
+	const head = data.slice(0, 256).toString('utf8').trimStart().toLowerCase();
+	if (head.startsWith('<?xml') || head.startsWith('<svg') || contentType.toLowerCase().includes('svg')) {
+		return true;
+	}
+	// 兜底：content-type 明确是图片
+	if (contentType.toLowerCase().startsWith('image/')) return true;
+	return false;
+}
+
+/** 通用请求头：部分图标服务器会按 UA 重定向或返回非图标内容，统一带浏览器 UA */
+const ICON_REQUEST_HEADERS = {
+	'User-Agent':
+		'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+	Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+};
+
+/** 请求某个 URL 的图片数据，返回可解析图片或 null */
+async function tryFetchImage(url: string): Promise<{ data: Buffer; contentType: string } | null> {
+	try {
+		const response = await axios.get(url, {
+			responseType: 'arraybuffer',
+			timeout: 3000,
+			// 允许跟随重定向（部分图标地址会 301/302 到真实图片，Google Favicon 也会 302）
+			maxRedirects: 5,
+			headers: ICON_REQUEST_HEADERS
+		});
+		const contentType = response.headers['content-type'] || 'image/png';
+		return isImageBuffer(response.data, contentType) ? { data: response.data, contentType } : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * 获取网站图标 — 多源降级策略：
+ * 原始 URL → 站点自带 favicon.ico → 第三方 favicon 服务 → Google Favicon API → 降级图标
+ * 原始 URL 常为站点首页（返回 HTML），因此优先尝试站点 /favicon.ico（国内最稳），
+ * 再依次尝试第三方服务与 Google（部分地区不可达），最终降级。
+ */
+async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: string }> {
+	const candidates: string[] = [iconUrl];
+
 	const domain = extractDomain(iconUrl);
 	if (domain) {
-		try {
-			const response = await axios.get(`https://www.google.com/s2/favicons?domain=${domain}&sz=32`, {
-				responseType: 'arraybuffer',
-				timeout: 5000
-			});
-			return {
-				data: response.data,
-				contentType: response.headers['content-type'] || 'image/png'
-			};
-		} catch {}
+		// 站点自带 favicon.ico，国内可达性最好
+		candidates.push(`https://${domain}/favicon.ico`);
+		candidates.push(`http://${domain}/favicon.ico`);
+		// 第三方可达的 favicon 服务
+		candidates.push(`https://icons.duckduckgo.com/ip3/${domain}.png`);
+		candidates.push(`https://api.iowen.cn/favicon/${domain}.png`);
+		// Google Favicon（接口会 302 重定向到真实图标，部分地区不可达）
+		candidates.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
 	}
 
-	// 第三级：降级图标
+	for (const url of candidates) {
+		const result = await tryFetchImage(url);
+		if (result) return result;
+	}
+
 	return FALLBACK_ICON;
 }
 

@@ -3,10 +3,24 @@
 		v-for="(script, index) of automationScripts"
 		:key="index"
 	>
-		<a-card
-			:title="script.name"
-			class="as"
-		>
+		<a-card class="as">
+			<template #title>
+				<div class="d-flex align-items-center gap-2">
+					<img
+						v-if="script.icon && !failedIcons.has(script.icon)"
+						:src="iconUrl(script.icon)"
+						class="script-icon"
+						@error="failedIcons.add(script.icon!)"
+					/>
+					<Icon
+						v-else
+						type="public"
+						:size="18"
+						class="script-icon-fallback"
+					/>
+					<span> {{ script.name }} </span>
+				</div>
+			</template>
 			<template #extra>
 				<a-button
 					size="mini"
@@ -89,7 +103,10 @@
 </template>
 
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { RawAutomationScript } from './index';
+import { iconUrl } from '../../utils';
+import Icon from '../Icon.vue';
 
 const props = defineProps<{
 	automationScripts: RawAutomationScript[];
@@ -98,6 +115,9 @@ const props = defineProps<{
 const emits = defineEmits<{
 	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]): void;
 }>();
+
+/** 加载失败的图标地址集合，命中后改用默认地球图标 */
+const failedIcons = reactive(new Set<string>());
 
 function remove(index: number) {
 	const arr = [...props.automationScripts];
@@ -109,5 +129,12 @@ function remove(index: number) {
 <style scoped lang="less">
 .as + .as {
 	margin-top: 8px;
+}
+
+.script-icon {
+	width: 18px;
+	height: 18px;
+	object-fit: contain;
+	border-radius: 3px;
 }
 </style>

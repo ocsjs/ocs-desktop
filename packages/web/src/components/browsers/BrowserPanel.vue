@@ -170,6 +170,9 @@
 								showPageSize: true,
 								size: 'mini'
 							}"
+							:scroll="{
+								x: 800
+							}"
 							:columns="[
 								{
 									title: '操作',
