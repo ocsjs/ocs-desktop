@@ -55,9 +55,9 @@
 
 					<div class="cards-area entities">
 						<template v-if="allBrowsers.length === 0">
-							<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
+							<a-card class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
 								<EmptyBrowserCard />
-							</div>
+							</a-card>
 						</template>
 						<template v-else>
 							<div class="cards-grid">
@@ -144,7 +144,14 @@
 										type="add_circle_outline"
 										class="add-icon"
 									/>
-									<span class="add-text">新增浏览器</span>
+									<span class="add-text">新建浏览器</span>
+									<span
+										class="text-secondary"
+										style="font-size: 11px"
+									>
+										<a-tag>数据隔离</a-tag>
+										<a-tag>账号多开</a-tag>
+									</span>
 								</div>
 							</div>
 						</template>
@@ -154,7 +161,7 @@
 				<!-- 脚本面板 -->
 				<div
 					v-show="state.activeTab === 'scripts'"
-					class="overflow-auto"
+					class="overflow-auto p-2"
 				>
 					<UserScriptListPage />
 				</div>
@@ -254,6 +261,7 @@ onMounted(() => {
 	display: flex;
 	flex-direction: column;
 	overflow: auto;
+	background-color: #165cff08;
 }
 
 .cards-area {
@@ -274,6 +282,7 @@ onMounted(() => {
 	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s ease;
+	background-color: white;
 
 	&:hover {
 		border-color: #bedaff;
@@ -326,7 +335,7 @@ onMounted(() => {
 	justify-content: center;
 	min-height: 120px;
 	border: 1px dashed #c9cdd4;
-	background: transparent;
+	background-color: #165cff03;
 
 	&:hover {
 		border-color: #165dff;
@@ -335,13 +344,7 @@ onMounted(() => {
 
 	.add-icon {
 		font-size: 32px;
-		color: #165dff;
 		margin-bottom: 8px;
-	}
-
-	.add-text {
-		font-size: 13px;
-		color: #165dff;
 	}
 }
 
@@ -405,11 +408,14 @@ body[arco-theme='dark'] & {
 
 .tabs {
 	position: sticky;
-	background-color: white;
 	top: 0px;
 	z-index: 99;
+
 	:deep(.arco-tabs-tab) {
 		border: 1px solid rgb(235, 235, 235);
+		background-color: white;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+		margin: 4px;
 	}
 }
 

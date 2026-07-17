@@ -10,6 +10,7 @@
 				show-icon
 				banner
 				closable
+				class="rounded"
 				@close="onClose(index)"
 			>
 				{{ banner.content }}

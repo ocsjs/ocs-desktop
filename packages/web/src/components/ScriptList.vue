@@ -299,6 +299,7 @@ function getUrlVersion(url: string) {
 	border-radius: 4px;
 	padding: 8px 12px;
 	box-shadow: 0px 2px 4px 0px #d7d7d7;
+	background-color: white;
 }
 
 .user-script-active {

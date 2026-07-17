@@ -1,6 +1,6 @@
 <template>
-	<div class="setting text-center container-md">
-		<Card title="通用设置">
+	<div class="setting container-md">
+		<a-card title="通用设置">
 			<Description class="pt-2 pb-2">
 				<template #label>
 					<img
@@ -22,7 +22,6 @@
 				</a-tooltip> -->
 
 				<a-button
-					size="small"
 					type="primary"
 					@click="state.show = true"
 				>
@@ -64,66 +63,51 @@
 					</a-modal>
 				</div>
 			</Description>
-		</Card>
+		</a-card>
 
-		<Card title="浏览器设置">
+		<a-card title="浏览器设置">
 			<BrowserPath></BrowserPath>
 
 			<Description label="原生弹窗">
 				<a-tooltip content="启用后，浏览器中的原版弹窗可能会影响脚本运行">
-					<a-switch
-						v-model="store.render.setting.browser.enableDialog"
-						size="small"
-					/>
+					<a-switch v-model="store.render.setting.browser.enableDialog" />
 				</a-tooltip>
 			</Description>
 
 			<Description label="强制安装脚本">
 				<a-tooltip content="启用后，启动浏览器时将跳过版本检查，强制安装所有启用的脚本">
-					<a-switch
-						v-model="store.render.setting.browser.forceUpdateScript"
-						size="small"
-					/>
+					<a-switch v-model="store.render.setting.browser.forceUpdateScript" />
 				</a-tooltip>
 			</Description>
-		</Card>
+		</a-card>
 
-		<Card title="基本设置">
+		<a-card title="基本设置">
 			<Description label="开机自启">
-				<a-switch
-					v-model="store.window.autoLaunch"
-					size="small"
-				/>
+				<a-switch v-model="store.window.autoLaunch" />
 			</Description>
 
 			<Description label="窗口置顶">
-				<a-switch
-					v-model="store.window.alwaysOnTop"
-					size="small"
-				/>
+				<a-switch v-model="store.window.alwaysOnTop" />
 			</Description>
 			<Description label="夜间模式">
 				<a-switch
 					v-model="store.render.setting.theme.dark"
-					size="small"
 					@click="changeTheme"
 				/>
 			</Description>
 			<Description label="显示侧边栏文字">
 				<a-switch
 					v-model="store.render.setting.showSideBarText"
-					size="small"
 					@click="changeTheme"
 				/>
 			</Description>
-		</Card>
+		</a-card>
 
-		<Card title="其他设置">
+		<a-card title="其他设置">
 			<Description label="浏览器缓存预警阈值">
 				<a-input-number
 					v-model="store.render.setting.browser.cachesSizeWarningPoint"
 					style="width: 200px"
-					size="small"
 				>
 					<template #append> GB </template>
 				</a-input-number>
@@ -138,9 +122,9 @@
 					/>
 				</a-popover>
 			</Description>
-		</Card>
+		</a-card>
 
-		<Card title="路径设置">
+		<a-card title="路径设置">
 			<Path
 				label="浏览器缓存路径"
 				name="userDataDirsFolder"
@@ -159,7 +143,7 @@
 				label="软件路径"
 				name="exe-path"
 			/>
-		</Card>
+		</a-card>
 
 		<div class="mt-4">
 			<a-popconfirm
@@ -168,19 +152,13 @@
 				cancel-text="取消"
 				@ok="reset"
 			>
-				<a-button
-					size="small"
-					status="danger"
-				>
-					重置设置
-				</a-button>
+				<a-button status="danger"> 重置设置 </a-button>
 			</a-popconfirm>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import Card from './Card.vue';
 import Description from './Description.vue';
 import Path from './Path.vue';
 import { lang, store } from '../store';
@@ -242,11 +220,16 @@ function syncNote() {
 <style scoped lang="less">
 .setting {
 	min-height: 500px;
+	max-width: 800px;
 }
 
 #ocs-global-configs {
 	overflow: overlay;
 	max-width: 600px;
 	max-height: calc(100vh - 200px);
+}
+
+.arco-card + .arco-card {
+	margin-top: 12px;
 }
 </style>

@@ -108,10 +108,10 @@ html.window-frame {
 }
 code {
   margin: 0px 2px !important;
-  padding: 2px 4px !important;
-  font-size: 90% !important;
-  color: #323030;
-  background-color: #eaeaea;
+  padding: 4px 6px !important;
+  font-size: 12px !important;
+  color: #d63384;
+  background-color: #f2f2f2;
   border-radius: 4px;
 }
 em {

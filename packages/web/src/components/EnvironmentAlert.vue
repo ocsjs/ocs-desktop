@@ -12,6 +12,7 @@
 				type="warning"
 				show-icon
 				banner
+				class="rounded"
 			>
 				<div>{{ lang('browser_page_environment_error_notice', '软件环境存在问题，将会影响浏览器的正常启动') }}</div>
 

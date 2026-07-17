@@ -1,0 +1,74 @@
+/**
+ * Arco Design 圆角主题覆盖
+ * 风格：强圆润（胶囊感）
+ *
+ * 必须用 body 选择器（而非 :root）：arco.css 把这些变量定义在 body{} 上，
+ * CSS 自定义属性靠继承传递，body 自身的声明会覆盖从 :root(html) 继承的值，
+ * 因此写在 :root 上对 body 内元素无效。改用 body 同选择器、靠"后加载"取胜。
+ * 本文件必须在 arco.css 之后引入。
+ */
+body {
+  --border-radius-small: 6px;
+  --border-radius-medium: 12px;
+  --border-radius-large: 18px;
+  --tag-border-radius: 999px;
+  --badge-border-radius: 999px;
+  --switch-radius: 999px;
+}
+.arco-input-wrapper,
+.arco-textarea-wrapper,
+.arco-select-view-single,
+.arco-select-view-multiple {
+  border-radius: var(--border-radius-small) !important;
+}
+.arco-card {
+  border-radius: var(--border-radius-medium) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+.arco-alert {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+.arco-collapse {
+  border-radius: var(--border-radius-medium) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden;
+}
+.arco-collapse-item {
+  border-radius: var(--border-radius-medium) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+.arco-alert-info {
+  background-color: #d6e8ff;
+}
+/**
+ * 其他自定义样式，更现代化
+ */
+.arco-modal {
+  border-radius: var(--border-radius-large) !important;
+}
+.arco-modal-header {
+  border-bottom: none !important;
+}
+.arco-card-header {
+  border-bottom: 1px solid var(--color-neutral-2);
+}
+.arco-modal-footer {
+  border-top: 1px solid var(--color-neutral-2);
+}
+.arco-modal-close-btn {
+  font-size: 24px;
+}
+.arco-modal-simple .arco-modal-title {
+  justify-content: start !important;
+}
+.arco-modal-title {
+  font-size: 18px !important;
+  font-weight: bold !important;
+}
+.arco-modal-footer .arco-btn-size-medium {
+  padding: 4px 24px;
+}
+.arco-checkbox-icon {
+  width: 18px;
+  height: 18px;
+}

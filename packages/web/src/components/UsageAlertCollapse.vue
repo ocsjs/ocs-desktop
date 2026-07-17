@@ -5,7 +5,7 @@
 			position="bottom"
 		>
 			<a-alert
-				class="alert-collapse"
+				class="alert-collapse usage-alert-top"
 				:banner="banner ?? false"
 				:center="center ?? false"
 				:type="type || 'info'"
@@ -30,7 +30,7 @@
 			</a-alert>
 			<a-alert
 				v-if="!collapse"
-				class="mb-3 border-top"
+				class="mb-3 border-top usage-alert-bottom"
 				:banner="banner ?? false"
 				:center="center ?? false"
 				:type="type || 'info'"
@@ -74,8 +74,22 @@ const emits = defineEmits<{
 }>();
 </script>
 
-<style scoped>
+<style scoped lang="less">
 .alert-collapse {
 	cursor: pointer;
+}
+
+.usage-alert-top {
+	border-top-left-radius: var(--border-radius-small);
+	border-top-right-radius: var(--border-radius-small);
+}
+
+.usage-alert-bottom {
+	border-bottom-left-radius: var(--border-radius-small);
+	border-bottom-right-radius: var(--border-radius-small);
+}
+
+code {
+	background-color: rgb(224, 106, 106) !important;
 }
 </style>

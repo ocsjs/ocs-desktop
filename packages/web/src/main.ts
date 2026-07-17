@@ -8,6 +8,8 @@ import '@arco-design/web-vue/dist/arco.css';
 import { router } from './route';
 import { notify } from './utils/notify';
 import 'material-icons/iconfont/material-icons.css';
+// 自定义圆角主题覆盖，必须在 arco.css 之后引入
+import './assets/less/arco-custom.less';
 import { inBrowser } from './utils/node';
 
 window.addEventListener('error', function (e) {

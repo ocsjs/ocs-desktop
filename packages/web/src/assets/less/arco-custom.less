@@ -1,0 +1,104 @@
+/**
+ * Arco Design 圆角主题覆盖
+ * 风格：强圆润（胶囊感）
+ *
+ * 必须用 body 选择器（而非 :root）：arco.css 把这些变量定义在 body{} 上，
+ * CSS 自定义属性靠继承传递，body 自身的声明会覆盖从 :root(html) 继承的值，
+ * 因此写在 :root 上对 body 内元素无效。改用 body 同选择器、靠"后加载"取胜。
+ * 本文件必须在 arco.css 之后引入。
+ */
+body {
+	// 圆角档位整体上调，让全局观感更圆润
+	--border-radius-small: 6px; // 原 2px → 按钮、输入框、卡片描边
+	--border-radius-medium: 12px; // 原 4px → 弹窗、面板、下拉
+	--border-radius-large: 18px; // 原 8px → 大容器 / 预留
+
+	// tag / badge / switch 这些小元件希望更接近胶囊
+	--tag-border-radius: 999px;
+	--badge-border-radius: 999px;
+	--switch-radius: 999px;
+}
+
+// 输入框聚焦时圆角保持一致，避免 arco 内部个别硬编码导致视觉不统一
+.arco-input-wrapper,
+.arco-textarea-wrapper,
+.arco-select-view-single,
+.arco-select-view-multiple {
+	border-radius: var(--border-radius-small) !important;
+}
+
+.arco-card {
+	border-radius: var(--border-radius-medium) !important;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+.arco-alert {
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+// 折叠面板：整体容器与展开项均加阴影，强化层次感
+.arco-collapse {
+	border-radius: var(--border-radius-medium) !important;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+	overflow: hidden;
+}
+
+// 折叠面板展开项（每个可折叠块）也加阴影，强化层次感
+.arco-collapse-item {
+	border-radius: var(--border-radius-medium) !important;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+// 简洁模式下背景为淡蓝，通知也是淡蓝，这里加强一点通知背景防止和背景重合颜色
+.arco-alert-info {
+	background-color: #d6e8ff;
+}
+
+/**
+ * 其他自定义样式，更现代化
+ */
+
+.arco-modal {
+	border-radius: var(--border-radius-large) !important;
+}
+
+.arco-modal-header {
+	border-bottom: none !important;
+}
+
+// 淡化边框
+.arco-card-header {
+	border-bottom: 1px solid var(--color-neutral-2);
+}
+.arco-modal-footer {
+	border-top: 1px solid var(--color-neutral-2);
+}
+
+.arco-modal-close-btn {
+	font-size: 24px;
+}
+
+.arco-modal-simple {
+	.arco-modal-title {
+		justify-content: start !important;
+	}
+}
+
+// 让 modal 的标题更突出，避免被关闭按钮抢了风头
+.arco-modal-title {
+	font-size: 18px !important;
+	font-weight: bold !important;
+}
+
+// 加大按钮尺寸，提升可点击性
+.arco-modal-footer {
+	.arco-btn-size-medium {
+		padding: 4px 24px;
+	}
+}
+
+// 加大复选框图标尺寸，避免视觉上过小
+.arco-checkbox-icon {
+	width: 18px;
+	height: 18px;
+}

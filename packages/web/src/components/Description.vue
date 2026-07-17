@@ -4,12 +4,12 @@
 			flex="160px"
 			class="desc-label"
 		>
-			<slot name="label">{{ label }}</slot> :
+			<slot name="label">{{ label }}</slot>
 		</a-col>
 
 		<a-col
 			flex="auto"
-			class="d-inline-flex align-items-center"
+			class="d-inline-flex align-items-center justify-content-end"
 		>
 			<span
 				v-if="desc"
@@ -47,5 +47,6 @@ const { label, desc, textClass } = toRefs(props);
 
 .desc-label {
 	white-space: nowrap;
+	font-size: 16px;
 }
 </style>
