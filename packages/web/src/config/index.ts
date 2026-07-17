@@ -3,6 +3,10 @@ import { RouteRecordRaw } from 'vue-router';
 
 import page from '@/pages/index.vue';
 import bookmarks from '@/pages/bookmarks.vue';
+import Today from '@/plus/pages/Today.vue';
+import CourseBrowser from '@/plus/pages/CourseBrowser.vue';
+import LegacyHub from '@/plus/pages/LegacyHub.vue';
+import ModulePlaceholder from '@/plus/pages/ModulePlaceholder.vue';
 import { GreasyForkUserScript, ScriptCatUserScript, CommonUserScript } from '../types/user.script';
 import { remote } from '../utils/remote';
 import { ScriptSearchEngine } from '../types/search';
@@ -21,52 +25,168 @@ export const config = reactive({
 		{
 			name: 'index',
 			path: '/',
-			redirect: '/browsers',
+			redirect: '/today',
 			component: shallowRef(page),
 			children: [
 				{
-					name: 'browsers',
-					path: 'browsers',
+					name: 'today',
+					path: 'today',
+					component: shallowRef(Today),
+					meta: {
+						icon: 'home',
+						title: '今日学习'
+					}
+				},
+				{
+					name: 'browser',
+					path: 'browser',
+					component: shallowRef(CourseBrowser),
+					meta: {
+						icon: 'public',
+						title: '网课浏览器'
+					}
+				},
+				{
+					name: 'ai-question',
+					path: 'ai-question',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'smart_toy',
+						title: 'AI 题目助手'
+					}
+				},
+				{
+					name: 'question-bank',
+					path: 'question-bank',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'disabled_by_default',
+						title: '错题本'
+					}
+				},
+				{
+					name: 'documents',
+					path: 'documents',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'folder',
+						title: '资料库'
+					}
+				},
+				{
+					name: 'tasks',
+					path: 'tasks',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'event_available',
+						title: '任务提醒'
+					}
+				},
+				{
+					name: 'model-config',
+					path: 'model-config',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'dns',
+						title: '模型配置'
+					}
+				},
+				{
+					name: 'settings',
+					path: 'settings',
+					component: shallowRef(ModulePlaceholder),
+					meta: {
+						icon: 'settings',
+						title: '设置中心'
+					}
+				},
+				{
+					name: 'legacy',
+					path: 'legacy',
+					component: shallowRef(LegacyHub),
+					meta: {
+						icon: 'tune',
+						title: '高级/原版功能'
+					}
+				},
+				{
+					name: 'legacy-browsers',
+					path: 'legacy/browsers',
 					component: () => import('@/pages/browsers/index.vue'),
 					meta: {
 						icon: 'view_list',
-						title: '浏览器列表'
+						title: '原浏览器列表',
+						hideInMenu: true
 					}
 				},
 				{
-					name: 'user-scripts',
-					path: 'user-scripts',
+					name: 'legacy-browsers-compat',
+					path: 'browsers',
+					redirect: '/legacy/browsers',
+					meta: {
+						icon: 'view_list',
+						title: '原浏览器列表',
+						hideInMenu: true
+					}
+				},
+				{
+					name: 'legacy-user-scripts',
+					path: 'legacy/user-scripts',
 					component: () => import('@/pages/user-scripts/index.vue'),
 					meta: {
 						icon: 'code',
-						title: '脚本列表'
+						title: '原脚本列表',
+						hideInMenu: true
 					}
 				},
 				{
-					name: 'resources',
-					path: 'resources',
+					name: 'legacy-user-scripts-compat',
+					path: 'user-scripts',
+					redirect: '/legacy/user-scripts',
+					meta: {
+						icon: 'code',
+						title: '原脚本列表',
+						hideInMenu: true
+					}
+				},
+				{
+					name: 'legacy-resources',
+					path: 'legacy/resources',
 					component: () => import('@/pages/resources/index.vue'),
 					meta: {
 						icon: 'widgets',
-						title: '应用中心'
+						title: '原应用中心',
+						hideInMenu: true
 					}
 				},
 				{
-					name: 'dashboard',
-					path: 'dashboard',
+					name: 'legacy-dashboard',
+					path: 'legacy/dashboard',
 					component: () => import('@/pages/dashboard/index.vue'),
 					meta: {
 						icon: 'image',
-						title: '监控列表'
+						title: '原监控列表',
+						hideInMenu: true
 					}
 				},
 				{
-					name: 'setting',
+					name: 'legacy-setting-compat',
 					path: 'setting',
+					redirect: '/legacy/setting',
+					meta: {
+						icon: 'settings',
+						title: '原软件设置',
+						hideInMenu: true
+					}
+				},
+				{
+					name: 'legacy-setting',
+					path: 'legacy/setting',
 					component: () => import('@/pages/setting/index.vue'),
 					meta: {
 						icon: 'settings',
-						title: '软件设置'
+						title: '原软件设置',
+						hideInMenu: true
 					}
 				}
 			]

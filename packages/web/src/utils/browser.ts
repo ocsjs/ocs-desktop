@@ -78,7 +78,7 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 		? generateUniqueName(opts.name, siblingNames)
 		: generateUniqueName('未命名浏览器', siblingNames);
 
-	currentFolder.value.children[id] = new Browser({
+	const browser = new Browser({
 		type: 'browser',
 		uid: id,
 		name,
@@ -96,6 +96,8 @@ export function newBrowser(opts?: { name: string; playwrightScripts?: RawPlaywri
 		tags: [],
 		playwrightScripts: opts?.playwrightScripts ? JSON.parse(JSON.stringify(opts?.playwrightScripts)) : []
 	});
+	currentFolder.value.children[id] = browser;
+	return browser;
 }
 
 export async function checkBrowserCaches() {
