@@ -6,19 +6,29 @@ export const ZHSUnitLoginScript = new AutomationScript(
 	{
 		schoolname: {
 			label: '学校',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入学校名称'
 		},
 		id: {
 			label: '学号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入学号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '智慧树-学校登录',
+		icon: 'https://www.zhihuishu.com/',
 		async run(
 			page,
 			configs,
@@ -83,15 +93,22 @@ export const ZHSPhoneLoginScript = new AutomationScript(
 	{
 		phone: {
 			label: '手机号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入手机号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '智慧树-手机密码登录',
+		icon: 'https://www.zhihuishu.com/',
 		async run(
 			page,
 			configs,

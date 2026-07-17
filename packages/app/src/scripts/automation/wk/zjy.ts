@@ -5,15 +5,22 @@ export const ZJYLoginScript = new AutomationScript(
 	{
 		username: {
 			label: '账号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入账号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '职教云-账号密码登录',
+		icon: 'https://zjy2.icve.com.cn/',
 		async run(page, configs) {
 			try {
 				await page.goto('https://zjy2.icve.com.cn/study/index');

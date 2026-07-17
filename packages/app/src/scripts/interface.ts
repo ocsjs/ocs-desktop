@@ -52,10 +52,29 @@ export type BaseAutomationEvents = {
 	'script-data': (...msg: string[]) => void;
 };
 
+export type ConfigType = 'text' | 'password' | 'number' | 'textarea' | 'select' | 'switch';
+
+export interface ConfigOption {
+	label: string;
+	value: any;
+}
+
 export interface Config {
 	label: string;
 	value: any;
 	hide?: boolean;
+	/** 输入类型，默认 text */
+	type?: ConfigType;
+	/** 是否必填 */
+	required?: boolean;
+	/** 最大值/最大长度（number 类型为数值上限，text/textarea 为最大字符长度） */
+	max?: number;
+	/** 最小值/最小长度 */
+	min?: number;
+	/** 下拉选项（type=select 时生效） */
+	options?: ConfigOption[];
+	/** 占位提示 */
+	placeholder?: string;
 }
 
 export type ConfigValueRecord<C extends Record<string, Config>> = {

@@ -4,7 +4,10 @@ export const NewPageScript = new AutomationScript(
 	{
 		url: {
 			label: '网页链接',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入 http 开头的链接'
 		}
 	},
 	{

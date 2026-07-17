@@ -5,15 +5,22 @@ export const ICVELoginScript = new AutomationScript(
 	{
 		username: {
 			label: '账号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入账号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '智慧职教-账号密码登录',
+		icon: 'https://www.icve.com.cn/',
 		async run(page, configs) {
 			try {
 				if (await isNotLogin(page)) {

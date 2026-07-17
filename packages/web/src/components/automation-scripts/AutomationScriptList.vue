@@ -31,14 +31,55 @@
 					>
 						<div style="flex: 0 0 100px">
 							<span> {{ cfg.label }} </span>
+							<span
+								v-if="cfg.required"
+								class="text-danger"
+							> *</span>
 						</div>
 						<div style="flex: auto">
-							<a-input
+							<a-input-password
+								v-if="cfg.type === 'password'"
 								v-model="cfg.value"
-								:placeholder="`输入 ${cfg.label} ...`"
 								size="small"
+								:max-length="cfg.max"
+								:placeholder="cfg.placeholder || `输入 ${cfg.label} ...`"
+							/>
+							<a-input-number
+								v-else-if="cfg.type === 'number'"
+								v-model="cfg.value"
+								size="small"
+								:min="cfg.min"
+								:max="cfg.max"
+								:placeholder="cfg.placeholder || `输入 ${cfg.label} ...`"
+							/>
+							<a-textarea
+								v-else-if="cfg.type === 'textarea'"
+								v-model="cfg.value"
+								size="small"
+								:max-length="cfg.max"
+								:auto-size="{ minRows: 1, maxRows: 3 }"
+								:placeholder="cfg.placeholder || `输入 ${cfg.label} ...`"
+							/>
+							<a-select
+								v-else-if="cfg.type === 'select'"
+								v-model="cfg.value"
+								size="small"
+								:options="cfg.options"
+								:placeholder="cfg.placeholder || `选择 ${cfg.label} ...`"
+							/>
+							<a-switch
+								v-else-if="cfg.type === 'switch'"
+								v-model="cfg.value"
+								size="small"
+							/>
+							<a-input
+								v-else
+								v-model="cfg.value"
+								size="small"
+								:max-length="cfg.max"
+								:placeholder="cfg.placeholder || `输入 ${cfg.label} ...`"
 								@blur="() => (cfg.value = cfg.value.trim())"
-							></a-input>
+							/>
 						</div>
 					</div>
 				</div>

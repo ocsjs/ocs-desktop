@@ -6,19 +6,29 @@ export const CXUnitLoginScript = new AutomationScript(
 	{
 		unit: {
 			label: '学校/单位',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入学校/单位名称'
 		},
 		id: {
 			label: '学号/工号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入学号/工号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '超星-学校机构登录',
+		icon: 'https://www.chaoxing.com/',
 		async run(
 			page,
 			configs,
@@ -55,15 +65,22 @@ export const CXPhoneLoginScript = new AutomationScript(
 	{
 		phone: {
 			label: '手机号',
-			value: ''
+			value: '',
+			type: 'text',
+			required: true,
+			placeholder: '请输入手机号'
 		},
 		password: {
 			label: '密码',
-			value: ''
+			value: '',
+			type: 'password',
+			required: true,
+			placeholder: '请输入密码'
 		}
 	},
 	{
 		name: '超星-手机密码登录',
+		icon: 'https://www.chaoxing.com/',
 		async run(page, configs) {
 			try {
 				if (await isNotLogin(page)) {
