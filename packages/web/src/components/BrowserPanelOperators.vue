@@ -1,15 +1,40 @@
 <template>
-	<div class="d-flex w-100 align-items-center">
-		<div style="flex: 0 0 84px">浏览器编辑</div>
+	<div class="d-flex w-100 align-items-center justify-content-end flex-wrap gap-2">
+		<div style="flex: 1 1 auto">
+			<template v-if="state.renaming">
+				<a-input
+					ref="renameRef"
+					v-model="name"
+					size="mini"
+					@blur="onBlur"
+				></a-input>
+			</template>
+			<template v-else>
+				<span class="fw-bold">{{ browser.name }}</span>
+				<a-tooltip
+					content="重命名"
+					position="bottom"
+				>
+					<a-button
+						type="text"
+						size="mini"
+						class="ms-2"
+						@click="rename"
+					>
+						<IconEdit />
+					</a-button>
+				</a-tooltip>
+			</template>
+		</div>
 		<div
-			style="flex: 1 1 auto"
+			style="flex: 0 0 auto"
 			class="d-flex justify-content-end"
 		>
 			<BrowserOperators
 				:browser="browser"
 				tooltip-position="br"
-				icon-class="fs-4"
-				class="ps-3 pe-5"
+				icon-class="fs-5"
+				class="ps-2"
 			>
 				<template #split>
 					<a-divider direction="vertical" />
@@ -40,13 +65,36 @@
 </template>
 
 <script lang="ts" setup>
+import { reactive, ref } from 'vue';
 import { Browser } from '../fs/browser';
 import BrowserOperators from './browsers/BrowserOperators.vue';
 import Icon from './Icon.vue';
+import { nextTick } from 'process';
 
-defineProps<{
+const props = defineProps<{
 	browser: Browser;
 }>();
+
+const name = defineModel<string>({ default: '' });
+
+const state = reactive({
+	renaming: false
+});
+
+const renameRef = ref();
+
+function rename() {
+	state.renaming = true;
+	name.value = props.browser.name;
+	nextTick(() => {
+		renameRef.value?.focus();
+	});
+}
+
+function onBlur() {
+	props.browser?.rename(name.value);
+	state.renaming = false;
+}
 </script>
 
 <style scoped></style>

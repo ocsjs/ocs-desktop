@@ -1,70 +1,13 @@
 <template>
-	<div
-		ref="profileElement"
-		class="overflow-auto profile"
-	>
-		<a-descriptions :column="1">
-			<a-descriptions-item label="文件名">
-				<template v-if="state.renaming">
-					<a-input
-						id="bp-rename"
-						v-model="instance.name"
-						size="mini"
-						@blur="
-							() => {
-								instance?.rename(instance.name);
-								state.renaming = false;
-							}
-						"
-					></a-input>
-				</template>
-				<template v-else>
-					{{ instance.name }}
-					<a-button
-						type="text"
-						size="mini"
-						class="ms-2"
-						@click="rename"
-					>
-						重命名
-					</a-button>
-				</template>
-			</a-descriptions-item>
-			<a-descriptions-item label="创建时间">
-				{{ datetime(instance.createTime) }}
-			</a-descriptions-item>
-			<a-descriptions-item label="文件位置">
-				{{
-					Folder.from(instance.parent)
-						?.flatParents()
-						.map((f) => f.name)
-						.join(' / ')
-				}}
-				<a-button
-					type="text"
-					size="mini"
-					@click="instance?.location()"
-				>
-					跳转到该目录
-				</a-button>
-			</a-descriptions-item>
-			<a-descriptions-item label="缓存路径">
-				{{ instance.cachePath }}
-			</a-descriptions-item>
-		</a-descriptions>
-
-		<a-divider class="mt-1 mb-1" />
-
+	<div class="profile">
 		<a-descriptions
 			v-if="instance"
 			:column="1"
 			size="large"
+			class="mt-3 ps-2 pe-2"
 		>
 			<a-descriptions-item label="标签分类">
-				<div
-					id="bp-tags"
-					data-label="标签分类"
-				>
+				<div>
 					<Tags
 						v-model:tags="instance.tags"
 						size="small"
@@ -75,90 +18,137 @@
 			</a-descriptions-item>
 			<a-descriptions-item label="备注描述">
 				<a-textarea
-					id="bp-notes"
 					v-model="instance.notes"
-					data-label="备注描述"
 					placeholder="备注为空~"
-					:auto-size="{
-						minRows: 2,
-						maxRows: 10
-					}"
 					allow-clear
 				/>
 			</a-descriptions-item>
+		</a-descriptions>
 
-			<a-descriptions-item label="自动化程序">
-				<div
-					id="bp-automation-scripts"
-					data-label="自动化程序"
+		<a-divider> 自动程序 </a-divider>
+
+		<div class="pe-2">
+			<UsageAlertCollapse
+				v-model:collapse="store.render.state.read_record.automation_script_usage"
+				class="mb-2"
+				banner
+				title="使用提示"
+				:html="
+					lang(
+						'simple_mode_index_automation_script_usage',
+						'启动浏览器后会自动运行 <code>自动程序</code><br />根据不同配置运行例如：自动登录、自动点击等。'
+					)
+				"
+			>
+				启动浏览器后会自动运行 <code>自动程序</code><br />
+				根据不同配置运行例如：自动登录、自动点击等。
+			</UsageAlertCollapse>
+			<a-tooltip>
+				<template #content>
+					启动浏览器后会自动运行 <code>自动程序</code><br />
+					根据不同配置运行例如：自动登录、自动点击等。
+					<a-divider class="mt-1 mb-1" />
+					提示1：自动化程序拥有操控页面的所有权限，与用户脚本不同的是，用户脚本是运行在页面中，权限比较少。<br />
+					提示2：通常用来辅助用户脚本一起配合运行。<br />
+					提示3：输入的配置例如账号密码将由软件加密存储，以保证数据安全。
+				</template>
+
+				<a-button
+					class="w-100"
+					type="primary"
+					@click="state.showAutomationScriptSelector = true"
 				>
-					<a-tooltip>
-						<template #content>
-							启动浏览器后会运行 “自动化程序”。每个自动化程序会开启一个新的页面。 选择并确定后,
-							需要在浏览器设置里修改配置。
-							<a-divider class="mt-1 mb-1" />
-							提示1：自动化程序拥有操控页面的所有权限，与用户脚本不同的是，用户脚本是运行在页面中，权限比较少。<br />
-							提示2：通常用来辅助用户脚本一起配合运行。<br />
-							提示3：输入的配置例如账号密码将由软件加密存储，以保证数据安全。
-						</template>
+					<icon-plus /> 添加自动程序
+				</a-button>
+			</a-tooltip>
+			<div class="mt-2">
+				<AutomationScripts v-model:automation-scripts="instance.automationScripts"></AutomationScripts>
+			</div>
+		</div>
 
+		<a-divider> </a-divider>
+
+		<a-collapse :default-active-key="[1]">
+			<a-collapse-item
+				key="1"
+				header="基础信息"
+			>
+				<a-descriptions
+					:column="1"
+					class="ps-2 pe-2 mb-2"
+				>
+					<a-descriptions-item label="创建时间">
+						<span style="font-size: 12px">{{ datetime(instance.createTime) }}</span>
+					</a-descriptions-item>
+					<a-descriptions-item label="文件位置">
+						<span style="font-size: 12px">
+							{{
+								Folder.from(instance.parent)
+									?.flatParents()
+									.map((f) => f.name)
+									.join(' / ')
+							}}
+						</span>
+						<a-button
+							type="text"
+							size="mini"
+							@click="instance?.location()"
+						>
+							跳转到该目录
+						</a-button>
+					</a-descriptions-item>
+					<a-descriptions-item
+						v-if="state.cachePathExists"
+						label="缓存路径"
+					>
+						<span
+							class="text-secondary pointer"
+							style="font-size: 12px"
+							@click="open(instance.cachePath)"
+						>
+							{{ instance.cachePath }} <IconFolder />
+						</span>
+					</a-descriptions-item>
+
+					<a-descriptions-item label="文件数据">
 						<a-button
 							size="mini"
-							@click="state.showAutomationScriptSelector = true"
+							@click="state.showCode = true"
 						>
-							设置 <icon-settings />
+							点击查看
 						</a-button>
-					</a-tooltip>
-					<div class="mt-2">
-						<AutomationScripts v-model:automation-scripts="instance.automationScripts"></AutomationScripts>
-					</div>
-				</div>
-			</a-descriptions-item>
-
-			<a-descriptions-item label="文件数据">
-				<a-button
-					id="bp-file-data"
-					data-label="文件数据"
-					size="mini"
-					@click="state.showCode = true"
-				>
-					点击查看
-				</a-button>
-				<a-modal
-					v-model:visible="state.showCode"
-					:footer="false"
-					:simple="true"
-					:width="600"
-					modal-class="p-0 m-0"
-				>
-					<div
-						class="m-3"
-						style="height: 70vh; overflow: overlay"
-					>
-						<a-textarea
-							:auto-size="true"
-							:disabled="true"
-							:model-value="JSON.stringify(instance, null, 4)"
-						></a-textarea>
-					</div>
-				</a-modal>
-			</a-descriptions-item>
-
-			<a-descriptions-item label="日志输出">
-				<div
-					id="bp-xterm"
-					data-label="日志输出"
-				>
-					<XTerm :uid="instance.uid"></XTerm>
-				</div>
-			</a-descriptions-item>
-
-			<a-descriptions-item label="操作历史">
-				<div
-					id="bp-file-history"
-					data-label="操作历史"
-					class="histories"
-				>
+						<a-modal
+							v-model:visible="state.showCode"
+							:footer="false"
+							:simple="true"
+							:width="600"
+							modal-class="p-0 m-0"
+						>
+							<div
+								class="m-3"
+								style="height: 70vh; overflow: overlay"
+							>
+								<a-textarea
+									:auto-size="true"
+									:disabled="true"
+									:model-value="JSON.stringify(instance, null, 4)"
+								></a-textarea>
+							</div>
+						</a-modal>
+					</a-descriptions-item>
+				</a-descriptions>
+			</a-collapse-item>
+			<a-collapse-item
+				key="2"
+				header="日志输出"
+			>
+				<XTerm :uid="instance.uid"></XTerm>
+			</a-collapse-item>
+			<a-collapse-item
+				key="3"
+				header="操作历史"
+			>
+				<div class="histories">
 					<template v-if="instance.histories.length">
 						<a-button
 							size="mini"
@@ -222,8 +212,8 @@
 
 					<a-empty v-else />
 				</div>
-			</a-descriptions-item>
-		</a-descriptions>
+			</a-collapse-item>
+		</a-collapse>
 
 		<a-modal
 			v-model:visible="state.showAutomationScriptSelector"
@@ -240,7 +230,7 @@
 </template>
 
 <script setup lang="ts">
-import { store } from '../../store';
+import { lang, store } from '../../store';
 import { Browser } from '../../fs/browser';
 import { datetime } from '../../utils';
 import Tags from '../Tags.vue';
@@ -248,22 +238,25 @@ import Icon from '../Icon.vue';
 import { BrowserOptions, Tag } from '../../fs/interface';
 import { Folder } from '../../fs/folder';
 import { currentBrowser } from '../../fs/index';
-import { reactive, onMounted, nextTick, ref } from 'vue';
+import { reactive, onMounted, nextTick } from 'vue';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScripts from '../automation-scripts/AutomationScriptList.vue';
 import XTerm from '../XTerm.vue';
+import { electron } from '../../utils/node';
+import { remote } from '../../utils/remote';
+import UsageAlertCollapse from '../UsageAlertCollapse.vue';
+
 const props = defineProps<{
 	browser: BrowserOptions;
 }>();
 
 // 这里因为 BrowserPanel 使用的是侧边栏，侧边栏关闭时会自动销毁对象，所以不用做 compute 计算处理
 const instance = Browser.from(props.browser.uid);
-const profileElement = ref<HTMLElement>();
 
 const state = reactive({
 	showCode: false,
-	renaming: false,
-	showAutomationScriptSelector: false
+	showAutomationScriptSelector: false,
+	cachePathExists: false
 });
 
 function createTag(tag: Tag) {
@@ -298,36 +291,18 @@ function clearHistory() {
 	}
 }
 
-function rename() {
-	state.renaming = true;
-	nextTick(() => {
-		profileElement.value?.querySelector<HTMLElement>('#bp-rename')?.focus();
-	});
-}
-
 /** 渲染侧边toc跳转栏 */
 onMounted(() => {
-	nextTick(() => {
-		const configs = Array.from(document.querySelectorAll('[id^=bp-]')) as HTMLElement[];
-
-		const toc = document.createElement('div');
-		toc.classList.add('bp-toc');
-		const bp = document.querySelector('#browser-panel');
-		const drawer = document.querySelector('#browser-panel .arco-drawer');
-		if (bp && drawer) {
-			bp.prepend(toc);
-			toc.style.right = drawer.clientWidth + 'px';
-			for (const el of configs) {
-				const div = document.createElement('div');
-				div.textContent = el.dataset.label || '';
-				div.addEventListener('click', () => {
-					el.scrollIntoView();
-				});
-				toc.append(div);
-			}
-		}
+	nextTick(async () => {
+		state.cachePathExists = await remote.fs.call('existsSync', props.browser.cachePath);
 	});
 });
+
+async function open(p: string) {
+	if (await remote.fs.call('existsSync', p)) {
+		electron.shell.openPath(p);
+	}
+}
 </script>
 
 <style scoped lang="less">

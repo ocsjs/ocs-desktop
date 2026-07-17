@@ -86,6 +86,7 @@ export type WebStore = {
 		read_record: {
 			user_script_usage: boolean;
 			browser_usage: boolean;
+			automation_script_usage: boolean;
 		};
 	};
 };
@@ -154,7 +155,8 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 			height: document.documentElement.clientHeight,
 			read_record: {
 				user_script_usage: false,
-				browser_usage: false
+				browser_usage: false,
+				automation_script_usage: false
 			}
 		}
 	} as WebStore

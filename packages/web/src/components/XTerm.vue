@@ -48,7 +48,6 @@ function openXTerm() {
 .xterm-container {
 	/* fix : https://github.com/xtermjs/xterm.js/issues/3564#issue-1062239799 */
 	overflow: hidden;
-	width: 420px;
 	height: 200px;
 	border-radius: 4px;
 	padding: 12px;

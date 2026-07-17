@@ -15,36 +15,20 @@
 
 			<!-- 全局：浏览器操作面板 -->
 			<template v-if="currentBrowser">
-				<template v-if="store.render.state.mini">
-					<a-modal
-						title="浏览器操作"
-						:visible="!!currentBrowser"
-						:width="600"
-						:footer="false"
-						fullscreen
-						@cancel="store.render.browser.currentBrowserUid = ''"
-					>
-						<template #title>
-							<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
-						</template>
+				<a-modal
+					:closable="false"
+					:visible="!!currentBrowser"
+					:width="600"
+					:footer="false"
+					:header="false"
+					@cancel="store.render.browser.currentBrowserUid = ''"
+				>
+					<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
+					<a-divider class="mt-2 mb-1" />
+					<div style="max-height: 80vh; overflow: auto">
 						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
-					</a-modal>
-				</template>
-				<template v-else>
-					<a-drawer
-						id="browser-panel"
-						:closable="false"
-						:visible="!!currentBrowser"
-						:width="600"
-						:footer="false"
-						:header="false"
-						@cancel="store.render.browser.currentBrowserUid = ''"
-					>
-						<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
-						<a-divider class="mt-2 mb-1" />
-						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
-					</a-drawer>
-				</template>
+					</div>
+				</a-modal>
 			</template>
 
 			<!-- 全局：一键安装 -->
