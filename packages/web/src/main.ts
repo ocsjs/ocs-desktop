@@ -50,6 +50,15 @@ function errorFilter(str: string) {
 	if (str.includes('CrashpadMetrics')) {
 		return true;
 	}
+	if (str.includes('GUEST_VIEW_MANAGER_CALL') && str.includes('ERR_ABORTED')) {
+		return true;
+	}
+	if (str.includes('GUEST_VIEW_MANAGER_CALL') && str.includes('Script failed to execute')) {
+		return true;
+	}
+	if (str.includes('ERR_ABORTED') && str.includes('loading')) {
+		return true;
+	}
 }
 
 createApp(App)

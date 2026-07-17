@@ -16,6 +16,7 @@ export const electron: typeof Electron = window.electron || {
 	ipcRenderer: {
 		sendSync: () => {},
 		send: () => {},
+		invoke: async () => undefined,
 		on: () => {},
 		once: () => {}
 	}

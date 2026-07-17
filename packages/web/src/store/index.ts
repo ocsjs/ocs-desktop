@@ -10,9 +10,31 @@ import { inBrowser } from '../utils/node';
 
 export type StoreUserScript = { info?: CommonUserScript } & Omit<UserScripts, 'info'>;
 
+export type StudyCourse = {
+	id: string;
+	name: string;
+	progress: number;
+	color: string;
+	icon: string;
+	completedUnits: number;
+	totalUnits: number;
+	sourceUrl?: string;
+	platform?: string;
+	updatedAt?: number;
+};
+
+export type StudyProgress = {
+	courses: StudyCourse[];
+	totalStudyMinutes: number;
+	todayStudyMinutes: number;
+	dailyTargetMinutes: number;
+	lastSyncedAt?: number;
+};
+
 export type WebStore = {
 	scripts: StoreUserScript[];
 	notifies: any[];
+	study: StudyProgress;
 
 	browser: {
 		currentFolderUid: string;
@@ -86,12 +108,22 @@ export type WebStore = {
 	};
 };
 
+const persistedStore = inBrowser
+	? JSON.parse(localStorage.getItem('ocs-app-store') || '{}')
+	: { render: remote.methods.callSync('getRenderStoreSnapshot') };
+
 const _store: AppStore & { render: WebStore } = defaultsDeep(
-	inBrowser ? JSON.parse(localStorage.getItem('ocs-app-store') || '{}') : remote['electron-store'].get('store'),
+	persistedStore,
 	{
 		render: {
 			scripts: [],
 			notifies: [],
+			study: {
+				courses: [],
+				totalStudyMinutes: 0,
+				todayStudyMinutes: 0,
+				dailyTargetMinutes: 0
+			},
 			browser: {
 				currentFolderUid: '',
 				currentBrowserUid: '',

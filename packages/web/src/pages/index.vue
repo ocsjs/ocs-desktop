@@ -6,73 +6,77 @@
 			position="bl"
 			:style="{ display: 'block' }"
 		>
-			<div class="row h-100 w-100 p-0 m-0">
-				<div class="col p-0 m-0">
-					<div class="row main h-100 w-100 p-0 m-0">
-						<div class="col-12 p-0 m-0"><Title id="title" /></div>
-						<div class="col-12 p-0 m-0 overflow-auto d-flex">
-							<div
-								:style="{ width: state.sideBarWidth + 'px' }"
-								class="h-100"
-							>
-								<!-- 侧边栏图标 -->
-								<div class="col-auto sider h-100">
-									<div
-										v-if="routes.find((r) => r.name === 'index')"
-										:style="{
-											width: state.sideBarWidth + 'px',
-											flex: `0 0 ${state.sideBarWidth}px`
-										}"
-										class="sider-items"
-									>
-										<template
-											v-for="(item, index) in (routes.find((r) => r.name === 'index')?.children as CustomRouteType[])"
-											:key="index"
-										>
-											<div
-												class="sider-item"
-												:class="{ active: item.name === currentRoute.name }"
-												@click="clickMenu(item)"
-											>
-												<component
-													:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
-													style="height: 28px"
-													:content="item.meta.title"
-													position="right"
-												>
-													<Icon
-														class="icon"
-														:type="item.meta.icon"
-														theme="outlined"
-													/>
-												</component>
-
-												<div
-													v-if="store.render.setting.showSideBarText"
-													class="ms-2 sider-item-title text-secondary"
-												>
-													{{ item.meta.title }}
-												</div>
-											</div>
-										</template>
-									</div>
-
-									<div class="text-secondary version mb-1 ms-2">{{ version }}</div>
-								</div>
-							</div>
-							<div :style="{ width: `calc(100% - ${state.sideBarWidth}px)` }">
-								<router-view v-slot="{ Component }">
-									<keep-alive>
-										<component :is="Component" />
-									</keep-alive>
-								</router-view>
-							</div>
-						</div>
+			<div class="plus-shell">
+				<aside class="plus-sidebar">
+					<div class="brand">
+						<div class="brand-mark">OCS<sup>+</sup></div>
+						<strong>OCS Plus</strong>
 					</div>
-				</div>
+
+					<nav class="module-nav">
+						<button
+							v-for="module in enabledPlusModules"
+							:key="module.id"
+							:class="{ active: currentRoute.name === module.id }"
+							@click="clickModule(module)"
+						>
+							<PlusIcon :name="module.icon" />
+							<span>{{ module.title }}</span>
+						</button>
+					</nav>
+
+					<div class="more-menu">
+						<button
+							:class="{ active: currentRoute.path.startsWith('/legacy') }"
+							@click="router.push('/legacy')"
+						>
+							<PlusIcon name="menu" />
+							<span>高级/原版</span>
+						</button>
+						<PlusIcon name="expand_more" :size="18" />
+					</div>
+				</aside>
+
+				<section class="plus-main">
+					<header class="plus-topbar">
+						<div class="status-pills">
+							<span class="pill online"><PlusIcon name="check" :size="18" /> 在线</span>
+							<span class="pill">本地服务正常</span>
+						</div>
+
+						<div class="top-actions">
+							<button @click="openSyncSettings"><PlusIcon name="cloud_sync" /> 云端同步</button>
+							<button
+								title="通知"
+								@click="showNotifications"
+							>
+								<PlusIcon name="notifications" />
+							</button>
+							<button
+								title="设置"
+								@click="openSettings"
+							>
+								<PlusIcon name="settings" />
+							</button>
+							<span class="user-chip">学</span>
+						</div>
+					</header>
+
+					<main class="plus-content">
+						<router-view v-slot="{ Component }">
+							<keep-alive>
+								<component :is="Component" />
+							</keep-alive>
+						</router-view>
+					</main>
+
+					<footer class="plus-footer">
+						<span><i /> 已连接到本地服务</span>
+						<span>版本 {{ version || '1.2.0' }}</span>
+					</footer>
+				</section>
 			</div>
 
-			<!-- 显示当前浏览器的操作面板 -->
 			<template v-if="currentBrowser">
 				<template v-if="store.render.state.mini">
 					<a-modal
@@ -107,57 +111,44 @@
 				</template>
 			</template>
 
-			<!-- 显示一键安装 -->
 			<Setup v-model:visible="store.render.state.setup"></Setup>
 		</CommonEditActionDropdown>
 	</a-config-provider>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, reactive, computed } from 'vue';
-import { RouteRecordRaw, useRouter } from 'vue-router';
-import Title from '../components/Title.vue';
-import { router, routes, CustomRouteType } from '../route';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
+import { Message, Modal } from '@arco-design/web-vue';
+import cloneDeep from 'lodash/cloneDeep';
+import debounce from 'lodash/debounce';
+import BrowserPanel from '../components/browsers/BrowserPanel.vue';
+import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
+import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
+import Setup from '../components/Setup.vue';
+import { currentBrowser } from '../fs';
 import { store } from '../store';
 import { about, changeTheme, fetchRemoteLangs, fetchRemoteNotify, setAlwaysOnTop, setAutoLaunch } from '../utils';
 import { closeAllBrowser, showClearBrowserCachesModal } from '../utils/browser';
-import { remote } from '../utils/remote';
-import Icon from '../components/Icon.vue';
-import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
-import { Modal, Tooltip } from '@arco-design/web-vue';
-import BrowserPanel from '../components/browsers/BrowserPanel.vue';
-import { currentBrowser } from '../fs';
-import { inBrowser, electron } from '../utils/node';
-import { getWindowsRelease } from '../utils/os';
-import cloneDeep from 'lodash/cloneDeep';
-import Setup from '../components/Setup.vue';
 import { activeIpcRenderListener } from '../utils/ipc';
-import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
-import BrowserPanelOperators from '../components/BrowserPanelOperators.vue';
-import debounce from 'lodash/debounce';
-const { ipcRenderer } = electron;
+import { electron, inBrowser } from '../utils/node';
+import { getWindowsRelease } from '../utils/os';
+import { remote } from '../utils/remote';
+import PlusIcon from '../plus/components/PlusIcon.vue';
+import { enabledPlusModules, PlusModule } from '../plus/modules/registry';
 
+const { ipcRenderer } = electron;
+const router = useRouter();
+const currentRoute = router.currentRoute;
 const version = ref('');
 
-// 当前路由
-const currentRoute = useRouter().currentRoute;
-
-const state = reactive({
-	sideBarWidth: computed(() => (store.render.setting.showSideBarText ? 142 : 56))
-});
-
-// 监听软件关闭
 onUnmounted(() => closeAllBrowser());
 
 onMounted(async () => {
 	try {
-		/**
-		 * 开启 Ipc 通道监听
-		 */
-
 		activeIpcRenderListener();
 
-		/** 设置窗口边框 */
 		remote.os.call('platform').then(async (platform) => {
 			if (platform === 'win32') {
 				const release = await getWindowsRelease();
@@ -167,8 +158,6 @@ onMounted(async () => {
 			}
 		});
 
-		/** 检测环境 */
-		// @ts-ignore
 		if (inBrowser) {
 			store.render.state.setup = false;
 			Modal.warning({
@@ -183,58 +172,46 @@ onMounted(async () => {
 			});
 		}
 
-		/** 设置版本 */
 		remote.app.call('getVersion').then((v) => {
 			version.value = v;
 		});
 
-		/** 初始化标题 */
-		remote.win.call('setTitle', `OCS - ${router.resolve(currentRoute.value).meta.title}`);
-
-		/** 初始化 store */
+		remote.win.call('setTitle', `OCS Plus - ${String(router.resolve(currentRoute.value).meta.title || '今日学习')}`);
 		remote.logger.call('info', 'render store init');
-		setAutoLaunch();
-		setAlwaysOnTop();
+		if (!inBrowser) {
+			setAutoLaunch();
+			setAlwaysOnTop();
+		}
 		changeTheme().catch(console.error);
 
-		/** 打开关于软件 */
 		if (store.render.state.first) {
 			about().catch(console.error);
 		}
 
-		/** 监听屏幕变化 */
 		onResize();
 		window.addEventListener('resize', onResize);
-
-		/** 获取最新远程通知 */
 		fetchRemoteNotify(false).catch(console.error);
-
 		fetchRemoteLangs().catch(console.error);
 
-		/** 检测浏览器缓存大小，超过10GB则提示 */
-		remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
-			if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
-				showClearBrowserCachesModal(totalSize);
-			}
-		});
+		if (!inBrowser) {
+			remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
+				if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
+					showClearBrowserCachesModal(totalSize);
+				}
+			});
+		}
 
-		/** 监听主题变化 */
 		watch(
 			() => cloneDeep(store.render.setting.theme),
-			(cur, prev) => {
+			(cur) => {
 				if (cur.dark) {
-					// 设置为暗黑主题
 					document.body.setAttribute('arco-theme', 'dark');
 				} else {
-					// 恢复亮色主题
 					document.body.removeAttribute('arco-theme');
 				}
 			}
 		);
 
-		/**
-		 * 监听 store 变化，自动存储，不要每个变化都存储，MAC版本中每次都会触发权限获取才能存储，可能会导致严重卡顿
-		 */
 		watch(
 			[
 				() => store.render.setting.ocs.openSync,
@@ -247,7 +224,6 @@ onMounted(async () => {
 			}
 		);
 
-		// 使用防抖，避免频繁触发存储
 		watch(
 			[() => store.render],
 			debounce(() => {
@@ -256,8 +232,10 @@ onMounted(async () => {
 			{ deep: true }
 		);
 
-		watch(() => store.window.autoLaunch, setAutoLaunch);
-		watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
+		if (!inBrowser) {
+			watch(() => store.window.autoLaunch, setAutoLaunch);
+			watch(() => store.window.alwaysOnTop, setAlwaysOnTop);
+		}
 
 		window.onresize = () => {
 			store.render.state.height = document.documentElement.clientHeight;
@@ -267,10 +245,22 @@ onMounted(async () => {
 	}
 });
 
-/**
- * 全局唯一关闭处理地方
- */
-ipcRenderer.on('close', async () => {
+ipcRenderer.on('close', closeApp);
+
+function openSyncSettings() {
+	Message.info('云端同步的新面板还没接入；需要原版同步配置时，请从左下角“高级/原版”进入。');
+}
+
+function openSettings() {
+	router.push('/settings');
+	remote.win.call('setTitle', 'OCS Plus - 设置中心');
+}
+
+function showNotifications() {
+	fetchRemoteNotify(true).catch(console.error);
+}
+
+async function closeApp() {
 	console.log('关闭浏览器中...');
 	const res = await closeAllBrowser();
 	if (res === false) {
@@ -282,32 +272,28 @@ ipcRenderer.on('close', async () => {
 	await saveStoreToLocal(store);
 	m.close();
 	console.log('数据已保存');
-	remote.app.call('exit', 0);
-});
+	if (inBrowser) {
+		window.close();
+	} else {
+		remote.app.call('exit', 0);
+	}
+}
 
-function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
-	router.push(route.path);
-	remote.win.call('setTitle', `OCS - ${route.meta.title}`);
+function clickModule(module: PlusModule) {
+	router.push(module.path);
+	remote.win.call('setTitle', `OCS Plus - ${module.title}`);
 }
 
 async function saveStoreToLocal(_store: typeof store) {
 	try {
 		if (inBrowser) {
 			localStorage.setItem('ocs-app-store', JSON.stringify(_store));
+		} else if (remote.methods.callSync('isEncryptionAvailable') && _store.app.data_encryption) {
+			const resolvedStore: typeof store = JSON.parse(JSON.stringify(_store));
+			Reflect.set(resolvedStore, 'render', await remote.methods.call('encryptString', JSON.stringify(resolvedStore.render)));
+			await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolvedStore)));
 		} else {
-			if (remote.methods.callSync('isEncryptionAvailable') && _store.app.data_encryption) {
-				const resolved_store: typeof store = JSON.parse(JSON.stringify(_store));
-				// 加密
-				Reflect.set(
-					resolved_store,
-					'render',
-					await remote.methods.call('encryptString', JSON.stringify(resolved_store.render))
-				);
-				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(resolved_store)));
-			} else {
-				// 不加密
-				await remote['electron-store'].set('store', JSON.parse(JSON.stringify(_store)));
-			}
+			await remote['electron-store'].set('store', JSON.parse(JSON.stringify(_store)));
 		}
 	} catch (e) {
 		console.error(e);
@@ -315,76 +301,268 @@ async function saveStoreToLocal(_store: typeof store) {
 }
 
 function onResize() {
-	const isInMobile = document.documentElement.clientWidth < 1200;
+	const isInMobile = document.documentElement.clientWidth < 1100;
 	store.render.state.mini = isInMobile;
 	store.render.state.responsive = isInMobile ? 'mini' : 'small';
-
-	// 如果小于 700，自动隐藏侧边文字
-	if (document.documentElement.clientWidth < 800) {
-		store.render.setting.showSideBarText = false;
-		store.render.state.mini = true;
-	} else {
-		store.render.setting.showSideBarText = true;
-		store.render.state.mini = false;
-	}
+	store.render.setting.showSideBarText = document.documentElement.clientWidth >= 800;
 }
 </script>
 
 <style lang="less">
 @import '@/assets/css/bootstrap.min.css';
 @import '@/assets/css/common.css';
-.main {
-	display: grid;
-	grid-template-rows: 32px calc(100vh - 32px);
-	grid-template-areas:
-		'header'
-		'main ';
+
+html,
+body,
+#app,
+#component {
+	height: 100%;
 }
 
-.sider {
-	-webkit-app-region: no-drag;
-	user-select: none;
-	padding: 4px 24px 4px 0px;
-	text-align: center;
+body {
+	margin: 0;
+	background: #eef3f7;
+}
+
+.plus-shell {
+	height: 100vh;
+	width: 100vw;
+	display: grid;
+	grid-template-columns: 204px minmax(0, 1fr);
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(246, 249, 252, 0.94)),
+		#f6f9fc;
+	color: #162033;
+	overflow: hidden;
+	font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+}
+
+.plus-sidebar {
+	-webkit-app-region: drag;
 	display: flex;
-	justify-content: left;
-	border-right: 1px solid #f3f3f3;
+	flex-direction: column;
+	border-right: 1px solid #dde5ee;
+	background: rgba(255, 255, 255, 0.78);
+	backdrop-filter: blur(18px);
+}
 
-	.sider-items {
-		padding-top: 12px;
+.brand {
+	height: 78px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 0 24px;
+	border-bottom: 1px solid #e3e9ef;
 
-		.sider-item {
-			padding: 8px;
-			display: flex;
-			cursor: pointer;
-			align-items: center;
-			border-left: 6px solid white;
+	strong {
+		font-size: 21px;
+		font-weight: 850;
+		letter-spacing: 0;
+	}
+}
+
+.brand-mark {
+	width: 50px;
+	height: 50px;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #ffffff;
+	background: linear-gradient(145deg, #22b5ad, #20899e);
+	box-shadow: 0 12px 22px rgba(31, 151, 153, 0.24);
+	font-weight: 900;
+
+	sup {
+		font-size: 10px;
+	}
+}
+
+.module-nav {
+	-webkit-app-region: no-drag;
+	display: grid;
+	gap: 10px;
+	padding: 16px 12px;
+
+	button {
+		height: 58px;
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		padding: 0 18px;
+		border: 0;
+		border-left: 4px solid transparent;
+		border-radius: 8px;
+		background: transparent;
+		color: #1f2937;
+		font-size: 16px;
+		font-weight: 650;
+		text-align: left;
+		transition:
+			background 0.16s ease,
+			color 0.16s ease,
+			transform 0.16s ease;
+
+		.plus-icon {
+			flex: 0 0 22px;
+			color: #162033;
 		}
-		.sider-item.active {
-			background-color: #f4f9ff;
-			border-left: 6px solid #1890ff;
+
+		span {
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
-		.sider-item-title {
-			font-size: 13px;
+		&:hover {
+			background: #eef7f6;
 		}
 
-		.sider-item + .sider-item {
-			margin-top: 12px;
-		}
+		&.active {
+			background: #e9f6f5;
+			border-left-color: #2aa7a3;
+			color: #137f86;
+			transform: translateX(2px);
 
-		.icon {
-			width: 28px;
-			height: 28px;
-			font-size: 28px;
-			cursor: pointer;
+			.plus-icon {
+				color: #168f95;
+			}
 		}
 	}
+}
 
-	.version {
-		font-size: 12px;
-		position: absolute;
-		bottom: 0px;
+.more-menu {
+	-webkit-app-region: no-drag;
+	margin-top: auto;
+	padding: 0 20px 22px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: #617086;
+
+	button {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		border: 0;
+		background: transparent;
+		color: inherit;
+
+		&.active {
+			color: #168f95;
+			font-weight: 800;
+		}
+	}
+}
+
+.plus-main {
+	display: grid;
+	grid-template-rows: 78px minmax(0, 1fr) 48px;
+	min-width: 0;
+}
+
+.plus-topbar {
+	-webkit-app-region: drag;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 126px 0 20px;
+	border-bottom: 1px solid #dde5ee;
+	background: rgba(255, 255, 255, 0.86);
+	backdrop-filter: blur(18px);
+}
+
+.status-pills,
+.top-actions {
+	-webkit-app-region: no-drag;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.pill {
+	height: 38px;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 0 16px;
+	border-radius: 8px;
+	border: 1px solid #dce4ec;
+	background: #f6f8fa;
+	color: #1f2937;
+	font-weight: 700;
+
+	&.online {
+		background: #e7f8f2;
+		border-color: #c6eadb;
+		color: #078653;
+	}
+}
+
+.top-actions {
+	button {
+		height: 36px;
+		min-width: 36px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		border: 0;
+		background: transparent;
+		color: #101827;
+		font-weight: 650;
+	}
+}
+
+.user-chip {
+	width: 36px;
+	height: 36px;
+	border-radius: 999px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #0b7190;
+	background: #e8eef5;
+	font-weight: 900;
+}
+
+.plus-content {
+	min-width: 0;
+	min-height: 0;
+	padding: 8px;
+	overflow: auto;
+}
+
+.plus-panel {
+	border: 1px solid #e5ebf1;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.92);
+	padding: 20px 18px;
+	box-shadow: 0 16px 38px rgba(24, 48, 74, 0.07);
+}
+
+.plus-footer {
+	display: flex;
+	align-items: center;
+	gap: 28px;
+	padding: 0 22px;
+	border-top: 1px solid #dde5ee;
+	background: rgba(255, 255, 255, 0.82);
+	color: #64748b;
+	font-size: 13px;
+
+	span {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	i {
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+		background: #22c17a;
 	}
 }
 
@@ -392,55 +570,146 @@ function onResize() {
 	padding: 12px !important;
 }
 
-/* 新手教程遮罩层 */
-.tutorial {
-	position: absolute;
-	width: 100%;
-	height: 100%;
-	background-color: #00000030;
-	z-index: 100;
-	top: 0;
-	left: 0;
-}
+@media (max-width: 980px) {
+	.plus-shell {
+		grid-template-columns: 82px minmax(0, 1fr);
+	}
 
-.bp-toc {
-	position: absolute;
-	background: white;
-	z-index: 999;
-	right: 400px;
+	.brand {
+		justify-content: center;
+		padding: 0;
 
-	animation-duration: 0.5s;
-	animation-name: slide-in;
-	animation-timing-function: ease;
-	padding: 4px;
-	border-radius: 8px 0px 0px 8px;
-	font-size: 12px;
-	top: 24px;
-	color: #86909c;
-
-	* {
-		cursor: pointer;
-		margin: 6px 0px 6px 6px;
-		padding: 4px;
-		border-radius: 4px;
-
-		&:hover {
-			background-color: #ececec;
+		strong {
+			display: none;
 		}
 	}
-}
 
-.app-container {
-	flex: 0 0 auto;
-}
+	.module-nav button {
+		justify-content: center;
+		padding: 0;
 
-@keyframes slide-in {
-	from {
-		top: -500px;
+		span {
+			display: none;
+		}
 	}
 
-	to {
-		top: 24px;
+	.more-menu span {
+		display: none;
+	}
+}
+
+@media (max-width: 1280px) {
+	.plus-shell {
+		grid-template-columns: 92px minmax(0, 1fr);
+	}
+
+	.plus-sidebar {
+		background: rgba(255, 255, 255, 0.84);
+	}
+
+	.brand {
+		height: 70px;
+		justify-content: center;
+		padding: 0;
+
+		strong {
+			display: none;
+		}
+	}
+
+	.brand-mark {
+		width: 48px;
+		height: 48px;
+	}
+
+	.module-nav {
+		gap: 8px;
+		padding: 14px 10px;
+
+		button {
+			height: 54px;
+			justify-content: center;
+			padding: 0;
+			border-left: 0;
+
+			span {
+				display: none;
+			}
+
+			&.active {
+				transform: none;
+				box-shadow: inset 4px 0 0 #2aa7a3;
+			}
+		}
+	}
+
+	.more-menu {
+		justify-content: center;
+		padding: 0 0 16px;
+
+		button span,
+		> .plus-icon {
+			display: none;
+		}
+	}
+
+	.plus-main {
+		grid-template-rows: 70px minmax(0, 1fr);
+	}
+
+	.plus-topbar {
+		padding: 0 126px 0 18px;
+	}
+
+	.status-pills {
+		gap: 8px;
+	}
+
+	.status-pills .pill:not(.online) {
+		display: none;
+	}
+
+	.pill {
+		height: 34px;
+		padding: 0 12px;
+	}
+
+	.top-actions {
+		gap: 6px;
+
+		button {
+			height: 34px;
+			min-width: 34px;
+			padding: 0 6px;
+		}
+
+		button:first-child {
+			font-size: 0;
+
+			.plus-icon {
+				margin: 0;
+			}
+		}
+	}
+
+	.user-chip {
+		width: 34px;
+		height: 34px;
+	}
+
+	.plus-content {
+		padding: 8px 10px 10px;
+		overflow: auto;
+	}
+
+	.plus-footer {
+		display: none;
+	}
+}
+
+@media (max-width: 980px) {
+	.plus-shell {
+		grid-template-columns: 82px minmax(0, 1fr);
 	}
 }
 </style>

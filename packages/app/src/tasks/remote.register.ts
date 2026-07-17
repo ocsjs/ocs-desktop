@@ -9,7 +9,7 @@ import os from 'os';
 import crypto from 'crypto';
 import { OCSApi, getValidBrowsers } from '@ocs-desktop/common';
 import si from 'systeminformation';
-import { store } from '../store';
+import { getDecryptedRenderData, store } from '../store';
 import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
 import { updateApp } from './updater';
@@ -18,6 +18,7 @@ import { PlaywrightScript } from '../scripts/script';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 
 export type RawPlaywrightScript = Pick<PlaywrightScript, 'configs' | 'name'>;
+
 
 /**
  * 注册主进程远程通信事件
@@ -86,6 +87,12 @@ let win: BrowserWindow | undefined;
 
 /** 需远程共享的方法 */
 const methods = {
+	/**
+	 * Return only the renderer-owned snapshot.  Calling electron-store.get('store')
+	 * looks up a literal key named "store" and therefore returns undefined; the
+	 * actual persisted data lives at the top-level render key.
+	 */
+	getRenderStoreSnapshot: () => getDecryptedRenderData(),
 	autoLaunch,
 	get: (url: string, config?: AxiosRequestConfig<any> | undefined) => axios.get(url, config).then((res) => res.data),
 	post: (url: string, config?: AxiosRequestConfig<any> | undefined) => axios.post(url, config).then((res) => res.data),

@@ -8,10 +8,10 @@ import { task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
-import { initChrome } from './src/tasks/init.chrome';
 import { store } from './src/store';
 
-app.setName('ocs');
+app.setName('OCS Plus');
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 // 防止软件崩溃以及兼容
 app.commandLine.appendSwitch('no-sandbox');
@@ -50,7 +50,8 @@ function bootstrap() {
 
 				await app.whenReady();
 				const window = createWindow();
-				await task('初始化谷歌浏览器', () => initChrome(window));
+				// MVP 只使用用户保存的本地浏览器路径。不要在启动阶段解压、安装或重启内置浏览器，
+				// 以免浏览器资源缺失或初始化失败阻塞 Plus 首页和原 OCS 入口。
 
 				app.on('quit', (e) => {
 					e.preventDefault();
@@ -79,7 +80,6 @@ function bootstrap() {
 					await window.loadFile('./public/index.html');
 				} else {
 					await window.loadURL('http://localhost:3000');
-					window.webContents.openDevTools();
 				}
 
 				// 加载完成显示，解决一系列的显示/黑屏问题
