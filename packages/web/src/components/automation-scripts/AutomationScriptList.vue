@@ -48,7 +48,9 @@
 							<span
 								v-if="cfg.required"
 								class="text-danger"
-							> *</span>
+							>
+								*</span
+							>
 						</div>
 						<div style="flex: auto">
 							<a-input-password

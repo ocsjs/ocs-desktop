@@ -10,7 +10,7 @@
 		<div>
 			<a-button
 				type="text"
-				@click="newBrowser()"
+				@click="newBrowserOrInit()"
 			>
 				<Icon type="web">新建浏览器</Icon>
 			</a-button>
@@ -38,7 +38,7 @@
 
 <script lang="ts" setup>
 import { about, goto } from '../utils';
-import { newBrowser } from '../utils/browser';
+import { newBrowserOrInit } from '../utils/browser';
 import Icon from './Icon.vue';
 </script>
 

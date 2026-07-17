@@ -51,6 +51,7 @@
 				cancel-text="稍后再说"
 				:title="envState.setupTitle"
 				:create-new-browser="false"
+				:preset-steps="['show_desc', 'init_env']"
 				@close="
 					() => {
 						updateEnvironmentDetect();

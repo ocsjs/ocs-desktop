@@ -114,7 +114,8 @@
 													style="font-size: 12px"
 													class="text-center text-secondary"
 												>
-													<IconInfoCircleFill /> 点击启动按钮运行浏览器。
+													<IconInfoCircleFill /> 点击 启动 运行浏览器。<br />
+													单击 设置浏览器
 												</div>
 											</template>
 
@@ -188,7 +189,7 @@ import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 import { BrowserOptions } from '../../fs/interface';
-import { newBrowser } from '../../utils/browser';
+import { newBrowserOrInit } from '../../utils/browser';
 import EmptyBrowserCard from '../../components/EmptyBrowserCard.vue';
 import SettingPanel from '../../components/SettingPanel.vue';
 import { lang } from '../../store/index';
@@ -218,7 +219,7 @@ function selectBrowser(browser: BrowserOptions) {
 
 /** 新增浏览器 */
 function handleAddBrowser() {
-	newBrowser();
+	newBrowserOrInit();
 }
 
 /** 重命名临时值 */
@@ -335,7 +336,7 @@ onMounted(() => {
 	justify-content: center;
 	min-height: 120px;
 	border: 1px dashed #c9cdd4;
-	background-color: #165cff03;
+	background-color: transparent;
 
 	&:hover {
 		border-color: #165dff;

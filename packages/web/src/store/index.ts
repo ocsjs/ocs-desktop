@@ -70,6 +70,8 @@ export type WebStore = {
 			enableDialog: boolean;
 			/** 是否强制更新/安装脚本 */
 			forceUpdateScript: boolean;
+			/** 点击「新建浏览器」时是否自动打开初始化弹窗并执行初始化 */
+			autoInitNewBrowser: boolean;
 		};
 	};
 
@@ -79,6 +81,8 @@ export type WebStore = {
 		first: boolean;
 		/** 是否展示初始化设置  */
 		setup: boolean;
+		/** 是否展示「新建浏览器自动初始化」弹窗 */
+		newBrowserSetup: boolean;
 		mini: boolean;
 		responsive: 'mini' | 'small';
 		height: number;
@@ -143,13 +147,15 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 			browser: {
 				cachesSizeWarningPoint: 10,
 				enableDialog: false,
-				forceUpdateScript: false
+				forceUpdateScript: false,
+				autoInitNewBrowser: true
 			}
 		},
 		langs: {},
 		state: {
 			first: true,
 			setup: true,
+			newBrowserSetup: false,
 			mini: false,
 			responsive: 'small',
 			height: document.documentElement.clientHeight,

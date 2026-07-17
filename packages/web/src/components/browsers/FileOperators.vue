@@ -19,7 +19,7 @@
 		<a-button
 			size="small"
 			type="primary"
-			@click="newBrowser()"
+			@click="newBrowserOrInit()"
 		>
 			<Icon type="web"> 新建浏览器 </Icon>
 		</a-button>
@@ -106,7 +106,7 @@ import { reactive, h } from 'vue';
 import { RawAutomationScript } from '../automation-scripts';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScriptTable from '../automation-scripts/AutomationScriptTable.vue';
-import { newBrowser, newFolder } from '../../utils/browser';
+import { newBrowser, newBrowserOrInit, newFolder } from '../../utils/browser';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';

@@ -58,6 +58,22 @@
 							<Icon type="web" />
 						</a-button>
 					</a-tooltip>
+					<a-tooltip
+						content="删除浏览器"
+						position="br"
+					>
+						<a-popconfirm
+							content="是否删除该浏览器?"
+							@ok="browser.remove()"
+						>
+							<a-button
+								size="mini"
+								status="danger"
+							>
+								<Icon type="delete" />
+							</a-button>
+						</a-popconfirm>
+					</a-tooltip>
 				</template>
 			</BrowserOperators>
 		</div>

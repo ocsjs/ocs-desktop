@@ -1,288 +1,288 @@
 body,
 html,
 #app {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  min-width: 500px;
-  min-height: 300px;
-  --title-height: 32px;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
+	min-width: 500px;
+	min-height: 300px;
+	--title-height: 32px;
 }
 html.window-frame {
-  border: 1px solid #e1e1e1;
-  overflow: hidden;
-  box-shadow: 0px 0px 12px #d3d3d3;
+	border: 1px solid #e1e1e1;
+	overflow: hidden;
+	box-shadow: 0px 0px 12px #d3d3d3;
 }
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	font-family: Avenir, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 .pointer {
-  cursor: pointer;
+	cursor: pointer;
 }
 /* 设置滚动条的样式 */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+	width: 12px;
+	height: 12px;
 }
 /* 滚动槽 */
 ::-webkit-scrollbar-track {
-  background: #ebebeb;
+	background: #ebebeb;
 }
 /* 滚动条滑块 */
 ::-webkit-scrollbar-thumb {
-  border-radius: 7px;
-  background: #b8b8b8;
+	border-radius: 7px;
+	background: #b8b8b8;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #8f8f8f;
+	background: #8f8f8f;
 }
 /* 滚动条箭头按钮 */
 ::-webkit-scrollbar-button {
-  display: none;
+	display: none;
 }
 ::-webkit-scrollbar-button:vertical:start:decrement,
 ::-webkit-scrollbar-button:vertical:end:increment,
 ::-webkit-scrollbar-button:horizontal:start:decrement,
 ::-webkit-scrollbar-button:horizontal:end:increment {
-  display: block;
-  height: 18px;
-  width: 18px;
-  background: #d1d1d1 no-repeat center center;
-  background-size: 14px;
+	display: block;
+	height: 18px;
+	width: 18px;
+	background: #d1d1d1 no-repeat center center;
+	background-size: 14px;
 }
 ::-webkit-scrollbar-button:vertical:start:decrement:hover,
 ::-webkit-scrollbar-button:vertical:end:increment:hover,
 ::-webkit-scrollbar-button:horizontal:start:decrement:hover,
 ::-webkit-scrollbar-button:horizontal:end:increment:hover {
-  background-color: rgba(214, 214, 214, 0.1);
+	background-color: rgba(214, 214, 214, 0.1);
 }
 ::-webkit-scrollbar-button:vertical:start:decrement {
-  background-image: url('../img/scrollbar/up.svg');
+	background-image: url('../img/scrollbar/up.svg');
 }
 ::-webkit-scrollbar-button:vertical:end:increment {
-  background-image: url('../img/scrollbar/down.svg');
+	background-image: url('../img/scrollbar/down.svg');
 }
 ::-webkit-scrollbar-button:horizontal:start:decrement {
-  background-image: url('../img/scrollbar/left.svg');
+	background-image: url('../img/scrollbar/left.svg');
 }
 ::-webkit-scrollbar-button:horizontal:end:increment {
-  background-image: url('../img/scrollbar/right.svg');
+	background-image: url('../img/scrollbar/right.svg');
 }
 ::-webkit-scrollbar-corner {
-  background: transparent;
+	background: transparent;
 }
 /** 通知栏样式 */
 .arco-notification {
-  /** 主容器 */
-  /** 底部按钮 */
+	/** 主容器 */
+	/** 底部按钮 */
 }
 .arco-notification .arco-notification-notice {
-  padding: 12px;
+	padding: 12px;
 }
 .arco-notification .arco-notification-notice-btn {
-  margin-top: 8px;
+	margin-top: 8px;
 }
 .arco-notification .arco-notification-notice-with-icon .arco-notification-notice-description {
-  margin-left: 0;
-  font-size: 12px;
+	margin-left: 0;
+	font-size: 12px;
 }
 .arco-notification .arco-notification-notice-with-icon .arco-notification-notice-message {
-  margin-left: 36px;
+	margin-left: 36px;
 }
 .arco-notification .arco-notification-notice-description {
-  overflow: auto;
+	overflow: auto;
 }
 .anticon {
-  vertical-align: 0px !important;
+	vertical-align: 0px !important;
 }
 .markdown {
-  font-size: 14px;
-  border: 1px solid #e6e6e6;
-  border-radius: 4px;
-  padding: 4px;
+	font-size: 14px;
+	border: 1px solid #e6e6e6;
+	border-radius: 4px;
+	padding: 4px;
 }
 code {
-  margin: 0px 2px !important;
-  padding: 4px 6px !important;
-  font-size: 12px !important;
-  color: #d63384;
-  background-color: #f2f2f2;
-  border-radius: 4px;
+	margin: 0px 2px !important;
+	padding: 4px 6px !important;
+	font-size: 12px !important;
+	color: #d63384;
+	background-color: #f2f2f2;
+	border-radius: 4px;
 }
 em {
-  background-color: yellow;
-  font-weight: bold;
+	background-color: yellow;
+	font-weight: bold;
 }
 body .arco-tree li span.arco-tree-iconEle {
-  vertical-align: unset;
+	vertical-align: unset;
 }
 body .arco-tree li .arco-tree-node-content-wrapper {
-  padding: 0;
+	padding: 0;
 }
 body .arco-tree li {
-  padding: 0px 8px 0px 0px !important;
-  text-overflow: hidden;
-  overflow: hidden;
-  white-space: nowrap;
+	padding: 0px 8px 0px 0px !important;
+	text-overflow: hidden;
+	overflow: hidden;
+	white-space: nowrap;
 }
 body .arco-tree-title {
-  padding: 4px 8px 4px 0px !important;
+	padding: 4px 8px 4px 0px !important;
 }
 body .arco-tree * {
-  animation-duration: 0s !important;
-  animation: none !important;
-  transition: none !important;
+	animation-duration: 0s !important;
+	animation: none !important;
+	transition: none !important;
 }
 body .arco-tree-iconEle.arco-tree-icon__customize {
-  width: 18px;
+	width: 18px;
 }
 body .arco-tree li span.arco-tree-switcher {
-  width: 18px;
+	width: 18px;
 }
 body[arco-theme='dark'] {
-  color: #cccccc;
-  background-color: #2c2c2c;
-  /* 暗色模式滚动槽 */
-  /* 暗色模式滚动条滑块 */
-  /* 暗色模式滚动条箭头按钮 - 通过 filter 反色适配暗色 */
+	color: #cccccc;
+	background-color: #2c2c2c;
+	/* 暗色模式滚动槽 */
+	/* 暗色模式滚动条滑块 */
+	/* 暗色模式滚动条箭头按钮 - 通过 filter 反色适配暗色 */
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.288);
+	background: rgba(255, 255, 255, 0.288);
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.589);
+	background: rgba(255, 255, 255, 0.589);
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.87);
+	background: rgba(255, 255, 255, 0.87);
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment {
-  background: rgba(255, 255, 255, 0.671) no-repeat center center;
-  background-size: 14px;
-  filter: invert(1);
+	background: rgba(255, 255, 255, 0.671) no-repeat center center;
+	background-size: 14px;
+	filter: invert(1);
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement:hover,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment:hover,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement:hover,
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment:hover {
-  background-color: rgba(255, 255, 255, 0.342);
+	background-color: rgba(255, 255, 255, 0.342);
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement {
-  background-image: url('../img/scrollbar/up.svg');
+	background-image: url('../img/scrollbar/up.svg');
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment {
-  background-image: url('../img/scrollbar/down.svg');
+	background-image: url('../img/scrollbar/down.svg');
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement {
-  background-image: url('../img/scrollbar/left.svg');
+	background-image: url('../img/scrollbar/left.svg');
 }
 body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment {
-  background-image: url('../img/scrollbar/right.svg');
+	background-image: url('../img/scrollbar/right.svg');
 }
 body[arco-theme='dark'] .text-secondary {
-  color: #aaaaaa !important;
+	color: #aaaaaa !important;
 }
 body[arco-theme='dark'] .title {
-  color: #cccccc;
-  background-color: #2c2c2c;
-  border-bottom: 1px solid #4b4848;
+	color: #cccccc;
+	background-color: #2c2c2c;
+	border-bottom: 1px solid #4b4848;
 }
 body[arco-theme='dark'] #title ul li {
-  color: #cccccc;
+	color: #cccccc;
 }
 body[arco-theme='dark'] a,
 body[arco-theme='dark'] a.link {
-  color: #61a5e4 !important;
+	color: #61a5e4 !important;
 }
 body[arco-theme='dark'] .border-end,
 body[arco-theme='dark'] .border-start,
 body[arco-theme='dark'] .border-bottom,
 body[arco-theme='dark'] .border-top {
-  border-color: #4b4848 !important;
+	border-color: #4b4848 !important;
 }
 body[arco-theme='dark'] * {
-  box-shadow: none !important;
+	box-shadow: none !important;
 }
 body[arco-theme='dark'] .entity:hover {
-  background: #3b3b3b !important;
+	background: #3b3b3b !important;
 }
 body[arco-theme='dark'] .screenshot-item {
-  border: 1px solid;
-  border-color: #4b4848 !important;
+	border: 1px solid;
+	border-color: #4b4848 !important;
 }
 body[arco-theme='dark'] .breadcrumb {
-  background-color: #2c2c2c;
-  border: 1px solid #4b4848;
+	background-color: #2c2c2c;
+	border: 1px solid #4b4848;
 }
 body[arco-theme='dark'] .path-item {
-  color: #cccccc;
+	color: #cccccc;
 }
 body[arco-theme='dark'] .entity {
-  border-bottom: 1px solid #4b4848;
+	border-bottom: 1px solid #4b4848;
 }
 body[arco-theme='dark'] .entity-properties {
-  background-color: #4b4b4b;
-  color: #aaaaaa;
+	background-color: #4b4b4b;
+	color: #aaaaaa;
 }
 body[arco-theme='dark'] .sider-item.active {
-  background-color: #4b4b4b;
+	background-color: #4b4b4b;
 }
 body[arco-theme='dark'] .sider {
-  border-right: 1px solid #4b4848;
+	border-right: 1px solid #4b4848;
 }
 body[arco-theme='dark'] .sider .sider-item {
-  border-left: 6px solid #2c2c2c;
+	border-left: 6px solid #2c2c2c;
 }
 body[arco-theme='dark'] .sider .sider-item.active {
-  background-color: #4b4b4b;
-  border-left: 6px solid #4898e2;
+	background-color: #4b4b4b;
+	border-left: 6px solid #4898e2;
 }
 body[arco-theme='dark'] .ps-table .ps-body-cell {
-  border: 1px solid #4b4848;
+	border: 1px solid #4b4848;
 }
 body[arco-theme='dark'] .ps-table .ps-body-cell .arco-input-wrapper {
-  background: #4b4b4b;
+	background: #4b4b4b;
 }
 body[arco-theme='dark'] .ps-table .arco-table-tr .ps-table-index {
-  background-color: #4b4b4b;
-  color: #aaaaaa;
+	background-color: #4b4b4b;
+	color: #aaaaaa;
 }
 .arco-trigger-popup {
-  animation-duration: 0s !important;
-  animation: none !important;
-  transition: none !important;
+	animation-duration: 0s !important;
+	animation: none !important;
+	transition: none !important;
 }
 .arco-trigger-popup * {
-  animation-duration: 0s !important;
-  animation: none !important;
-  transition: none !important;
+	animation-duration: 0s !important;
+	animation: none !important;
+	transition: none !important;
 }
 .arco-dropdown-option-content {
-  font-size: 12px;
-  line-height: 28px;
+	font-size: 12px;
+	line-height: 28px;
 }
 /** 简单模式下不要有头部间隔 */
 .arco-modal-simple .arco-modal-header {
-  margin-bottom: 0px;
+	margin-bottom: 0px;
 }
 /** 防止被标题栏遮挡 */
 .arco-drawer-container,
 .arco-modal-container {
-  top: var(--title-height) !important;
+	top: var(--title-height) !important;
 }
 .arco-notification-list,
 .arco-message-list {
-  top: 52px;
+	top: 52px;
 }
 .user-script-search-modal {
-  max-width: 1200px;
-  min-width: 600px;
-  overflow: auto;
+	max-width: 1200px;
+	min-width: 600px;
+	overflow: auto;
 }

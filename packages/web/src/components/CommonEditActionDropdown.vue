@@ -160,7 +160,7 @@ import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderType, FolderOptions } from '../fs/interface';
 import { contextUid, currentSearchedEntities } from '../fs';
-import { newBrowser } from '../utils/browser';
+import { newBrowserOrInit } from '../utils/browser';
 import Icon from './Icon.vue';
 
 type Permission = 'edit' | 'rename' | 'remove' | 'location';
@@ -238,7 +238,7 @@ function exec(id: string) {
 function onSelect(value: string | number | Record<string, unknown> | undefined) {
 	// 空白区域的新建浏览器
 	if (value === 'newBrowser') {
-		newBrowser();
+		newBrowserOrInit();
 		isBlankArea.value = false;
 		return;
 	}

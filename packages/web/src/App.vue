@@ -34,7 +34,25 @@
 			</a-modal>
 
 			<!-- 全局：一键安装 -->
-			<Setup v-model:visible="store.render.state.setup"></Setup>
+			<Setup
+				v-model:visible="store.render.state.setup"
+				:preset-steps="['show_desc', 'init_env', 'init_extensions', 'init_script']"
+			></Setup>
+
+			<!-- 全局：新建浏览器自动初始化 -->
+			<Setup
+				v-model:visible="store.render.state.newBrowserSetup"
+				auto-setup
+				title="新建浏览器"
+				confirm-text="开始初始化"
+				:preset-steps="['new_browser', 'init_automationScript']"
+				@finish="
+					() => {
+						store.render.state.newBrowserSetup = false;
+						Message.success('新建浏览器成功');
+					}
+				"
+			></Setup>
 		</div>
 	</a-config-provider>
 </template>
@@ -50,7 +68,7 @@ import { about, changeTheme, fetchRemoteNotify, fetchRemoteLangs, setAlwaysOnTop
 import { activeIpcRenderListener } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
 import { currentBrowser } from './fs';
-import { Modal } from '@arco-design/web-vue';
+import { Modal, Message } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import cloneDeep from 'lodash/cloneDeep';
 import debounce from 'lodash/debounce';

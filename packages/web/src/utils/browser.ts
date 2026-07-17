@@ -42,6 +42,15 @@ function generateUniqueName(baseName: string, existingNames: string[]): string {
 	return `${baseName} (${maxN + 1})`;
 }
 
+/**
+ * 根据当前文件夹中已有的浏览器/文件夹名，生成不重复的浏览器默认名（如「未命名浏览器」「未命名浏览器 (2)」）。
+ * 复用 newBrowser 的命名算法，供新建浏览器输入弹窗作为默认值。
+ */
+export function getDefaultBrowserName(baseName = '未命名浏览器'): string {
+	const siblingNames = Object.values(currentFolder.value.children).map((c) => c.name);
+	return generateUniqueName(baseName, siblingNames);
+}
+
 export function newFolder() {
 	// 关闭搜索模式
 	resetSearch();
@@ -61,7 +70,11 @@ export function newFolder() {
 	});
 	currentFolder.value.children[id] = folder;
 }
-export function newBrowser(opts?: { name: string; automationScripts?: RawAutomationScript[]; store?: object }) {
+export function newBrowser(opts?: {
+	name: string;
+	automationScripts?: RawAutomationScript[];
+	store?: object;
+}): Browser | undefined {
 	if (!store?.render?.setting?.launchOptions?.executablePath) {
 		Message.error('检测到浏览器路径未填写，请在左侧软件设置中设置，然后重新创建浏览器！');
 		return;
@@ -78,7 +91,7 @@ export function newBrowser(opts?: { name: string; automationScripts?: RawAutomat
 		? generateUniqueName(opts.name, siblingNames)
 		: generateUniqueName('未命名浏览器', siblingNames);
 
-	currentFolder.value.children[id] = new Browser({
+	const browser = new Browser({
 		type: 'browser',
 		uid: id,
 		name,
@@ -96,6 +109,27 @@ export function newBrowser(opts?: { name: string; automationScripts?: RawAutomat
 		tags: [],
 		automationScripts: opts?.automationScripts ? JSON.parse(JSON.stringify(opts?.automationScripts)) : []
 	});
+	currentFolder.value.children[id] = browser;
+	return browser;
+}
+
+/**
+ * 新建浏览器（或触发自动初始化）
+ *
+ * 当「新建浏览器自动初始化」开关开启时，不直接创建浏览器，
+ * 而是打开「新建浏览器自动初始化」弹窗并自动执行初始化流程（新建浏览器 + 添加自动化程序）。
+ * 关闭时退化为直接调用 newBrowser。
+ */
+export function newBrowserOrInit(opts?: {
+	name: string;
+	automationScripts?: RawAutomationScript[];
+	store?: object;
+}): Browser | undefined {
+	if (store.render.setting.browser.autoInitNewBrowser) {
+		store.render.state.newBrowserSetup = true;
+		return;
+	}
+	return newBrowser(opts);
 }
 
 export async function checkBrowserCaches() {

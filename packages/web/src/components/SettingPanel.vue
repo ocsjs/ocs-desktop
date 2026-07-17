@@ -79,6 +79,14 @@
 					<a-switch v-model="store.render.setting.browser.forceUpdateScript" />
 				</a-tooltip>
 			</Description>
+
+			<Description label="新建浏览器自动初始化">
+				<a-tooltip
+					content="启用后，点击新建浏览器将自动打开初始化弹窗并执行（新建浏览器、添加自动化程序），关闭则直接创建空浏览器"
+				>
+					<a-switch v-model="store.render.setting.browser.autoInitNewBrowser" />
+				</a-tooltip>
+			</Description>
 		</a-card>
 
 		<a-card title="基本设置">
