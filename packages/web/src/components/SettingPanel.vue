@@ -1,13 +1,13 @@
 <template>
 	<div class="setting container-md">
-		<a-card title="通用设置">
+		<a-card title="脚本设置">
 			<Description class="pt-2 pb-2">
 				<template #label>
 					<img
 						src="../../public/favicon.png"
 						width="32px"
 					/>
-					<span class="fw-bold"> OCS配置 </span>
+					<span class="fw-bold"> OCS脚本配置 </span>
 				</template>
 				<!-- 这里tooltip不删除、兼容旧版浏览器的提示 setting_browser_ocs_config_sync_tip -->
 				<!-- <a-tooltip
