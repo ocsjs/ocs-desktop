@@ -30,10 +30,16 @@
 		>
 			<template #title> 选择模板进行批量创建 </template>
 			<AutomationScriptSelector
-				v-model:automation-scripts="state.automationScripts"
+				:automation-scripts="state.automationScripts"
 				style="max-height: 70vh; overflow: overlay"
 				:multiple="false"
-				@confirm="(state.showAutomationScriptSelector = false), showMultipleCreateTable()"
+				@confirm="
+					(as) => {
+						state.automationScripts = as;
+						state.showAutomationScriptSelector = false;
+						showMultipleCreateTable();
+					}
+				"
 			></AutomationScriptSelector>
 		</a-modal>
 

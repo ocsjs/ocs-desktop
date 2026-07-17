@@ -8,9 +8,10 @@
 		/>
 
 		<CommonSelector
+			:selected="props.automationScripts.map((s) => ({ key: s.name, ...s }))"
 			:multiple="props.multiple"
-			:list="scripts.filter((s) => s.name.includes(state.search)).map((s) => ({ key: s.name, ...s }))"
-			:on-select="confirm"
+			:list="scripts.map((s) => ({ key: s.name, ...s }))"
+			@select="onConfirm"
 		>
 			<template #content="{ item: script }">
 				<b> {{ script.name }} </b>
@@ -57,18 +58,15 @@ const props = withDefaults(
 );
 
 const emits = defineEmits<{
-	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]): void;
-	(e: 'confirm'): void;
+	(e: 'confirm', automationScripts: RawAutomationScript[]): void;
 }>();
 
 const RawScripts = remote.methods.callSync('getRawScripts');
-console.log('RawScripts', RawScripts);
 const scripts = computed<RawAutomationScript[]>(() => RawScripts.filter((s) => s.name.includes(state.search)));
 
-function confirm(selectedScripts: RawAutomationScript[]) {
-	// 使用拷贝消除响应式特性
-	emits('update:automationScripts', JSON.parse(JSON.stringify(selectedScripts)));
-	emits('confirm');
+function onConfirm(val: RawAutomationScript[]) {
+	console.log(JSON.parse(JSON.stringify(val)));
+	emits('confirm', JSON.parse(JSON.stringify(val)));
 }
 </script>
 

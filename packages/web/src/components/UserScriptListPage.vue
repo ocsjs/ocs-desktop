@@ -337,10 +337,10 @@
 		>
 			<CommonSelector
 				:list="state.versionSelector.list.map((i) => ({ key: i.version, ...i }))"
-				:on-select="(items) => {
-					changeScriptVersion(state.versionSelector.currentScriptId!,items[0])
-				}"
 				:multiple="false"
+				@select="(items)=>{
+					changeScriptVersion(state.versionSelector.currentScriptId!,items[0]) 
+				}"
 			>
 				<template #content="{ item }">
 					<div class="row">

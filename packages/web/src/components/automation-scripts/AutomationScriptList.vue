@@ -3,7 +3,22 @@
 		v-for="(script, index) of automationScripts"
 		:key="index"
 	>
-		<a-card :title="script.name">
+		<a-card
+			:title="script.name"
+			class="as"
+		>
+			<template #extra>
+				<a-button
+					size="mini"
+					type="outline"
+					status="danger"
+					@click="remove(index)"
+				>
+					<template #icon>
+						<icon-close />
+					</template>
+				</a-button>
+			</template>
 			<div>
 				<div
 					v-for="cfg of script.configs"
@@ -20,6 +35,7 @@
 						<div style="flex: auto">
 							<a-input
 								v-model="cfg.value"
+								:placeholder="`输入 ${cfg.label} ...`"
 								size="small"
 								@blur="() => (cfg.value = cfg.value.trim())"
 							></a-input>
@@ -34,13 +50,19 @@
 <script setup lang="ts">
 import { RawAutomationScript } from './index';
 
-defineProps<{
+const props = defineProps<{
 	automationScripts: RawAutomationScript[];
 }>();
 
-defineEmits<{
+const emits = defineEmits<{
 	(e: 'update:automationScripts', automationScripts: RawAutomationScript[]): void;
 }>();
+
+function remove(index: number) {
+	const arr = [...props.automationScripts];
+	arr.splice(index, 1);
+	emits('update:automationScripts', arr);
+}
 </script>
 
 <style scoped lang="less">

@@ -14,22 +14,24 @@
 			</div>
 
 			<!-- 全局：浏览器操作面板 -->
-			<template v-if="currentBrowser">
-				<a-modal
-					:closable="false"
-					:visible="!!currentBrowser"
-					:width="600"
-					:footer="false"
-					:header="false"
-					@cancel="store.render.browser.currentBrowserUid = ''"
-				>
+			<a-modal
+				:closable="false"
+				:visible="!!currentBrowser"
+				:width="600"
+				:top="8"
+				:align-center="false"
+				:footer="false"
+				:header="false"
+				@cancel="store.render.browser.currentBrowserUid = ''"
+			>
+				<div v-if="currentBrowser">
 					<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
 					<a-divider class="mt-2 mb-1" />
 					<div style="max-height: 80vh; overflow: auto">
 						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
 					</div>
-				</a-modal>
-			</template>
+				</div>
+			</a-modal>
 
 			<!-- 全局：一键安装 -->
 			<Setup v-model:visible="store.render.state.setup"></Setup>

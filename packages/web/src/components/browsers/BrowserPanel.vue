@@ -4,7 +4,7 @@
 			v-if="instance"
 			:column="1"
 			size="large"
-			class="mt-3 ps-2 pe-2"
+			class="mt-2 ps-2 pe-2"
 		>
 			<a-descriptions-item label="标签分类">
 				<div>
@@ -25,8 +25,6 @@
 			</a-descriptions-item>
 		</a-descriptions>
 
-		<a-divider> 自动程序 </a-divider>
-
 		<div class="pe-2">
 			<UsageAlertCollapse
 				v-model:collapse="store.render.state.read_record.automation_script_usage"
@@ -43,7 +41,8 @@
 				启动浏览器后会自动运行 <code>自动程序</code><br />
 				根据不同配置运行例如：自动登录、自动点击等。
 			</UsageAlertCollapse>
-			<a-tooltip>
+
+			<a-tooltip position="bottom">
 				<template #content>
 					启动浏览器后会自动运行 <code>自动程序</code><br />
 					根据不同配置运行例如：自动登录、自动点击等。
@@ -54,13 +53,14 @@
 				</template>
 
 				<a-button
-					class="w-100"
+					class="w-100 mb-2"
 					type="primary"
 					@click="state.showAutomationScriptSelector = true"
 				>
 					<icon-plus /> 添加自动程序
 				</a-button>
 			</a-tooltip>
+
 			<div class="mt-2">
 				<AutomationScripts v-model:automation-scripts="instance.automationScripts"></AutomationScripts>
 			</div>
@@ -218,12 +218,18 @@
 		<a-modal
 			v-model:visible="state.showAutomationScriptSelector"
 			:footer="false"
+			unmount-on-close
 		>
 			<template #title> 选择自动化程序 </template>
 			<AutomationScriptSelector
-				v-model:automation-scripts="instance.automationScripts"
+				:automation-scripts="instance.automationScripts"
 				style="max-height: 70vh; overflow: overlay"
-				@confirm="state.showAutomationScriptSelector = false"
+				@confirm="
+					(as) => {
+						instance.automationScripts = as;
+						state.showAutomationScriptSelector = false;
+					}
+				"
 			></AutomationScriptSelector>
 		</a-modal>
 	</div>
