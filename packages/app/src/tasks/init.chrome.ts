@@ -5,14 +5,13 @@ import { sleep, unzip } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
 import child_process from 'child_process';
+import { getBuiltinChromeRoot } from '@ocs-desktop/common';
 const logger = Logger('chrome-init');
 
 export async function initChrome(win: BrowserWindow) {
 	try {
 		// 解压浏览器内核
-		const chromePath = app.isPackaged
-			? path.join(process.resourcesPath, 'bin', 'chrome')
-			: path.join(app.getAppPath(), '..', '..', 'bin', 'chrome');
+		const chromePath = getBuiltinChromeRoot();
 		logger.log('chromePath', chromePath);
 		if (!fs.existsSync(chromePath)) {
 			logger.error(`内置浏览器目录不存在: ${chromePath}`);
