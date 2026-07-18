@@ -226,7 +226,6 @@
 			<template #title> 选择自动化程序 </template>
 			<AutomationScriptSelector
 				:automation-scripts="instance.automationScripts"
-				style="max-height: 70vh; overflow: overlay"
 				@confirm="
 					(as) => {
 						instance.automationScripts = as;

@@ -31,7 +31,6 @@
 			<template #title> 选择模板进行批量创建 </template>
 			<AutomationScriptSelector
 				:automation-scripts="state.automationScripts"
-				style="max-height: 70vh; overflow: overlay"
 				:multiple="false"
 				@confirm="
 					(as) => {
