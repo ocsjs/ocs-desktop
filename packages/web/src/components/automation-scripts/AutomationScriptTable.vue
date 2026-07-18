@@ -115,7 +115,7 @@ const emits = defineEmits<{
 	(
 		e: 'confirm',
 		raw: RawAutomationScript,
-		configsList: (RawAutomationScript['configs'] & { browserName: string })[]
+		configsList: { browserName: string; configs: RawAutomationScript['configs'] }[]
 	): void;
 	(e: 'cancel'): void;
 }>();
@@ -220,14 +220,17 @@ function getValidData() {
 function onConfirm() {
 	const validData = getValidData();
 
-	const configsList: (RawAutomationScript['configs'] & { browserName: string })[] = [];
+	const configsList: { browserName: string; configs: RawAutomationScript['configs'] }[] = [];
 
 	for (const obj of validData) {
-		const configs: RawAutomationScript['configs'] & { browserName: string } = Object.create({});
+		const configs: RawAutomationScript['configs'] = Object.create({});
 		const object: Record<string, any> & { browserName: string } = JSON.parse(JSON.stringify(obj));
 
 		Reflect.deleteProperty(object, 'index');
 		Reflect.deleteProperty(object, 'key');
+		// 将 browserName 单独取出，避免它作为 config 条目混入 configs（否则渲染时会出现幽灵输入项）
+		const browserName = object.browserName || '';
+		Reflect.deleteProperty(object, 'browserName');
 
 		for (const key in object) {
 			if (Object.prototype.hasOwnProperty.call(object, key)) {
@@ -238,8 +241,8 @@ function onConfirm() {
 				} as Config);
 			}
 		}
-		configs.browserName = object.browserName || state.browserNameFields.map((f) => configs[f]?.value || '').join(' ');
-		configsList.push(configs);
+		const finalBrowserName = browserName || state.browserNameFields.map((f) => configs[f]?.value || '').join(' ');
+		configsList.push({ browserName: finalBrowserName, configs });
 	}
 
 	emits('confirm', props.rawAutomationScript, configsList);

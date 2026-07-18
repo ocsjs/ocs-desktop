@@ -129,15 +129,15 @@ function showMultipleCreateTable() {
 
 async function multipleCreate(
 	raw: RawAutomationScript,
-	configsList: (RawAutomationScript['configs'] & { browserName: string })[]
+	configsList: { browserName: string; configs: RawAutomationScript['configs'] }[]
 ) {
-	for (const configs of configsList) {
+	for (const item of configsList) {
 		newBrowser({
-			name: configs.browserName,
+			name: item.browserName,
 			automationScripts: [
 				{
 					name: raw.name,
-					configs: configs
+					configs: item.configs
 				}
 			]
 		});
