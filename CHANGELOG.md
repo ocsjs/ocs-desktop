@@ -8,6 +8,57 @@
 
 
 
+## [2.13.0](https://github.com/ocsjs/ocs-desktop/compare/v2.12.0...v2.13.0) (2026-07-19)
+
+
+### ✨ Features
+
+* 新增全局Banner通知显示 ([9e0859f](https://github.com/ocsjs/ocs-desktop/commit/9e0859fa8eb69acd7ed221159a642377cfcb3253))
+* 新增加密解密算法，并适配原方案。 ([4660b9e](https://github.com/ocsjs/ocs-desktop/commit/4660b9e7908e2a6b723256f14fcbc11d26379357))
+* 新增脚本使用meta.js更新检测功能，如果版本不需要更新则直接跳过 ([4ca3147](https://github.com/ocsjs/ocs-desktop/commit/4ca3147607631733546e4cab66195f9c3d7f433e))
+* 添加简洁模式 ([029a961](https://github.com/ocsjs/ocs-desktop/commit/029a961f55e64509d2da5a756d3e3db8525a1cb9))
+
+
+### 🐛 Bug Fixes
+
+* 修复开发环境下内容浏览器无法初始化的问题 ([04427aa](https://github.com/ocsjs/ocs-desktop/commit/04427aa1e5a8c14184bdfb3389744041decedd79))
+* 修复批量创建浏览器出现多余配置的问题 ([2c7a54c](https://github.com/ocsjs/ocs-desktop/commit/2c7a54cee21b41a9893119b409d1bcf15697b8b1))
+* 修复脚本meta.js更新检查功能，在指定版本时无法正确处理的问题 ([8186db7](https://github.com/ocsjs/ocs-desktop/commit/8186db7d098f00c1f942697bfc1d6bed7f0ce6fb))
+* 修复软件无限关闭的BUG ([0fef8b8](https://github.com/ocsjs/ocs-desktop/commit/0fef8b8b2e344e5b15c59c2834cc93eab074fc53))
+* 修复部分脚本作者头像无法显示的BUG ([9044a5c](https://github.com/ocsjs/ocs-desktop/commit/9044a5ca8e3befb70307d60e05eefc00552125a2))
+* 分离环境检测功能、新增 AppInBrowser.vue 组件、修复浏览器中书签界面显示软件提示弹窗以及自动切换简洁模式的BUG ([7a86a66](https://github.com/ocsjs/ocs-desktop/commit/7a86a66b8b69ff1740156793509951ea790e3e5b))
+* 更新 pnpm-lock.yaml 以包含 highlight.js 依赖 ([5ee825d](https://github.com/ocsjs/ocs-desktop/commit/5ee825d0f67614cc64a8c6fdaa94f141aa057f9f))
+
+
+### ⚡ Performance
+
+* 优化PR工作流、添加 separate-pull-requests 参数 ([4f6c730](https://github.com/ocsjs/ocs-desktop/commit/4f6c730a61ff0bcf77ac9c7a1efff95ef5e2bc58))
+* 优化双模式下的环境检测功能 ([6e83254](https://github.com/ocsjs/ocs-desktop/commit/6e832545e3fa2a6ebb70a44b5c6c1479bed76c0a))
+* 优化滑动框样式 ([8f03be8](https://github.com/ocsjs/ocs-desktop/commit/8f03be8aff06159e30bf56e05df1e6f38e95920a))
+* 优化滚动条样式 ([f74a327](https://github.com/ocsjs/ocs-desktop/commit/f74a327fc59e1ca0c25bd58cbadfde131542ee6d))
+* 优化用户脚本和浏览器的使用提示 ([dda0a42](https://github.com/ocsjs/ocs-desktop/commit/dda0a42ef7412381b1cf85ffc9dc1b223fe32cb2))
+* 优化简洁模式Tab栏夜间模式显示、修复简洁模式点击启动会触发编辑功能的问题 ([44687a2](https://github.com/ocsjs/ocs-desktop/commit/44687a25e8c58b2ee884644eed8266c379c9470b))
+* 优化自动化程序选择窗口 ([836be61](https://github.com/ocsjs/ocs-desktop/commit/836be61ff8bfbbc1eaf8aa8117bcb6ce9759e39e))
+* 优化自动程序选择器，优化样式 ([2d2f07f](https://github.com/ocsjs/ocs-desktop/commit/2d2f07f66aba70fb5472b6b296c802b544ac3f38))
+* 优化设置界面文案 ([f28d3e6](https://github.com/ocsjs/ocs-desktop/commit/f28d3e65a9b05a5ac5b6b5a70b9a1728256d859b))
+* 修复项目类型报错 ([9739ddb](https://github.com/ocsjs/ocs-desktop/commit/9739ddb190f722945a9b9b54ddd968d83543eb8f))
+* 分离环境检测、优化列表选择器、简洁模式设置可查看路径 ([b00fba3](https://github.com/ocsjs/ocs-desktop/commit/b00fba3c5c86829d4cbee515532a60c5d2b6d647))
+* 创建浏览器时自动弹出命名步骤和自动程序设置步骤 ([8cd59a7](https://github.com/ocsjs/ocs-desktop/commit/8cd59a75114e9ecf478d7e9f92b2179b1a3f0581))
+* 增加圆角、阴影、背景颜色、优化各种组件样式 ([3d9a4ed](https://github.com/ocsjs/ocs-desktop/commit/3d9a4edb9ef26d822472d9f8b2bdfd71ad42f2b7))
+* 增加本地图标接口的缓存功能 ([ce360d4](https://github.com/ocsjs/ocs-desktop/commit/ce360d4d68ab6ccb158c2a524a6708129aa5c890))
+* 增加自动化程序的输入类型、属性等 ([1b03a8a](https://github.com/ocsjs/ocs-desktop/commit/1b03a8a63c752c9e40bf3adbfc38c0260a3ba1cf))
+* 将脚本搜索功能集成在按钮上，不再使用Tab栏展示，并且添加脚本列表分页功能 ([ca001ae](https://github.com/ocsjs/ocs-desktop/commit/ca001aecfd7ed5652834d2625fde18d4e094fdda))
+* 将自动化脚本文案更改：自动化程序，防止歧义 ([f6269e8](https://github.com/ocsjs/ocs-desktop/commit/f6269e897380e613f8e614f449b02c4c0207236b))
+* 新增 markdown 代码高亮显示功能 ([0bb7782](https://github.com/ocsjs/ocs-desktop/commit/0bb77826c3f9456cb278a5d1954acc13e9f4c509))
+* 新增使用提示Alert关闭功能、新增简洁模式Tab栏置顶功能 ([6dfd16f](https://github.com/ocsjs/ocs-desktop/commit/6dfd16f2860babd8f010140bb99af03143d03b25))
+* 新增软件设置到简洁模式中、并且优化样式和代码 ([1bccbc0](https://github.com/ocsjs/ocs-desktop/commit/1bccbc02a428bfb1faa0b8b29df86619d851eb2c))
+* 新增项目 SKILL ([dcffc5c](https://github.com/ocsjs/ocs-desktop/commit/dcffc5c611aa8fee6420e2623ceb08eb11c53133))
+* 浏览器操作抽屉改成弹窗界面，并且优化样式主次分明 ([fb4305c](https://github.com/ocsjs/ocs-desktop/commit/fb4305cc2f65c2086bdb3650e0f5ef0889fa8230))
+* 添加简洁模式的右键菜单提示 ([c3e7c1e](https://github.com/ocsjs/ocs-desktop/commit/c3e7c1e96ba6481625b8fee42f817744e034329d))
+* 添加网络脚本弹窗中现实官方脚本列表的功能 ([5119a33](https://github.com/ocsjs/ocs-desktop/commit/5119a330ed1eb59e4f3658ad5f5dca767398bdc4))
+* 添加脚本信息间隔检测、防止频繁检测 ([9b46fd9](https://github.com/ocsjs/ocs-desktop/commit/9b46fd9efd075637051aa3a0c3d54f78af9ebc89))
+* 添加自动化程序的网站图标显示 ([add17dd](https://github.com/ocsjs/ocs-desktop/commit/add17dd965b90ffdd9d4d944e6a66b1bcc174a44))
+
 ## [2.12.0](https://github.com/ocsjs/ocs-desktop/compare/v2.11.1...v2.12.0) (2026-06-17)
 
 
