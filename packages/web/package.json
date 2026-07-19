@@ -18,7 +18,9 @@
 		"colorpicker-v3": "^2.10.2",
 		"dayjs": "^1.10.7",
 		"easy-us": "^0.0.56",
+		"electron-store": "^8.2.0",
 		"events": "^3.3.0",
+		"lodash": "^4.18.1",
 		"markdown-it": "^13.0.1",
 		"markdown-it-anchor": "^8.6.7",
 		"markdown-it-container": "^3.0.0",
@@ -36,6 +38,7 @@
 	},
 	"devDependencies": {
 		"@arco-design/web-vue": "^2.42.0",
+		"@types/lodash": "^4.17.24",
 		"@types/markdown-it": "^12.2.3",
 		"@types/markdown-it-container": "^2.0.5",
 		"@types/markdown-it-emoji": "^2.0.2",

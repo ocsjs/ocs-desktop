@@ -40,8 +40,9 @@ export function getValidBrowsers(): ValidBrowser[] {
 }
 
 function resolveBrowserPath(commonPath: string) {
+	const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath || '';
 	return [
-		join(process.resourcesPath, commonPath),
+		join(resourcesPath, commonPath),
 		...(process.platform === 'win32'
 			? [
 					// @ts-ignore

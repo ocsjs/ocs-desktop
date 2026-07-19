@@ -7,8 +7,10 @@
 	>
 		<span
 			:style="{ color, fontSize: size ? size + 'px' : 'inherit' }"
-			:class="'material-icons' + (theme === 'filled' ? '' : '-' + theme)"
+			:class="['notranslate', 'material-icons' + (theme === 'filled' ? '' : '-' + theme)]"
 			:title="title"
+			translate="no"
+			aria-hidden="true"
 		>
 			{{ type }}
 		</span>

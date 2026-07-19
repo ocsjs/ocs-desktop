@@ -31,5 +31,15 @@ export default defineConfig({
 			app: path.resolve(__dirname, './app')
 		}
 	},
-	plugins: [commonjs({ filter: (id) => (id.includes('xlsx') ? undefined : false) }), vue(), visualizer()]
+	plugins: [
+		commonjs({ filter: (id) => (id.includes('xlsx') ? undefined : false) }),
+		vue({
+			template: {
+				compilerOptions: {
+					isCustomElement: (tag) => tag === 'webview'
+				}
+			}
+		}),
+		visualizer()
+	]
 });

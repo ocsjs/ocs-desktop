@@ -18,7 +18,7 @@
 				<a-button
 					size="mini"
 					type="text"
-					@click="instance?.launch()"
+					@click="launch"
 				>
 					<Icon
 						type="play_circle"
@@ -110,6 +110,7 @@ const props = withDefaults(
 		browser: BrowserOptions;
 		tooltipPosition?: 'top' | 'br';
 		iconClass?: string;
+		launchHandler?: (browser: Browser) => void | Promise<void>;
 	}>(),
 	{
 		tooltipPosition: 'top',
@@ -118,6 +119,15 @@ const props = withDefaults(
 );
 const instance = Browser.from(props.browser.uid);
 const process = computed(() => Process.from(props.browser.uid));
+
+async function launch() {
+	if (!instance) return;
+	if (props.launchHandler) {
+		await props.launchHandler(instance);
+		return;
+	}
+	await instance.launch();
+}
 </script>
 
 <style scoped lang="less">

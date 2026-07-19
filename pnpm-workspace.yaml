@@ -1,5 +1,11 @@
 packages:
   - packages/**
 
+allowBuilds:
+  electron: true
+  es5-ext: true
+  esbuild: true
+  vue-demi: true
+
 onlyBuiltDependencies:
   - electron

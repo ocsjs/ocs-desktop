@@ -295,8 +295,6 @@ function openInApp() {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500&display=swap');
-
 .browser-tag {
 	display: inline-block;
 	border-radius: 6px;
@@ -325,7 +323,7 @@ function openInApp() {
 .bookmarks-container {
 	min-height: 100vh;
 	background: @primary-bg;
-	font-family: 'Outfit', -apple-system, sans-serif;
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 	color: @text-primary;
 	position: relative;
 	overflow-x: hidden;

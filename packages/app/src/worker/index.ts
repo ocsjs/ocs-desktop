@@ -423,7 +423,9 @@ export async function launchBrowser({
 
 					// 必须先打开开发者模式，才能关闭额外拓展页，否则打开开发者模式可能会重启插件，导致出现新的额外页面
 					// 关闭拓展加载时弹出的首页
-					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
+			waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages }).catch((err) => {
+				console.warn('浏览器拓展主页关闭超时，已跳过：', err instanceof Error ? err.message : err);
+			});
 
 					// 安装用户脚本
 					const warn = await setupUserScripts({ browser, userscripts, step, config });
