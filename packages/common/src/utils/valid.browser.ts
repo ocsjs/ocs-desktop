@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ValidBrowser } from '../interface';
 import os from 'os';
-import 'electron';
+import { app } from 'electron';
 import { getBuiltinChromeRoot } from './chrome.path';
 
 // 获取可用浏览器路径
@@ -34,6 +34,14 @@ export function getValidBrowsers(): ValidBrowser[] {
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
+		case 'linux': {
+			return [
+				{
+					name: '软件内置浏览器-谷歌(Chrome)',
+					path: resolveBrowserPath('bin/chrome/chrome/chrome')
+				}
+			].filter((b) => b.path) as ValidBrowser[];
+		}
 		default: {
 			return [];
 		}
@@ -43,17 +51,21 @@ export function getValidBrowsers(): ValidBrowser[] {
 /**
  * 解析内置 Chrome 可执行文件路径。
  * relativeTail 为 `bin/chrome` 之后的相对路径（如 `chrome/chrome.exe`）。
- * - 打包模式：resources/bin/chrome/<relativeTail>
+ * - 运行时（init.chrome.ts 解压目标）：userData/bin/chrome/<relativeTail>
+ * - 打包模式 zip 源：resources/bin/chrome/<relativeTail>
  * - 开发模式：<projectRoot>/bin/chrome/<platform>-<arch>/<relativeTail>
  */
 function resolveBuiltinChromePath(relativeTail: string): string | undefined {
-	return [join(process.resourcesPath, 'bin', 'chrome', relativeTail), join(getBuiltinChromeRoot(), relativeTail)].find(
-		(p) => existsSync(p)
-	);
+	return [
+		join(app.getPath('userData'), 'bin', 'chrome', relativeTail),
+		join(process.resourcesPath, 'bin', 'chrome', relativeTail),
+		join(getBuiltinChromeRoot(), relativeTail)
+	].find((p) => existsSync(p));
 }
 
 function resolveBrowserPath(commonPath: string) {
 	return [
+		join(app.getPath('userData'), commonPath),
 		join(process.resourcesPath, commonPath),
 		...(process.platform === 'win32'
 			? [

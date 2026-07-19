@@ -54,17 +54,24 @@ function bootstrap() {
 
 				await app.whenReady();
 				const window = createWindow();
-				await task('初始化谷歌浏览器', () => initChrome(window));
+				const relaunched = await task('初始化谷歌浏览器', () => initChrome(window));
+				if (relaunched) {
+					return;
+				}
 
 				app.on('quit', (e) => {
 					e.preventDefault();
 					// 交给渲染层去关闭浏览器
-					window.webContents.send('close');
+					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+						window.webContents.send('close');
+					}
 				});
 
 				window.on('close', (e) => {
 					e.preventDefault();
-					window.webContents.send('close');
+					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+						window.webContents.send('close');
+					}
 				});
 
 				window.webContents.once('did-finish-load', () => {

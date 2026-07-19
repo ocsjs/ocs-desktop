@@ -383,12 +383,15 @@ export async function launchBrowser({
 				executablePath,
 				ignoreHTTPSErrors: true,
 				acceptDownloads: true,
-				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation', '--no-sandbox'],
+				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
 				args: [
 					'--window-position=0,0',
 					'--no-first-run',
 					'--no-default-browser-check',
 					'--allow-file-access-from-files',
+					// AppImage 下无法可靠保留 chrome-sandbox 的 setuid 位，Linux 关闭沙箱；
+					// Windows/macOS 保留沙箱以收紧攻击面。
+					...(process.platform === 'linux' ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
 					...args
 				]
 			})
