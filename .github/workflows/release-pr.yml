@@ -11,10 +11,14 @@ permissions:
 
 jobs:
   release-pr:
+    # 跳过合并 Release PR 产生的 push：此时 release-tag.yml 尚未创建新 tag，
+    # release-please 全量重扫历史 commit 会凭空生成内容重复的下一版本 PR
+    if: ${{ !contains(github.event.head_commit.message, 'release-please--branches') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN  }}
+          # 发布链靠真人合并 PR + gh workflow run 触发，内置 GITHUB_TOKEN 即可，无需 PAT
+          token: ${{ secrets.GITHUB_TOKEN }}
           skip-github-release: true # 只创建 PR，不创建 Release

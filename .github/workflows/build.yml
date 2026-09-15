@@ -3,6 +3,23 @@ name: Build and Upload
 on:
   workflow_dispatch:
 
+env:
+  # 腾讯云 COS（非机密；机密仅需 secrets.TENCENT_SECRET_ID / TENCENT_SECRET_KEY）
+  COS_BUCKET: ocs-1301696006
+  COS_REGION: ap-guangzhou
+  # 全球加速 endpoint：GitHub runner（美国）→ 国内跨境链路慢且部分 runner 路由不通，
+  # 走加速域名经腾讯骨干网回源（需 COS 控制台开启全球加速；coscmd 的 -r 与 -e 二选一）
+  COS_ENDPOINT: cos.accelerate.myqcloud.com
+  # COS 目标目录
+  COS_DOWNLOAD_DIR: /app/download/
+  COS_UPDATER_DIR: /app/electron-updater/
+  # coscmd 调优：跨境慢链路下 16MB 分片单片 2-4 分钟会被服务端 UserNetworkTooSlow 踢断，
+  # 4MB 分片约 30s 完成；低并发保证单流带宽；120s 快速失败避免坏路由空等 10 分钟
+  COS_THREAD_NUM: "3"
+  COS_PART_SIZE: "4"
+  COS_RETRY: "10"
+  COS_TIMEOUT: "120"
+
 jobs:
   build:
     strategy:
@@ -32,20 +49,20 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.14"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           run_install: true
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -68,10 +85,10 @@ jobs:
           ARCH: ${{ matrix.arch }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ matrix.platform }}-${{ matrix.arch }}
-          # 产物目录已迁移至仓库根 releases/（electron.builder.json directories.output）
+          # 产物目录：仓库根 releases/（electron.builder.json directories.output）
           path: |
             releases/*.exe
             releases/*.blockmap
@@ -90,10 +107,10 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -162,10 +179,10 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -191,23 +208,15 @@ jobs:
         if: steps.check-secrets.outputs.available == 'true'
         run: pip install coscmd
 
-      # coscmd 参数（已对照 coscmd config -h 核实）：
-      #   -m        并发线程数：单文件分片并发，取 ≈分片数即可（200MB/16MB≈13 片）；
-      #             国际链路上过高并发会加剧拥塞反而降低成功率，runner 为 4 vCPU，取 10
-      #   -p        分片大小 MB（默认仅 1MB：200MB 文件会切 200 片，慢且易失败，调大到 16MB）
-      #   --retry   单个分片失败重试次数
-      #   --timeout 单请求超时秒数（注意：-t 是 token 参数，不是超时；--connect-timeout 不存在）
       - name: Configure Tencent Cloud COS
         if: steps.check-secrets.outputs.available == 'true'
         run: |
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
             -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b ${{ secrets.COS_BUCKET }} \
-            -r ${{ secrets.COS_REGION }} \
-            -m 10 \
-            -p 16 \
-            --retry 10 \
-            --timeout 600
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
 
       # 逐文件上传 + 调用级重试：
       # coscmd upload 默认开启分片断点续传（-f/--force 才是关闭断点），
@@ -223,7 +232,7 @@ jobs:
             [ -f "$file" ] || continue
             for attempt in 1 2 3 4 5; do
               echo "Uploading $file (attempt $attempt/5)"
-              if coscmd upload -y "$file" "/app/download/${{ env.VERSION }}/"; then
+              if coscmd upload -y "$file" "${COS_DOWNLOAD_DIR}${VERSION}/"; then
                 break
               fi
               if [ "$attempt" = 5 ]; then
@@ -244,7 +253,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check COS secrets availability
         id: check-secrets
@@ -267,16 +276,18 @@ jobs:
         run: |
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
             -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b ${{ secrets.COS_BUCKET }} \
-            -r ${{ secrets.COS_REGION }}
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
 
       - name: Upload CHANGELOG.md to COS
         if: steps.check-secrets.outputs.available == 'true'
-        run: coscmd upload -y CHANGELOG.md /app/electron-updater/
+        run: coscmd upload -y CHANGELOG.md "$COS_UPDATER_DIR"
 
-  # electron-updater 三件套（latest*.yml + 安装包 + blockmap）上传到固定更新目录。
-  # 最后执行：latest.yml 一旦生效客户端即会检测到新版本，
-  # 此时安装包（upload-cos）与更新日志（upload-changelog）均已就绪。
+  # electron-updater 安装包与 blockmap 上传到固定更新目录（不含 latest*.yml）。
+  # latest.yml 是客户端发现更新的唯一入口，单独由 publish-update job 经人工审批后上传，
+  # 因此安装包提前上传无害——在 latest.yml 生效前没有任何客户端会下载它们。
   upload-electron-updater:
     needs: upload-changelog
     if: startsWith(github.ref, 'refs/tags/')
@@ -285,7 +296,7 @@ jobs:
 
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -311,12 +322,10 @@ jobs:
         run: |
           coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
             -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b ${{ secrets.COS_BUCKET }} \
-            -r ${{ secrets.COS_REGION }} \
-            -m 10 \
-            -p 16 \
-            --retry 10 \
-            --timeout 600
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
 
       - name: Upload electron-updater files to COS
         if: steps.check-secrets.outputs.available == 'true'
@@ -324,11 +333,76 @@ jobs:
         run: |
           set -e
           shopt -s nullglob
-          for file in artifacts/latest*.yml artifacts/*.blockmap artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage; do
+          for file in artifacts/*.blockmap artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage; do
             [ -f "$file" ] || continue
             for attempt in 1 2 3 4 5; do
               echo "Uploading $file (attempt $attempt/5)"
-              if coscmd upload -y "$file" "/app/electron-updater/"; then
+              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
+                break
+              fi
+              if [ "$attempt" = 5 ]; then
+                echo "::error::Upload failed after 5 attempts: $file"
+                exit 1
+              fi
+              sleep $((attempt * 15))
+            done
+          done
+
+  # 发布闸门：只上传 latest*.yml（win=latest.yml / mac=latest-mac.yml / linux=latest-linux.yml）。
+  # 该 job 绑定 publish-update environment（需在仓库 Settings → Environments 配置 Required reviewers），
+  # 每次发版会停在 Review deployments，Approve 后客户端才能检测到更新，Reject 则不发布。
+  # 注意：CI artifacts 保留 3 天，审批需在构建后 3 天内完成。
+  publish-update:
+    needs: upload-electron-updater
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: publish-update
+    continue-on-error: true
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Check COS secrets availability
+        id: check-secrets
+        run: |
+          if [ -n "$COS_SECRET_ID" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "Skipping publish-update: TENCENT_SECRET_ID not configured"
+          fi
+        env:
+          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+
+      - name: Install Tencent Cloud CLI
+        if: steps.check-secrets.outputs.available == 'true'
+        run: pip install coscmd
+
+      - name: Configure Tencent Cloud COS
+        if: steps.check-secrets.outputs.available == 'true'
+        run: |
+          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
+
+      - name: Upload latest yml to COS
+        if: steps.check-secrets.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -e
+          shopt -s nullglob
+          for file in artifacts/latest*.yml; do
+            [ -f "$file" ] || continue
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading $file (attempt $attempt/5)"
+              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
                 break
               fi
               if [ "$attempt" = 5 ]; then

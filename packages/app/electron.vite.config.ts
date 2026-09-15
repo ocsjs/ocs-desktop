@@ -16,7 +16,10 @@ const commonAlias = [
 
 export default defineConfig({
 	main: {
-		plugins: [externalizeDepsPlugin()],
+		// common 必须排除出外部化：否则产物保留 require('@ocs-desktop/common')，
+		// 运行时去 node_modules 找 lib/index.js（lib 被 gitignore 且构建链不产出）导致启动崩溃；
+		// 排除后 common 源码经下方 alias 直接打进 out/main bundle
+		plugins: [externalizeDepsPlugin({ exclude: ['@ocs-desktop/common'] })],
 		resolve: {
 			alias: commonAlias
 		},

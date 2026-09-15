@@ -853,7 +853,7 @@ function createStepFunction(page: Page, serverPort: number): StepTips {
 			let frame = findNavFrame();
 			const deadline = Date.now() + 15_000;
 			while (!frame && Date.now() < deadline) {
-				await new Promise((r) => setTimeout(r, 300));
+				await new Promise((resolve) => setTimeout(resolve, 300));
 				frame = findNavFrame();
 			}
 			if (!frame) return;
