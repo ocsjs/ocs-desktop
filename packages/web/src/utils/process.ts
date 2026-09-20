@@ -4,6 +4,7 @@ import { t, store } from '../store';
 import { LaunchOptions } from 'playwright-core';
 import { reactive } from 'vue';
 import type { ScriptWorker, ScreencastPageInfo, ScreencastPagesChangedPayload } from '@ocs-desktop/common/web';
+import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { Browser } from '../fs/browser';
 import { Message } from '@arco-design/web-vue';
 import EventEmitter from 'events';
@@ -325,7 +326,7 @@ export class Process extends EventEmitter {
 				Status.loading(`正在启动 ${this.browser.name}（脚本均为最新，无需更新）...`);
 			}
 			// 预下载远程脚本 + 构造安装 URL（远程脚本经本地服务器代理，规避网络波动）
-			const port = store.server.port || 15319;
+			const port = store.server.port || DEFAULT_SERVER_PORT;
 			const userscripts: string[] = [];
 			const urlToItem = new Map<string, ScriptToInstall>();
 			for (const item of scriptsToInstall) {

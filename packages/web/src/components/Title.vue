@@ -3,7 +3,7 @@
 		<span
 			class="logo"
 			style="cursor: pointer; -webkit-app-region: no-drag"
-			@click="shell.openExternal('https://docs.ocsjs.com')"
+			@click="shell.openExternal(OCS_WEBSITE)"
 		>
 			<img
 				width="18"
@@ -59,7 +59,7 @@
 
 				<a-doption @click="showVersionLogs"> <Icon type="notes">更新日志</Icon> </a-doption>
 
-				<TitleLink url="https://docs.ocsjs.com/">
+				<TitleLink :url="OCS_WEBSITE + '/'">
 					<template #title>
 						<Icon type="home">软件官网</Icon>
 					</template>
@@ -77,7 +77,8 @@ import { fetchRemoteNotify, date, about, getRemoteInfos } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal } from '@arco-design/web-vue';
-import { store } from '../store/index';
+import { store, devSession } from '../store/index';
+import { OCS_WEBSITE, OCS_DOWNLOAD_PAGE } from '@ocs-desktop/common/web';
 import { electron } from '../utils/node';
 import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities } from '../fs/index';
 import { Folder, root } from '../fs/folder';
@@ -252,6 +253,12 @@ function openDevTools() {
 		store
 	};
 
+	// 开启开发者设置卡片（会话级，重启后自动隐藏）
+	if (!devSession.enabled) {
+		devSession.enabled = true;
+		Message.info('已开启开发者设置，可在「设置」页查看（重启软件后自动隐藏）');
+	}
+
 	remote.webContents.call('openDevTools');
 }
 
@@ -271,10 +278,10 @@ async function showVersionLogs() {
 					h(
 						'a',
 						{
-							href: 'https://docs.ocsjs.com/docs/app',
+							href: OCS_DOWNLOAD_PAGE,
 							target: '_blank'
 						},
-						'https://docs.ocsjs.com/docs/app'
+						OCS_DOWNLOAD_PAGE
 					)
 				]),
 				h(

@@ -10,7 +10,7 @@ env:
   # 全球加速 endpoint：GitHub runner（美国）→ 国内跨境链路慢且部分 runner 路由不通，
   # 走加速域名经腾讯骨干网回源（需 COS 控制台开启全球加速；coscmd 的 -r 与 -e 二选一）
   COS_ENDPOINT: cos.accelerate.myqcloud.com
-  # COS 目标目录
+  # COS 目标目录（COS_UPDATER_DIR 与 packages/common/src/constants.ts 的 OCS_UPDATER.feedUrl 需保持同步）
   COS_DOWNLOAD_DIR: /app/download/
   COS_UPDATER_DIR: /app/electron-updater/
   # coscmd 调优：跨境慢链路下 16MB 分片单片 2-4 分钟会被服务端 UserNetworkTooSlow 踢断，

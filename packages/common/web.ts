@@ -5,6 +5,7 @@
  * 仅限主进程（@ocs-desktop/app）使用；渲染进程（@ocs-desktop/web）请一律使用
  * '@ocs-desktop/common/web'。
  */
+export * from './src/constants';
 export * from './src/api';
 export { StringUtils } from './src/utils/string';
 export * from './src/interface';

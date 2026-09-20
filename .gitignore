@@ -8,6 +8,9 @@
 bin/
 package-lock.json
 
+.codebuddy/plans
+.claude/plans
+
 # tsc
 
 lib/

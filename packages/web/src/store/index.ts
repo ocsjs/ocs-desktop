@@ -220,8 +220,8 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 	render: DEFAULT_RENDER,
 	// 补齐主进程 window 配置中可能缺失的字段（旧版本用户未触发版本迁移时），后台运行默认关闭
 	window: { hideToTrayOnClose: false },
-	// 补齐更新测试配置（旧版本用户的磁盘 store 无此字段）
-	updater: { feedUrl: '', infosUrl: '', allowDowngrade: false }
+	// 补齐更新/调试配置（旧版本用户的磁盘 store 无此字段）
+	updater: { feedUrl: '', infosUrl: '', allowDowngrade: false, chromeSource: '' }
 });
 
 // 解密数据（兼容新旧加密格式）
@@ -266,6 +266,16 @@ if (_theme && _theme.dark !== undefined) {
 
 /** 数据存储对象 */
 export const store: AppStore & { render: WebStore } = reactive(_store);
+
+/**
+ * 开发者会话状态（非持久化）：独立于 store，不经过 saveStore 写入 config.json，
+ * 因此软件重启后自动恢复默认值。用于「开发者设置」卡片的显隐控制
+ * （左上角「工具 → 开发者工具」点击后置为 true）。
+ */
+export const devSession = reactive({
+	/** 是否显示设置页的「开发者设置」卡片 */
+	enabled: false
+});
 
 console.log('store', store);
 // @ts-ignore

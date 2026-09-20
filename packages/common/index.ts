@@ -5,6 +5,7 @@ export {
 	getChromeDownloadSources
 } from './src/utils/chrome.source';
 export type { CftPlatform, ChromeDownloadSource, ChromeDownloadSourceType } from './src/utils/chrome.source';
+export * from './src/constants';
 export * from './src/api';
 export { StringUtils } from './src/utils/string';
 export * from './src/interface';

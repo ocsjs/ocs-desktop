@@ -5,18 +5,26 @@ import { gt, lte } from 'semver';
 import { Logger } from '../logger';
 import { store } from '../store';
 import { getCurrentWebContents, moveWindowToTop } from '../utils';
-import { UpdateInformationResource } from '@ocs-desktop/common';
+import { UpdateInformationResource, OCS_UPDATER, OCS_DOWNLOAD_PAGE, AppStore } from '@ocs-desktop/common';
 
 const logger = Logger('updater');
 
-/** 默认更新源目录（与 electron.builder.json publish.url 一致），CHANGELOG.md 随构建一并上传至此目录 */
-const DEFAULT_FEED_URL = 'https://cdn.ocsjs.com/app/electron-updater/';
+/** 默认更新源目录（常量集中于 common/src/constants.ts，与 electron.builder.json publish.url 需保持同步） */
+const DEFAULT_FEED_URL = OCS_UPDATER.feedUrl;
 
 /** 保持“用户确认后才下载”的交互，由渲染层弹窗触发 downloadUpdate */
 autoUpdater.autoDownload = false;
 /** 下载完成后由 update-downloaded 统一提示并 quitAndInstall，避免退出时静默安装 */
 autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.logger = logger;
+
+/**
+ * 判断是否为“更新通道文件不存在”（latest.yml / latest-mac.yml 等尚未发布）。
+ * 属于正常状态（发布闸门未审批或首次部署前），应保持静默，不弹错误框打扰用户。
+ */
+function isChannelNotFoundError(err: unknown): boolean {
+	return /Cannot find channel "[\w.-]+\.yml"/.test(String(err));
+}
 
 let listening = false;
 
@@ -58,6 +66,11 @@ function listenUpdaterEvents() {
 	});
 
 	autoUpdater.on('error', (err) => {
+		// latest.yml 未发布（404）属正常状态，静默处理仅记录日志
+		if (isChannelNotFoundError(err)) {
+			logger.info('未发现已发布的更新文件（latest.yml 404），跳过本次检查');
+			return;
+		}
 		logger.error('更新失败', err);
 		dialog
 			.showMessageBox({
@@ -96,7 +109,7 @@ async function resolveChangelogMarkdown(latest: string, current: string): Promis
 		return sections.join('\n\n');
 	} catch (e) {
 		logger.error('获取更新日志失败', e);
-		return `## ${latest}\n\n更新日志获取失败，可前往 https://docs.ocsjs.com 查看`;
+		return `## ${latest}\n\n更新日志获取失败，可前往 ${OCS_DOWNLOAD_PAGE} 查看`;
 	}
 }
 
@@ -132,19 +145,35 @@ function applyUpdaterConfig() {
 	}
 }
 
-export async function updater() {
+export async function updater(config?: AppStore['updater']) {
 	listenUpdaterEvents();
+	/**
+	 * 渲染层手动检查更新时会携带最新配置（持久化防抖可能尚未落盘），
+	 * 此处先同步到主进程 store，保证本次检查立即使用新值（如自定义更新源）
+	 */
+	if (config) {
+		store.set('updater', config);
+	}
 	applyUpdaterConfig();
 	logger.info('检查更新', { version: app.getVersion() });
 	try {
 		const result = await autoUpdater.checkForUpdates();
 		const latest = result?.updateInfo?.version || app.getVersion();
 		const hasUpdate =
-			!!result?.updateInfo &&
-			(autoUpdater.allowDowngrade ? latest !== app.getVersion() : gt(latest, app.getVersion()));
+			!!result?.updateInfo && (autoUpdater.allowDowngrade ? latest !== app.getVersion() : gt(latest, app.getVersion()));
 		logger.info('检查更新结果', { current: app.getVersion(), latest, hasUpdate });
 		return { current: app.getVersion(), latest, hasUpdate };
 	} catch (e) {
+		// latest.yml 未发布（404）属正常状态：手动检查时按“无可用更新”反馈而非报错
+		if (isChannelNotFoundError(e)) {
+			logger.info('未发现已发布的更新文件（latest.yml 404）', { version: app.getVersion() });
+			return {
+				current: app.getVersion(),
+				latest: app.getVersion(),
+				hasUpdate: false,
+				message: `未发现已发布的更新（更新文件可能尚未发布），当前版本 ${app.getVersion()}`
+			};
+		}
 		logger.error('检查更新失败', e);
 		return undefined;
 	}

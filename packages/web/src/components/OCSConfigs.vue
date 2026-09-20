@@ -62,6 +62,7 @@ import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle
 import { remote } from '../utils/remote';
 import { store as Store, t } from '../store/index';
 import { themeState } from '../utils';
+import { OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import type { Project } from 'easy-us';
 
 const props = defineProps<{
@@ -237,20 +238,20 @@ async function loadOCS() {
 		// @ts-ignore
 		if (global.OCS === undefined) {
 			// 加载 OCS
-			const code = await remote.methods.call('get', 'https://cdn.ocsjs.com/index.js');
+			const code = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.index);
 			await remote.webContents.call('executeJavaScript', code);
 		}
 
 		// @ts-ignore
 		if (global.EUS === undefined) {
 			// 加载 EUS
-			const code = await remote.methods.call('get', 'https://cdn.ocsjs.com/easy-us.js');
+			const code = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.easyUs);
 			await remote.webContents.call('executeJavaScript', code);
 		}
 
 		if (state.css === '') {
 			// 加载样式
-			state.css = await remote.methods.call('get', 'https://cdn.ocsjs.com/style.css');
+			state.css = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.style);
 		}
 
 		// @ts-ignore

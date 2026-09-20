@@ -28,7 +28,7 @@
 		<div>
 			<a-button
 				type="text"
-				@click="goto('https://docs.ocsjs.com')"
+				@click="goto(OCS_WEBSITE)"
 			>
 				<Icon type="home">前往官网</Icon>
 			</a-button>
@@ -39,6 +39,7 @@
 <script lang="ts" setup>
 import { about, goto } from '../utils';
 import { newBrowserOrInit } from '../utils/browser';
+import { OCS_WEBSITE } from '@ocs-desktop/common/web';
 import Icon from './Icon.vue';
 </script>
 

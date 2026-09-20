@@ -43,7 +43,9 @@ export const OriginalAppStore: AppStore = {
 		/** 自定义软件信息接口 URL（更新日志来源），留空使用默认 ocs-app-infos.json */
 		infosUrl: '',
 		/** 允许降级/同版本覆盖安装（重复测试用） */
-		allowDowngrade: false
+		allowDowngrade: false,
+		/** 强制指定内置浏览器下载源（'' 默认按优先级降级） */
+		chromeSource: ''
 	},
 	/** 渲染进程数据 */
 	render: {} as { [x: string]: any }

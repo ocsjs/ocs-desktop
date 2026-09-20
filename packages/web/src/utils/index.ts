@@ -6,7 +6,7 @@ import { remote } from './remote';
 import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
-import { OCSApi } from '@ocs-desktop/common/web';
+import { OCSApi, OCS_API, DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import axios from 'axios';
 import { Infos } from '@ocs-desktop/common';
 
@@ -138,7 +138,7 @@ export async function fetchRemoteNotify(readAll: boolean) {
  */
 export async function fetchRemoteLangs() {
 	try {
-		const infos = await axios.get('https://cdn.ocsjs.com/api/ocs-app-langs.json?t=' + Date.now(), {
+		const infos = await axios.get(OCS_API.langs + '?t=' + Date.now(), {
 			headers: {
 				'content-type': 'application/json'
 			}
@@ -161,7 +161,8 @@ export async function getRemoteInfos() {
 	if (temp_infos) {
 		return temp_infos;
 	}
-	temp_infos = await OCSApi.getInfos();
+	/** 开发者设置中可覆盖信息接口（测试环境联调），留空用默认 */
+	temp_infos = await OCSApi.getInfos(store.updater?.infosUrl || undefined);
 	return temp_infos;
 }
 
@@ -222,7 +223,7 @@ function installListener(name: string, channel: string, rate: number, chunkLengt
 
 /** 显示关于软件说明 */
 export async function about() {
-	const guide = await remote.methods.call('get', 'https://cdn.ocsjs.com/articles/app/guide.md');
+	const guide = await remote.methods.call('get', OCS_API.guide);
 	Modal.info({
 		title: '软件使用教程',
 		closable: true,
@@ -344,6 +345,8 @@ export function goto(link: string) {
 /** 通过本地服务代理加载图标，解决跨域问题 */
 export function iconUrl(url?: string): string {
 	if (!url) return '';
-	const port = 15319;
+	// 端口需与其他位置一致读取 store（原硬编码 15319，改端口后此处会失效）；
+	// store.server 仅存在于软件内环境，导航页运行在被启动的浏览器中时无此字段，需兜底默认端口
+	const port = store.server?.port || DEFAULT_SERVER_PORT;
 	return `http://localhost:${port}/icon?url=${encodeURIComponent(url)}`;
 }

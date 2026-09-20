@@ -51,6 +51,8 @@ export interface AppStore {
 		infosUrl: string;
 		/** 允许降级/同版本覆盖安装（重复测试用，对应 electron-updater allowDowngrade） */
 		allowDowngrade: boolean;
+		/** 强制指定内置浏览器下载源（'' 默认按优先级降级；npmmirror/official/ocs-cdn 用于测试下载链路） */
+		chromeSource: string;
 	};
 	/** 渲染进程数据（磁盘上可能为加密后的字符串，由主进程解密） */
 	render: { [x: string]: any };
@@ -111,8 +113,11 @@ export interface RemoteMethods {
 	getPlatform: () => NodeJS.Platform;
 	getSystemDark: () => boolean;
 	updateApp: (newVersion: UpdateInformationResource) => Promise<void>;
-	/** 手动检查更新，返回当前/最新版本与是否有更新（undefined 表示检查失败） */
-	checkUpdate: () => Promise<{ current: string; latest: string; hasUpdate: boolean } | undefined>;
+	/** 手动检查更新，返回当前/最新版本与是否有更新（undefined 表示检查失败）。
+	 *  可携带渲染层最新的 updater 配置，避免持久化防抖未落盘导致主进程读到旧值 */
+	checkUpdate: (
+		config?: AppStore['updater']
+	) => Promise<{ current: string; latest: string; hasUpdate: boolean; message?: string } | undefined>;
 	hideToTray: () => void;
 	quitApp: (code?: number) => void;
 	cancelQuit: () => void;

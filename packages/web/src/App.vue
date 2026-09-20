@@ -245,7 +245,13 @@ onMounted(async () => {
 		}
 	}
 
-	watch([() => store.render], debounce(performSave, 100), { deep: true });
+	// 监听范围必须覆盖全部可配置段：updater/server/window/paths 的修改同样需要持久化，
+	// 否则主进程 electron-store 一直是旧值（例如开发者设置里改更新源后主进程读不到）
+	watch(
+		[() => store.render, () => store.updater, () => store.server, () => store.window, () => store.paths],
+		debounce(performSave, 100),
+		{ deep: true }
+	);
 
 	/** 全局唯一关闭处理 */
 	let isExiting = false;

@@ -47,6 +47,7 @@
 
 		<div
 			ref="contentRef"
+			class="resources-content"
 			:style="{
 				opacity: resState.refreshing ? 0.6 : 1,
 				transition: 'opacity 0.2s'
@@ -94,17 +95,9 @@
 					<!-- ============ extensions 组：单选模式 ============ -->
 					<template v-if="group.name === 'extensions'">
 						<div class="extension-select-wrapper">
-							<div
-								v-if="extensionInstalling"
-								class="extension-overlay"
-							>
-								<a-spin />
-								<span class="ms-2">正在安装...</span>
-							</div>
 							<a-radio-group
 								v-model="selectedExtensionUrl"
 								class="extension-radio-group"
-								:style="{ pointerEvents: extensionInstalling ? 'none' : 'auto' }"
 							>
 								<div
 									v-for="(file, i) of group.files"
@@ -254,11 +247,20 @@
 							</div>
 						</div>
 					</template>
-				</template>
-			</template>
-		</div>
-	</a-card>
-</template>
+					</template>
+					</template>
+
+					<!-- 全局安装/卸载遮罩：任何资源安装/卸载/解压进行中时锁定整卡，禁止点击与其他操作 -->
+					<div
+					v-if="anyBusy"
+					class="resources-overlay"
+					>
+					<a-spin />
+					<span class="ms-2">{{ busyText }}</span>
+					</div>
+					</div>
+					</a-card>
+					</template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue';
@@ -292,6 +294,20 @@ const selectedExtensionUrl = ref('');
 
 /** 脚本管理器是否正在安装中（安装期间显示蒙版禁止操作） */
 const extensionInstalling = ref(false);
+
+/** 进行中的安装/卸载操作计数（>0 时整卡遮罩，禁止任何其他操作） */
+const operationCount = ref(0);
+
+/** 是否有任何安装/卸载/解压进行中（覆盖全部资源组，含脚本管理器与 OCR 等） */
+const anyBusy = computed(
+	() =>
+		extensionInstalling.value ||
+		operationCount.value > 0 ||
+		Object.values(fileStatus).some((s) => s.downloading || s.unzipping)
+);
+
+/** 遮罩提示文案 */
+const busyText = computed(() => (Object.values(fileStatus).some((s) => s.unzipping) ? '正在解压...' : '正在安装/卸载...'));
 
 /** 当前选中的脚本管理器 */
 const selectedExtension = computed(() => {
@@ -376,6 +392,7 @@ watch(selectedExtensionUrl, async (newUrl, oldUrl) => {
 });
 
 async function download(group_name: string, file: ResourceFile) {
+	operationCount.value++;
 	try {
 		const files = await resourceLoader.list();
 
@@ -415,16 +432,21 @@ async function download(group_name: string, file: ResourceFile) {
 	} catch (err) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
+	} finally {
+		operationCount.value--;
 	}
 }
 
 async function remove(group_name: string, file: ResourceFile) {
+	operationCount.value++;
 	try {
 		await resourceLoader.remove(group_name, file);
 		fileStatus[file.url].exists = false;
 	} catch (err) {
 		// @ts-ignore
 		Message.error('删除错误 ' + err.message);
+	} finally {
+		operationCount.value--;
 	}
 }
 
@@ -531,18 +553,23 @@ function openDownloadFolder() {
 	.extension-select-wrapper {
 		position: relative;
 	}
+}
 
-	.extension-overlay {
-		position: absolute;
-		inset: 0;
-		z-index: 10;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: var(--color-fill-2);
-		opacity: 0.7;
-		border-radius: var(--border-radius-small);
-	}
+.resources-content {
+	position: relative;
+}
+
+/* 全局安装/卸载遮罩：任何资源操作进行中时锁定整卡 */
+.resources-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--color-fill-2);
+	opacity: 0.7;
+	border-radius: var(--border-radius-small);
 }
 
 .card-title-icon {

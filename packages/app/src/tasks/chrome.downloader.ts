@@ -10,6 +10,7 @@ import {
 	resolveCftPlatform
 } from '@ocs-desktop/common';
 import { Logger } from '../logger';
+import { store } from '../store';
 
 const logger = Logger('chrome-downloader');
 
@@ -47,8 +48,15 @@ export async function downloadBuiltinChromeZip(
 ): Promise<void> {
 	const platform = resolveCftPlatform();
 	const expectedSha256 = BUILTIN_CHROME_SHA256[platform];
-	const sources = getChromeDownloadSources(undefined, platform);
+	// 开发者设置中可强制指定下载源（测试下载链路），默认按优先级降级
+	const sourceOverride = store.store.updater?.chromeSource;
+	const allSources = getChromeDownloadSources(undefined, platform);
+	const sources = sourceOverride ? allSources.filter((s) => s.type === sourceOverride) : allSources;
 	const tempZipPath = destZipPath + '.downloading';
+
+	if (sourceOverride && sources.length > 0) {
+		logger.info(`使用开发者指定的下载源: ${sources[0].name}`, { url: sources[0].url });
+	}
 
 	fs.mkdirSync(path.dirname(destZipPath), { recursive: true });
 

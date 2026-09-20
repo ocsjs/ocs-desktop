@@ -3,6 +3,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import url from 'url';
 import { store } from './store';
+import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 
 export function createWindow() {
 	const win = new BrowserWindow({
@@ -89,7 +90,7 @@ export function createLoadingWindow(): BrowserWindow {
 	// 开发模式：loading.html 源文件位于 web 项目 packages/web/public/（vite publicDir），
 	//   打包时由 vite 复制到 packages/app/public/；故两模式下分别从对应位置以 file:// 加载，
 	//   不依赖 vite dev server，且打包不会被 vite 覆盖（源文件受 web 项目管理）。
-	const port = (store.store.server?.port as number | undefined) || 15319;
+	const port = (store.store.server?.port as number | undefined) || DEFAULT_SERVER_PORT;
 	// 渲染产物经 electron-vite 输出到 out/renderer（含 publicDir 拷贝的 loading.html）；
 	// dev 模式直接读 web 源文件（vite publicDir），不依赖 dev server。
 	const loadingHtmlPath = app.isPackaged

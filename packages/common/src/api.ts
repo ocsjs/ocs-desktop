@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { OCS_API } from './constants';
 
 /** 资源文件 */
 export interface ResourceFile {
@@ -84,7 +85,7 @@ export interface Infos {
 
 export class OCSApi {
 	/** 默认软件信息接口（更新日志/资源/公告等），可通过 updater.infosUrl 设置覆盖以切换测试环境 */
-	static DEFAULT_INFOS_URL = 'https://cdn.ocsjs.com/api/ocs-app-infos.json';
+	static DEFAULT_INFOS_URL = OCS_API.infos;
 
 	static async getInfos(url?: string): Promise<Infos> {
 		const { data } = await axios.get((url || OCSApi.DEFAULT_INFOS_URL) + '?t=' + Date.now(), {

@@ -77,13 +77,19 @@ function writeIfChanged(file: string, content: string) {
 export function ensureNewTabExtension(dir: string, opts: { uid: string; port: number }): string {
 	const targetUrl = `http://localhost:${opts.port}/index.html#/bookmarks?uid=${encodeURIComponent(opts.uid)}`;
 
+	// OCS 图标：复制应用图标作为扩展图标，与中文名配合，
+	// 便于用户在 Chrome「新标签页被修改」提示中确认该扩展为 OCS 官方程序而非恶意程序
+	const iconSource = path.resolve('./public/favicon.png');
+	const hasIcon = fs.existsSync(iconSource);
+
 	const manifest = JSON.stringify(
 		{
 			manifest_version: 3,
-			name: 'OCS New Tab',
+			name: 'OCS 快捷导航页',
 			version: '1.0.0',
-			description: '将新建标签页显示为 OCS 快捷导航页',
-			chrome_url_overrides: { newtab: 'newtab.html' }
+			description: 'OCS 网课助手官方拓展：将新建标签页显示为 OCS 快捷导航页',
+			chrome_url_overrides: { newtab: 'newtab.html' },
+			...(hasIcon ? { icons: { 16: 'icon.png', 48: 'icon.png', 128: 'icon.png' } } : {})
 		},
 		null,
 		'\t'
@@ -121,5 +127,13 @@ export function ensureNewTabExtension(dir: string, opts: { uid: string; port: nu
 	fs.mkdirSync(dir, { recursive: true });
 	writeIfChanged(path.join(dir, 'manifest.json'), manifest);
 	writeIfChanged(path.join(dir, 'newtab.html'), html);
+	if (hasIcon) {
+		// 图标为二进制文件，按内容比对后复制，避免重复写入触发扩展重载
+		const iconData = fs.readFileSync(iconSource);
+		const iconTarget = path.join(dir, 'icon.png');
+		if (!fs.existsSync(iconTarget) || !fs.readFileSync(iconTarget).equals(iconData)) {
+			fs.writeFileSync(iconTarget, iconData);
+		}
+	}
 	return dir;
 }

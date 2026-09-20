@@ -472,11 +472,25 @@
 			/>
 		</a-card>
 
-		<a-card>
+		<!-- 开发者设置：左上角「工具 → 开发者工具」点击后显示（devSession 非持久化，重启自动隐藏） -->
+		<a-card v-if="devSession.enabled">
 			<template #title>
-				<span class="card-title-icon">🔄</span>
-				更新设置
+				<span class="card-title-icon">🛠️</span>
+				开发者设置
+				<a-tag
+					size="small"
+					style="margin-left: 8px"
+				>
+					重启后自动隐藏
+				</a-tag>
 			</template>
+
+			<a-divider
+				orientation="left"
+				style="margin: 4px 0 12px"
+			>
+				更新调试
+			</a-divider>
 
 			<Description label="当前版本">
 				<span>{{ store.version }}</span>
@@ -489,7 +503,7 @@
 						<template #content>
 							<div style="max-width: 320px">
 								<div>测试/调试用途：指定 latest.yml 所在的目录 URL，切换更新环境（如测试 CDN 目录）。</div>
-								<div>留空则使用默认线上源，正式用户请勿填写。</div>
+								<div>留空则使用默认线上源。</div>
 							</div>
 						</template>
 						<Icon
@@ -500,30 +514,7 @@
 				</template>
 				<a-input
 					v-model="store.updater.feedUrl"
-					placeholder="默认：https://cdn.ocsjs.com/app/electron-updater/"
-					allow-clear
-				/>
-			</Description>
-
-			<Description>
-				<template #label>
-					自定义信息接口
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：指定软件信息接口（更新日志来源 ocs-app-infos.json）的 URL。</div>
-								<div>留空则使用默认线上接口，正式用户请勿填写。</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.updater.infosUrl"
-					placeholder="默认：https://cdn.ocsjs.com/api/ocs-app-infos.json"
+					:placeholder="'默认：' + OCS_UPDATER.feedUrl"
 					allow-clear
 				/>
 			</Description>
@@ -544,6 +535,62 @@
 					检查更新
 				</a-button>
 			</Description>
+
+			<a-divider orientation="left"> 接口调试 </a-divider>
+
+			<Description>
+				<template #label>
+					自定义信息接口
+					<a-popover>
+						<template #content>
+							<div style="max-width: 320px">
+								<div>测试/调试用途：覆盖软件信息接口（ocs-app-infos.json），影响资源组/通知/书签等数据的来源。</div>
+								<div>留空则使用默认线上接口。</div>
+							</div>
+						</template>
+						<Icon
+							class="label-help-icon"
+							type="help_outline"
+						/>
+					</a-popover>
+				</template>
+				<a-input
+					v-model="store.updater.infosUrl"
+					:placeholder="'默认：' + OCS_API.infos"
+					allow-clear
+				/>
+			</Description>
+
+			<a-divider orientation="left"> 服务调试 </a-divider>
+
+			<Description label="本地服务器端口">
+				<a-tooltip content="本地 HTTP 服务（图标代理/浏览器通信等）的监听端口，修改后需重启软件生效">
+					<a-input-number
+						v-model="store.server.port"
+						:min="1024"
+						:max="65535"
+						style="width: 200px"
+					/>
+				</a-tooltip>
+			</Description>
+
+			<a-divider orientation="left"> 浏览器调试 </a-divider>
+
+			<Description label="浏览器下载源">
+				<a-tooltip
+					content="强制指定内置浏览器的下载源用于测试下载链路；默认按优先级自动降级（国内镜像 → 谷歌官方 → OCS 自建）"
+				>
+					<a-select
+						v-model="store.updater.chromeSource"
+						style="width: 200px"
+					>
+						<a-option value="">默认（按优先级）</a-option>
+						<a-option value="npmmirror">国内镜像源</a-option>
+						<a-option value="official">谷歌官方源</a-option>
+						<a-option value="ocs-cdn">OCS 自建源</a-option>
+					</a-select>
+				</a-tooltip>
+			</Description>
 		</a-card>
 
 		<div class="mt-4 mb-5">
@@ -563,7 +610,8 @@
 import { computed, reactive, ref } from 'vue';
 import Description from './Description.vue';
 import Path from './Path.vue';
-import { t, store, DEFAULT_RENDER } from '../store';
+import { t, store, DEFAULT_RENDER, devSession } from '../store';
+import { OCS_UPDATER, OCS_API } from '@ocs-desktop/common/web';
 import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
 import BrowserPath from './setting/BrowserPath.vue';
@@ -659,13 +707,14 @@ const checkingUpdate = ref(false);
 async function onCheckUpdate() {
 	checkingUpdate.value = true;
 	try {
-		const result = await remote.methods.call('checkUpdate');
+		// 直接携带最新配置（防抖持久化可能尚未落盘；reactive 代理无法跨 IPC 结构化克隆，需转为纯对象）
+		const result = await remote.methods.call('checkUpdate', JSON.parse(JSON.stringify(store.updater)));
 		if (!result) {
 			Message.error('检查更新失败，请查看日志或稍后重试');
 		} else if (result.hasUpdate) {
 			Message.success(`检测到新版本 ${result.latest}，请按更新弹窗提示操作`);
 		} else {
-			Message.info(`当前已是最新版本（${result.current}）`);
+			Message.info(result.message || `当前已是最新版本（${result.current}）`);
 		}
 	} catch (e) {
 		Message.error('检查更新失败：' + e);

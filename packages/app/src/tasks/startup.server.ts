@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
 import { store } from '../store';
+import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 import { getDecryptedRenderData } from '../crypto';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
@@ -131,7 +132,7 @@ export async function startupServer() {
 	const app = express();
 
 	store.set('server', {
-		port: 15319,
+		port: DEFAULT_SERVER_PORT,
 		authToken: randomUUID().replace(/-/g, '')
 	});
 

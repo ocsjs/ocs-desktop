@@ -2,8 +2,8 @@ import { BrowserWindow, app, dialog } from 'electron';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import axios from 'axios';
-import { createWriteStream, existsSync, mkdirSync } from 'fs';
-import { finished } from 'stream/promises';
+import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
+import { finished, pipeline } from 'stream/promises';
 import { Logger } from '../logger';
 import xlsx from 'xlsx';
 import unzipper from 'unzipper';
@@ -71,12 +71,14 @@ export function zip(input: string, output: string) {
 }
 
 /**
- * 解压文件
+ * 解压文件（流式）。
+ *
+ * 不使用 unzipper.Open.file()：它会将整个压缩包一次性读入内存（fs.readFile），
+ * 大文件（如 OCR 识别模块/内置浏览器，数百 MB）解压时会造成主进程内存暴涨、事件循环被占满，
+ * 表现为整个软件卡死。流式 Extract 边读边解压，内存占用恒定，不阻塞主进程。
  */
-
 export async function unzip(input: string, output: string) {
-	const directory = await unzipper.Open.file(input);
-	await directory.extract({ path: output });
+	await pipeline(createReadStream(input), unzipper.Extract({ path: output }));
 }
 
 export function getProjectPath() {

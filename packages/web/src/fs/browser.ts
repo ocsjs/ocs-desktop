@@ -8,6 +8,7 @@ import { Entity } from './entity';
 import { Folder, root } from './folder';
 import { BrowserOptions, BrowserOperateHistory, Tag, BrowserType, EntityOptions } from './interface';
 import { remote } from '../utils/remote';
+import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { RawAutomationScript } from '../components/automation-scripts';
 import { child_process } from '../utils/node';
 
@@ -78,10 +79,14 @@ export class Browser extends Entity implements BrowserOptions {
 		// 导航页扩展：新建标签页显示导航页（chrome_url_overrides.newtab），地址栏保持空白
 		// 未启用自定义导航页时跳过，浏览器保持默认空白导航页
 		if (store.render.setting.browser.bookmarkPage.enable !== false) {
-			const newtabExtension: string = await remote.methods.call('ensureNewTabExtension', `${this.cachePath}/ocs-newtab`, {
-				uid: this.uid,
-				port: store.server.port || 15319
-			});
+			const newtabExtension: string = await remote.methods.call(
+				'ensureNewTabExtension',
+				`${this.cachePath}/ocs-newtab`,
+				{
+					uid: this.uid,
+					port: store.server.port || DEFAULT_SERVER_PORT
+				}
+			);
 			extensionPaths.push(newtabExtension);
 		}
 		// 初始页面使用 about:blank，导航页由导航页扩展接管，避免地址栏暴露 localhost 地址

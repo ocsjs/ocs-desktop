@@ -1,5 +1,5 @@
 import { Instance as Chalk } from 'chalk';
-import { LoggerCore } from '@ocs-desktop/common';
+import { LoggerCore, DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request, CDPSession } from 'playwright-core';
@@ -118,7 +118,10 @@ export class ScriptWorker implements ScriptWorkerContract {
 		// 未启用自定义导航页时不加载该扩展，浏览器保持默认空白导航页
 		if (this.bookmarkPageEnabled) {
 			this.extensionPaths.push(
-				ensureNewTabExtension(path.join(cachePath, 'ocs-newtab'), { uid, port: store.server?.port || 15319 })
+				ensureNewTabExtension(path.join(cachePath, 'ocs-newtab'), {
+					uid,
+					port: store.server?.port || DEFAULT_SERVER_PORT
+				})
 			);
 		}
 
@@ -241,7 +244,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 				},
 
 				automationScripts: this.automationScripts,
-				serverPort: this.store?.server.port || 15319,
+				serverPort: this.store?.server.port || DEFAULT_SERVER_PORT,
 				closeableExtensionHomepages: [
 					'docs.scriptcat.org',
 					'docs.scriptcat.org/docs/change',
