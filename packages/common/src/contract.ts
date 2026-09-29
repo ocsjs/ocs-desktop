@@ -54,6 +54,13 @@ export interface AppStore {
 		/** 强制指定内置浏览器下载源（'' 默认按优先级降级；npmmirror/official/ocs-cdn 用于测试下载链路） */
 		chromeSource: string;
 	};
+	/** 脚本资源覆盖（开发者设置-脚本调试，留空使用默认线上地址 OCS_SCRIPT_RESOURCES） */
+	scriptResources: {
+		/** OCS index 脚本地址 */
+		index: string;
+		/** EasyUs 脚本地址 */
+		easyUs: string;
+	};
 	/** 渲染进程数据（磁盘上可能为加密后的字符串，由主进程解密） */
 	render: { [x: string]: any };
 }

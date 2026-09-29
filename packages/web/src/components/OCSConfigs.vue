@@ -219,15 +219,15 @@ async function loadOCS() {
 	try {
 		// @ts-ignore
 		if (global.OCS === undefined) {
-			// 加载 OCS
-			const code = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.index);
+			// 加载 OCS（开发者设置中可自定义脚本地址，留空用默认线上地址）
+			const code = await remote.methods.call('get', Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
 			await remote.webContents.call('executeJavaScript', code);
 		}
 
 		// @ts-ignore
 		if (global.EUS === undefined) {
-			// 加载 EUS
-			const code = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.easyUs);
+			// 加载 EUS（开发者设置中可自定义脚本地址，留空用默认线上地址）
+			const code = await remote.methods.call('get', Store.scriptResources.easyUs || OCS_SCRIPT_RESOURCES.easyUs);
 			await remote.webContents.call('executeJavaScript', code);
 		}
 

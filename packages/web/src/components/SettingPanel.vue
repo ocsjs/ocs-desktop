@@ -561,6 +561,54 @@
 				/>
 			</Description>
 
+			<a-divider orientation="left"> 脚本调试 </a-divider>
+
+			<Description>
+				<template #label>
+					OCS index 脚本
+					<a-popover>
+						<template #content>
+							<div style="max-width: 320px">
+								<div>测试/调试用途：覆盖 OCS index 脚本的加载地址（如本地开发构建产物）。</div>
+								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
+							</div>
+						</template>
+						<Icon
+							class="label-help-icon"
+							type="help_outline"
+						/>
+					</a-popover>
+				</template>
+				<a-input
+					v-model="store.scriptResources.index"
+					:placeholder="'默认：' + OCS_SCRIPT_RESOURCES.index"
+					allow-clear
+				/>
+			</Description>
+
+			<Description>
+				<template #label>
+					EasyUs 脚本
+					<a-popover>
+						<template #content>
+							<div style="max-width: 320px">
+								<div>测试/调试用途：覆盖 EasyUs 脚本的加载地址（如本地开发构建产物）。</div>
+								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
+							</div>
+						</template>
+						<Icon
+							class="label-help-icon"
+							type="help_outline"
+						/>
+					</a-popover>
+				</template>
+				<a-input
+					v-model="store.scriptResources.easyUs"
+					:placeholder="'默认：' + OCS_SCRIPT_RESOURCES.easyUs"
+					allow-clear
+				/>
+			</Description>
+
 			<a-divider orientation="left"> 服务调试 </a-divider>
 
 			<Description label="本地服务器端口">
@@ -611,7 +659,7 @@ import { computed, reactive, ref } from 'vue';
 import Description from './Description.vue';
 import Path from './Path.vue';
 import { t, store, DEFAULT_RENDER, devSession } from '../store';
-import { OCS_UPDATER, OCS_API } from '@ocs-desktop/common/web';
+import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
 import BrowserPath from './setting/BrowserPath.vue';

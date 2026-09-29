@@ -47,6 +47,13 @@ export const OriginalAppStore: AppStore = {
 		/** 强制指定内置浏览器下载源（'' 默认按优先级降级） */
 		chromeSource: ''
 	},
+	/** 脚本资源覆盖（开发者设置-脚本调试，留空使用默认线上地址） */
+	scriptResources: {
+		/** OCS index 脚本地址 */
+		index: '',
+		/** EasyUs 脚本地址 */
+		easyUs: ''
+	},
 	/** 渲染进程数据 */
 	render: {} as { [x: string]: any }
 };
