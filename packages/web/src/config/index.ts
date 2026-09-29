@@ -6,7 +6,7 @@ import bookmarks from '@/pages/bookmarks.vue';
 import { GreasyForkUserScript, ScriptCatUserScript, CommonUserScript } from '../types/user.script';
 import { remote } from '../utils/remote';
 import { ScriptSearchEngine } from '../types/search';
-import { StoreUserScript } from '../store';
+import { store, StoreUserScript } from '../store';
 
 export const config = reactive({
 	/**
@@ -21,7 +21,9 @@ export const config = reactive({
 		{
 			name: 'index',
 			path: '/',
-			redirect: '/simple',
+			// 按软件设置中的布局模式决定首页（专业→浏览器列表 / 简洁→简洁模式），
+			// 修复重启后无论设置如何都被重定向到简洁布局、导致设置与显示不一致的问题
+			redirect: () => (store.render.setting.mode === 'professional' ? '/browsers' : '/simple'),
 			component: shallowRef(page),
 			children: [
 				{
