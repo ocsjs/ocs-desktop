@@ -120,8 +120,19 @@ export class Process extends EventEmitter {
 	browser: Browser;
 	/** 浏览器启动参数 */
 	launchOptions: Required<LaunchOptions>;
-	/** 输出 */
+	/** 输出（仅保留最近 MAX_LOGS 条，避免长时运行日志无限增长造成渲染进程内存泄漏） */
 	logs: string[] = [];
+
+	/** 追加日志并截断到上限 */
+	private appendLog(...items: string[]) {
+		this.logs.push(...items);
+		if (this.logs.length > Process.MAX_LOGS) {
+			this.logs.splice(0, this.logs.length - Process.MAX_LOGS);
+		}
+	}
+
+	/** 日志保留上限（超过后丢弃最早的条目） */
+	private static readonly MAX_LOGS = 500;
 
 	/** 当前预览帧的 Blob URL（由 worker screencast 推流更新） */
 	frameUrl: string = '';
@@ -185,13 +196,13 @@ export class Process extends EventEmitter {
 		this.worker = createRemoteScriptWorker(this.shell);
 
 		this.shell.stdout?.on('data', (data: any) => {
-			this.logs.push(data.toString());
+			this.appendLog(data.toString());
 			onConsole?.(data.toString());
 		});
 		this.shell.stderr?.on('data', (data: any) => {
 			onConsole?.(data.toString());
 			remote.logger.call('error', String(data));
-			this.logs.push(`${this.browser.name} 错误`, data);
+			this.appendLog(`${this.browser.name} 错误`, data);
 			notify(`${this.browser.name} 错误`, data, this.browser.uid, {
 				duration: 60 * 1000,
 				copy: true,

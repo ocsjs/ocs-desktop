@@ -314,6 +314,25 @@ export class ScriptWorker implements ScriptWorkerContract {
 	}
 
 	/**
+	 * 父进程断开（IPC disconnect）/收到终止信号时的自我回收：
+	 * 尽力关闭浏览器（含 Chromium）后由入口 process.exit。
+	 * 与 close() 的区别：不发送任何 IPC 事件——此时 IPC 通道已断开，send 会抛错导致无法退出。
+	 * 用于防止父进程（渲染进程）被强杀（如 dev 调试 Ctrl+C）后 worker 及其 Chromium 成为孤儿进程。
+	 */
+	async dispose() {
+		try {
+			this.stopPageListTracking();
+		} catch {}
+		try {
+			await this.stopScreencastInternal();
+		} catch {}
+		try {
+			await this.browser?.close();
+		} catch {}
+		this.browser = undefined;
+	}
+
+	/**
 	 * 是否为不可推流的浏览器内部页面（chrome://、edge://、about:、extension:// 等）。
 	 * 这些页面无法被 CDP screencast 正常截取，选择目标时必须排除。
 	 */
