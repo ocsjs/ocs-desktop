@@ -2,13 +2,13 @@ import { ChildProcess } from 'child_process';
 import { remote } from './remote';
 import { t, store } from '../store';
 import { LaunchOptions } from 'playwright-core';
-import { reactive } from 'vue';
+import { reactive, h } from 'vue';
 import type { ScriptWorker, ScreencastPageInfo, ScreencastPagesChangedPayload } from '@ocs-desktop/common/web';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { Browser } from '../fs/browser';
-import { Message } from '@arco-design/web-vue';
+import { Message, Button } from '@arco-design/web-vue';
 import EventEmitter from 'events';
-import { child_process } from './node';
+import { child_process, electron } from './node';
 import { notify } from './notify';
 import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
@@ -222,6 +222,23 @@ export class Process extends EventEmitter {
 			'pages-changed': (_uid: string, payload: ScreencastPagesChangedPayload) => {
 				this.pages = payload?.pages || [];
 				this.screencastPageUrl = payload?.current || '';
+			},
+			/** 网页下载完成（worker 监听下载目录实时回传） */
+			'file-downloaded': (_uid: string, file: { filename: string; path: string }) => {
+				if (!file?.path) return;
+				notify('文件下载完成', `文件 ${file.filename} 已下载到"文件下载"目录：\n${file.path}`, 'file-downloaded-' + file.path, {
+					duration: 30 * 1000,
+					type: 'success',
+					btn: h(
+						Button,
+						{
+							type: 'primary',
+							size: 'small',
+							onClick: () => electron.shell.showItemInFolder(file.path)
+						},
+						'打开所在文件夹'
+					)
+				});
 			},
 			/**
 			 * 浏览器关闭

@@ -7,6 +7,10 @@ import type { AppStore, Config, ScriptWorker as ScriptWorkerContract } from '@oc
 import { AutomationScripts, LegacyScriptMappings } from '../scripts/index';
 import _get from 'lodash/get';
 import child_process from 'child_process';
+import http from 'http';
+import os from 'os';
+import crypto from 'crypto';
+import type { AddressInfo } from 'net';
 import { getBrowserMajorVersion, getExtensionPaths, ensureNewTabExtension } from '../utils/browser';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
@@ -256,8 +260,10 @@ export class ScriptWorker implements ScriptWorkerContract {
 				browserInfo: this.browserInfo,
 				uid: this.uid,
 				config: this.config,
+				/** 网页下载文件保存目录（软件设置中的"文件下载"目录） */
+				downloadsPath: this.store?.paths.downloadFolder,
 				...options
-			});
+				});
 		} catch (err) {
 			// 启动失败统一处理：发出 browser-closed 并退出进程，
 			// 避免渲染进程 Process.status 滞留 'launching'、卡片一直转圈只能重启软件恢复。
@@ -897,6 +903,7 @@ export async function launchBrowser({
 	browserInfo,
 	uid,
 	config,
+	downloadsPath,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -917,9 +924,14 @@ export async function launchBrowser({
 	browserInfo?: BrowserInfo;
 	uid: string;
 	config?: BrowserConfig;
+	/** 网页下载文件保存目录（未传入时回退为本地浏览器下载） */
+	downloadsPath?: string;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
+		// 启动前把浏览器 profile 的默认下载目录指向软件"文件下载"目录（原生下载行为落盘位置）
+		prepareDownloadPreferences(userDataDir, downloadsPath);
+
 		chromium
 			.launchPersistentContext(userDataDir, {
 				headless,
@@ -939,8 +951,16 @@ export async function launchBrowser({
 				]
 			})
 			.then(async (browser) => {
-				// 处理浏览器初始
-				handleBrowserInit(browser, { enable_dialog: config?.enable_dialog, userDataDir });
+				// 恢复浏览器原生下载行为（behavior:'default'，保留 download 事件）：
+				// 下载气泡显示真实文件名、文件原生落盘到"文件下载"目录；
+				// 事件仍触发，供 page.on('download') 截胡转发到本地默认浏览器（取消失败时原生落盘兜底）
+				const nativeDownloadRestored = await restoreNativeDownloadBehavior(browser);
+
+				// 处理浏览器初始（下载处理：http(s) 链接交给本地默认浏览器；blob/data 经本地代理转发）
+				handleBrowserInit(browser, { enable_dialog: config?.enable_dialog, userDataDir, downloadsPath, nativeDownloadRestored });
+
+				// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）
+				watchDownloadFolder(uid, downloadsPath);
 
 				// 浏览器增强：注入静音音频保活脚本（防休眠/防冻结，未开启时内部直接跳过）
 				await injectEnhancementKeepalive(browser, config);
@@ -1340,7 +1360,10 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 	});
 }
 
-function handleBrowserInit(browser: BrowserContext, config: { enable_dialog?: boolean; userDataDir: string }) {
+function handleBrowserInit(
+	browser: BrowserContext,
+	config: { enable_dialog?: boolean; userDataDir: string; downloadsPath?: string; nativeDownloadRestored?: boolean }
+) {
 	browser.addInitScript({
 		content: 'Object.defineProperty(navigator, "webdriver", { get: () => false });console.log(navigator)'
 	});
@@ -1372,17 +1395,50 @@ function handleBrowserInit(browser: BrowserContext, config: { enable_dialog?: bo
 			}
 		});
 
-		// 修改下载逻辑
+		// 下载处理（原生下载行为已由 restoreNativeDownloadBehavior 恢复：气泡显示真实文件名，
+		// 文件原生落盘到"文件下载"目录；此处进一步把下载转发到系统默认浏览器）：
+		// 1. http(s) 链接 → 取消浏览器内下载并交给用户本地默认浏览器（取消失败时原生落盘兜底）；
+		//    注意需要登录态 Cookie 的链接在本地浏览器可能无会话而失败（与早期 OCS 行为一致）。
+		// 2. blob:/data: → 读出内容经本地 HTTP 代理交给系统默认浏览器；读取失败（blob 已被页面
+		//    回收）时：原生行为下由浏览器自行落盘，否则 saveAs 到"文件下载"目录。
 		page.on('download', async (download) => {
+			const url = download.url();
 			// 不处理脚本安装
-			if (download.url().endsWith('.user.js')) {
+			if (url.endsWith('.user.js')) return;
+
+			// http(s) 链接：取消浏览器内下载并交给本地默认浏览器（取消失败时原生落盘兜底）
+			if (/^https?:\/\//.test(url)) {
+				await download.cancel().catch(() => {});
+				openUrl(url);
 				return;
 			}
 
-			download.cancel();
-			// 调用电脑本地浏览器进行文件下载
-			openUrl(download.url());
-			await page.evaluate(() => alert('自动化浏览器无法下载文件，已使用本地浏览器进行下载任务。'));
+			// blob:/data: 读出内容经本地 HTTP 代理交给本地默认浏览器
+			try {
+				const proxyUrl = await proxyDownloadToLocalBrowser(page, url, download.suggestedFilename());
+				await download.cancel().catch(() => {});
+				openUrl(proxyUrl);
+				return;
+			} catch (err) {
+				console.error('blob/data 下载代理失败：', String(err));
+			}
+
+			// 代理失败兜底：原生行为下浏览器会以真实文件名自行落盘（目录监听会通知），无需处理
+			if (config.nativeDownloadRestored) return;
+
+			if (config.downloadsPath) {
+				try {
+					fs.mkdirSync(config.downloadsPath, { recursive: true });
+					const target = resolveDownloadTarget(config.downloadsPath, download.suggestedFilename());
+					await download.saveAs(target);
+					console.log('文件已下载：', target);
+					return;
+				} catch (err) {
+					console.error('文件下载失败：', String(err));
+				}
+			}
+
+			await download.cancel().catch(() => {});
 		});
 	};
 	for (const page of browser.pages()) {
@@ -1391,14 +1447,200 @@ function handleBrowserInit(browser: BrowserContext, config: { enable_dialog?: bo
 	browser.on('page', pageHandle);
 }
 
-function openUrl(url: string) {
-	let cmd = 'start';
-	if (process.platform === 'darwin') {
-		cmd = 'open';
-	} else if (process.platform === 'linux') {
-		cmd = 'xdg-open';
+/**
+ * 恢复浏览器原生下载行为：通过浏览器根 CDP 会话发送 Browser.setDownloadBehavior { behavior:'default' }。
+ *
+ * 依据 playwright-core 源码：Playwright（acceptDownloads:true）仅在 context 初始化时设置一次
+ * allowAndName（下载存为临时 GUID 文件，即"MD5 文件名"），之后不再重设，启动后覆盖即永久生效。
+ * 恢复后下载气泡显示真实文件名、文件原生落盘到默认下载目录（见 prepareDownloadPreferences）。
+ * eventsEnabled:true 保留 download 事件，供 page.on('download') 把下载转发到系统默认浏览器
+ * （Browser.cancelDownload 按 guid 取消，与下载行为无关）；取消/转发失败时原生落盘自动兜底。
+ * 注意：behavior:'default' 下 Playwright 的 Download artifact 不存在，不能 saveAs。
+ * 返回是否恢复成功；失败时由 page.on('download') 的 saveAs 逻辑兜底。
+ */
+async function restoreNativeDownloadBehavior(browser: BrowserContext): Promise<boolean> {
+	try {
+		const browserInstance = browser.browser();
+		if (!browserInstance) return false;
+		const session = await browserInstance.newBrowserCDPSession();
+		// 不传 browserContextId：作用于默认上下文（persistent context 即默认上下文）
+		await session.send('Browser.setDownloadBehavior', { behavior: 'default', eventsEnabled: true });
+		await session.detach().catch(() => {});
+		return true;
+	} catch (err) {
+		console.error('恢复浏览器原生下载行为失败：', String(err));
+		return false;
 	}
-	child_process.exec(`${cmd} ${url}`);
+}
+
+/**
+ * 启动前把浏览器 profile 的默认下载目录写入 userDataDir/Default/Preferences，
+ * 使恢复原生下载行为后文件直接保存到软件"文件下载"目录（Chrome 启动时会合并该配置）。
+ * Preferences 解析失败时不写入，避免破坏用户浏览器配置。
+ */
+function prepareDownloadPreferences(userDataDir: string, downloadsPath?: string) {
+	if (!downloadsPath) return;
+	const defaultDir = path.join(userDataDir, 'Default');
+	const prefsPath = path.join(defaultDir, 'Preferences');
+	let prefs: Record<string, any> = {};
+	if (fs.existsSync(prefsPath)) {
+		try {
+			prefs = JSON.parse(fs.readFileSync(prefsPath, 'utf-8'));
+		} catch {
+			return;
+		}
+	}
+	prefs.download = {
+		...(prefs.download || {}),
+		default_directory: downloadsPath,
+		prompt_for_download: false,
+		directory_upgrade: true
+	};
+	prefs.savefile = { ...(prefs.savefile || {}), default_directory: downloadsPath };
+	try {
+		fs.mkdirSync(defaultDir, { recursive: true });
+		fs.writeFileSync(prefsPath, JSON.stringify(prefs, null, 2));
+	} catch (err) {
+		console.error('预设浏览器默认下载目录失败：', String(err));
+	}
+}
+
+/**
+ * 监听下载目录：新文件出现时通过 file-downloaded 事件通知渲染进程。
+ * 非递归（资源下载均位于子目录，不会误报）；过滤下载中的临时文件（.crdownload 等），
+ * 同一路径去重、事件防抖。watcher 随 worker 进程退出自动释放。
+ */
+function watchDownloadFolder(uid: string, downloadsPath?: string) {
+	if (!downloadsPath || !fs.existsSync(downloadsPath)) return;
+	const isTempFile = (name: string) => /\.(crdownload|partial|part|tmp|download|downloading)$/i.test(name);
+	const notified = new Set<string>();
+	const timers = new Map<string, ReturnType<typeof setTimeout>>();
+	try {
+		fs.watch(downloadsPath, (_event, filename) => {
+			if (!filename || isTempFile(filename)) return;
+			const full = path.join(downloadsPath, filename);
+			const prev = timers.get(full);
+			if (prev) clearTimeout(prev);
+			timers.set(
+				full,
+				setTimeout(() => {
+					timers.delete(full);
+					try {
+						// 文件可能已更名/删除（如 .crdownload 完成改名前的旧事件）
+						if (notified.has(full) || !fs.statSync(full).isFile()) return;
+						notified.add(full);
+						send('file-downloaded', uid, { filename, path: full });
+					} catch {}
+				}, 800)
+			);
+		});
+	} catch (err) {
+		console.error('监听下载目录失败：', String(err));
+	}
+}
+
+/** 生成不冲突的下载目标路径：已存在同名文件时依次追加 (1)(2)... 后缀 */
+function resolveDownloadTarget(dir: string, filename: string) {
+	const ext = path.extname(filename);
+	const base = path.basename(filename, ext);
+	let target = path.join(dir, filename);
+	for (let i = 1; fs.existsSync(target); i++) {
+		target = path.join(dir, `${base} (${i})${ext}`);
+	}
+	return target;
+}
+
+/** 下载代理：blob/data 内容临时文件注册表（token -> 文件信息 + 过期定时器） */
+const proxyDownloadItems = new Map<
+	string,
+	{ filePath: string; filename: string; timer: ReturnType<typeof setTimeout> }
+>();
+let proxyDownloadServer: http.Server | undefined;
+let proxyDownloadPort = 0;
+
+/**
+ * 将浏览器内 blob:/data: 下载代理给系统默认浏览器：
+ * 在创建 blob 的页面内 fetch 出内容写入临时文件，经仅监听 127.0.0.1 的一次性本地
+ * HTTP 服务提供下载，返回代理 URL（由调用方 openUrl 交给本地浏览器）。
+ * 内容读取失败（blob 已被页面 revoke）时抛错，由调用方回退 saveAs。
+ */
+async function proxyDownloadToLocalBrowser(page: Page, url: string, filename: string): Promise<string> {
+	// blob URL 仅在创建它的浏览器进程内有效，必须在页面内读取（随时可能被 revoke）
+	const base64 = await page.evaluate(async (u) => {
+		const res = await fetch(u);
+		if (!res.ok) throw new Error('fetch failed: ' + res.status);
+		const bytes = new Uint8Array(await res.arrayBuffer());
+		let binary = '';
+		const chunk = 0x8000;
+		for (let i = 0; i < bytes.length; i += chunk) {
+			binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as any);
+		}
+		return btoa(binary);
+	}, url);
+
+	const port = await ensureProxyDownloadServer();
+	const token = crypto.randomUUID();
+	const tmpDir = path.join(os.tmpdir(), 'ocs-download-proxy');
+	fs.mkdirSync(tmpDir, { recursive: true });
+	const filePath = path.join(tmpDir, token);
+	fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
+	// 一次性使用 + 5 分钟过期清理（本地浏览器始终未发起下载时兜底）
+	const timer = setTimeout(() => {
+		proxyDownloadItems.delete(token);
+		fs.promises.unlink(filePath).catch(() => {});
+	}, 5 * 60 * 1000);
+	proxyDownloadItems.set(token, { filePath, filename, timer });
+	return `http://127.0.0.1:${port}/d/${token}`;
+}
+
+/** 启动（或复用）仅监听 127.0.0.1 的下载代理服务：随机端口，随 worker 进程退出自动关闭 */
+async function ensureProxyDownloadServer(): Promise<number> {
+	if (proxyDownloadServer && proxyDownloadPort) return proxyDownloadPort;
+	proxyDownloadServer = http.createServer((req, res) => {
+		const token = (req.url || '').match(/^\/d\/([a-f0-9-]+)/)?.[1];
+		const item = token ? proxyDownloadItems.get(token) : undefined;
+		if (!item) {
+			res.statusCode = 404;
+			res.end('not found');
+			return;
+		}
+		// 一次性下载：立即注销并停止过期定时器，响应完成后删除临时文件
+		proxyDownloadItems.delete(token!);
+		clearTimeout(item.timer);
+		res.setHeader(
+			'Content-Disposition',
+			`attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(item.filename)}`
+		);
+		res.setHeader('Content-Type', 'application/octet-stream');
+		try {
+			res.setHeader('Content-Length', fs.statSync(item.filePath).size);
+			const stream = fs.createReadStream(item.filePath);
+			stream.pipe(res);
+			stream.on('close', () => fs.promises.unlink(item.filePath).catch(() => {}));
+			stream.on('error', () => res.end());
+		} catch {
+			res.statusCode = 500;
+			res.end();
+		}
+	});
+	await new Promise<void>((resolve, reject) => {
+		proxyDownloadServer!.once('error', reject);
+		proxyDownloadServer!.listen(0, '127.0.0.1', () => resolve());
+	});
+	proxyDownloadPort = (proxyDownloadServer.address() as AddressInfo).port;
+	return proxyDownloadPort;
+}
+
+function openUrl(url: string) {
+	// Windows 下 start 命令需要空标题参数，URL 必须加引号，否则 & 等字符会被 cmd 解析截断
+	const safeUrl = url.replace(/"/g, '');
+	if (process.platform === 'darwin') {
+		child_process.exec(`open "${safeUrl}"`);
+	} else if (process.platform === 'linux') {
+		child_process.exec(`xdg-open "${safeUrl}"`);
+	} else {
+		child_process.exec(`start "" "${safeUrl}"`);
+	}
 }
 
 /**
