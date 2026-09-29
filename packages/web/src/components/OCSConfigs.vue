@@ -169,25 +169,9 @@ function renderOCS() {
 		wrapper?.classList.toggle('ocs-dark', themeState.dark);
 
 		const list = h('div', { className: 'ocs-list' });
-		/** panel 缓存：key -> { script, name, panel, rendered }，onrender 首次打开时执行 */
-		const panelCache = new Map<string, { script: any; name: string; panel: HTMLElement; rendered: boolean }>();
-
-		/** 使用 OCS/EUS 内置 $modal 弹窗展示配置面板（挂载到 shadow root，保证样式生效） */
-		const openModal = (key: string) => {
-			const entry = panelCache.get(key);
-			if (!entry) return;
-			$modal.simple({ content: entry.panel, maskCloseable: true }, root);
-			if (!entry.rendered) {
-				entry.rendered = true;
-				try {
-					entry.script.onrender?.({ panel: entry.panel, header: h('header-element') });
-				} catch (err) {
-					console.error(err);
-				}
-			}
-		};
 
 		if (project) {
+			console.log('[ocsjs project]', project);
 			for (const key in project.scripts) {
 				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
 					const script = project.scripts[key];
@@ -204,17 +188,15 @@ function renderOCS() {
 						script.namespace &&
 						// 如果没有配置项，则不显示
 						Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
-						script.hideInPanel !== false
+						!script.hideInPanel
 					) {
-						const panel = $ui.scriptPanel(script, $store);
-						const name = panel.name || '未知脚本';
-						const cacheKey = script.namespace || key;
-						panelCache.set(cacheKey, { script, name, panel, rendered: false });
-
 						const item = h('div', { className: 'ocs-list-item' });
-						item.append(h('span', { className: 'ocs-list-item-name' }, name));
+						item.append(h('span', { className: 'ocs-list-item-name' }, script.name));
 						item.append(h('span', { className: 'ocs-list-item-arrow' }));
-						item.addEventListener('click', () => openModal(cacheKey));
+						item.addEventListener('click', () => {
+							const panel = $ui.scriptPanel(script, $store);
+							$modal.simple({ content: panel, maskCloseable: true }, root);
+						});
 						list.append(item);
 					}
 				}
