@@ -1,8 +1,13 @@
 import { app } from 'electron';
 import path from 'path';
+import { existsSync, readFileSync, copyFileSync } from 'fs';
 import Store from 'electron-store';
+import { coerce, valid, lt } from 'semver';
 import type { AppStore } from '@ocs-desktop/common';
 import { getDecryptedRenderData } from './crypto';
+import { Logger } from './logger';
+
+const logger = Logger('store');
 
 // IO操作只能在 app.getPath('userData') 下进行，否则会有权限问题。
 
@@ -57,6 +62,54 @@ export const OriginalAppStore: AppStore = {
 	/** 渲染进程数据 */
 	render: {} as { [x: string]: any }
 };
+
+/**
+ * 低版本（< 3.0）配置文件备份
+ *
+ * 背景：3.0 引入 keytar + AES 加密迁移（旧版为 safeStorage 纯 base64），
+ * 迁移/解密一旦异常可能污染 config.json，需要保留迁移前的原始配置用于恢复。
+ *
+ * 时机约束：必须在 new Store()（electron-store 实例化即首次读取 config.json）
+ * 以及 initAesKey / initStore 等全部配置读取、写入之前执行，保证 .bak 是
+ * 未经 3.0 加密迁移触碰的原始状态。
+ *
+ * - 仅当 config.json 记录的版本低于 3.0.0（或版本缺失/无法解析，视为旧配置）时备份
+ * - .bak 已存在则跳过：确保备份永远是首次遇到的迁移前原始配置，
+ *   即使迁移中途损坏、下次启动仍检测到 < 3.0，也不会用损坏数据反向覆盖备份
+ */
+function backupPreV3Config() {
+	// 与 electron-store 默认落盘位置一致
+	const configPath = path.resolve(app.getPath('userData'), './config.json');
+	const backupPath = configPath + '.bak';
+
+	try {
+		if (!existsSync(configPath)) return;
+		if (existsSync(backupPath)) return;
+
+		let version: string | null = null;
+		try {
+			const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+			const rawVersion = (raw as { version?: unknown })?.version;
+			if (typeof rawVersion === 'string') {
+				version = valid(coerce(rawVersion));
+			}
+		} catch {
+			// JSON 解析失败：同样视为旧配置，保留原始文件以便人工恢复
+		}
+
+		// 版本可解析且不低于 3.0.0，说明已完成迁移，无需备份
+		if (version && !lt(version, '3.0.0')) return;
+
+		copyFileSync(configPath, backupPath);
+		logger.info(`检测到低版本（${version || '未知'}）配置文件，已备份至 ${backupPath}`);
+	} catch (e) {
+		// 备份失败不阻断启动
+		logger.warn('低版本配置备份失败', e);
+	}
+}
+
+// ⚠️ 备份必须先于 new Store()：实例化即触发 config.json 首次读取
+backupPreV3Config();
 
 /**
  * - electron 本地存储对象
