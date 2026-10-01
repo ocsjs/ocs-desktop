@@ -120,8 +120,9 @@ function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 			border-left: 6px solid white;
 		}
 		.sider-item.active {
-			background-color: #f4f9ff;
-			border-left: 6px solid #1890ff;
+			/* 激活态跟随主题颜色：底色取主色最浅档（暗色下由 theme.less 覆盖为深灰） */
+			background-color: rgb(var(--primary-1));
+			border-left: 6px solid var(--theme-primary-color);
 		}
 
 		.sider-item-title {

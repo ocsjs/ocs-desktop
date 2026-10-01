@@ -38,6 +38,7 @@
 					v-model:active-key="Store.render.setting.ocs.currentProjectName"
 					type="card-gutter"
 					hide-content
+					size="small"
 				>
 					<a-tab-pane
 						v-for="project of state.projects
