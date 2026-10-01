@@ -10,7 +10,7 @@
 	"scripts": {
 		"build": "pnpm typecheck && gulp -f ./scripts/build-app.js",
 		"build:upgrader-stub": "gulp -f ./scripts/build-upgrader-stub.js",
-		"typecheck": "pnpm --filter @ocs-desktop/app exec tsc --noEmit && pnpm --filter @ocs-desktop/web exec vue-tsc --noEmit",
+		"typecheck": "pnpm --filter @ocs-desktop/common build && pnpm --filter @ocs-desktop/app exec tsc --noEmit && pnpm --filter @ocs-desktop/web exec vue-tsc --noEmit",
 		"lint": "prettier -c ./.prettierrc.json --check \"**/*.{ts,js,vue,css}\" && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue",
 		"lint:fix": "prettier -c ./.prettierrc.json --write \"**/*.{ts,js,vue,css}\" && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
 		"test": "pnpm --filter @ocs-desktop/common test && pnpm --filter @ocs-desktop/app test",

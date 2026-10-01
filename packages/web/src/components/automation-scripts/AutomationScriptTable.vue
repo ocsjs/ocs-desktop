@@ -112,6 +112,7 @@ import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
 import Icon from '../Icon.vue';
 import type { Config } from '@ocs-desktop/common/web';
+import { normalizeUrl } from '@ocs-desktop/common/web';
 import { remote } from '../../utils/remote';
 import xlsx from 'xlsx';
 
@@ -248,10 +249,13 @@ function onConfirm() {
 
 		for (const key in object) {
 			if (Object.prototype.hasOwnProperty.call(object, key)) {
+				// url 类型列（如网页链接）自动识别并补全 https:// 前缀
+				const rawConfig = rawAutomationScript.value.configs[key];
+				const value = rawConfig?.type === 'url' ? normalizeUrl(object[key]) : object[key];
 				Reflect.set(configs, key, {
-					hide: !!rawAutomationScript.value.configs[key]?.hide,
-					label: rawAutomationScript.value.configs[key]?.label,
-					value: object[key]
+					hide: !!rawConfig?.hide,
+					label: rawConfig?.label,
+					value
 				} as Config);
 			}
 		}

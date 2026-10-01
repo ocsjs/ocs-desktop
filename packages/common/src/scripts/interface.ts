@@ -52,7 +52,7 @@ export type BaseAutomationEvents = {
 	'script-data': (...msg: string[]) => void;
 };
 
-export type ConfigType = 'text' | 'password' | 'number' | 'textarea' | 'select' | 'switch';
+export type ConfigType = 'text' | 'password' | 'number' | 'textarea' | 'select' | 'switch' | 'url';
 
 export interface ConfigOption {
 	label: string;
@@ -77,6 +77,10 @@ export interface Config {
 	options?: ConfigOption[];
 	/** 占位提示 */
 	placeholder?: string;
+	/** 输入自动检测正则（字符串形式，保证跨 IPC 序列化安全），失焦时校验 */
+	pattern?: string;
+	/** pattern 校验失败时的提示文案 */
+	patternMessage?: string;
 }
 
 export type ConfigValueRecord<C extends Record<string, Config>> = {

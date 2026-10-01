@@ -8,6 +8,8 @@
 export * from './src/constants';
 export * from './src/api';
 export { StringUtils } from './src/utils/string';
+export { normalizeUrl } from './src/utils/url';
+export { validateConfigValue } from './src/utils/config';
 export * from './src/interface';
 export * from './src/contract';
 export * from './src/scripts/interface';

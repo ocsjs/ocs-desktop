@@ -64,7 +64,9 @@ export const ICourseLoginScript = new AutomationScript(
 			value: '',
 			type: 'text',
 			required: true,
-			placeholder: '请输入手机号或邮箱'
+			placeholder: '请输入手机号或邮箱',
+			pattern: '^(1[3-9]\\d{9}|[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+)$',
+			patternMessage: '请输入正确的手机号或邮箱'
 		},
 		password: {
 			label: '密码',
