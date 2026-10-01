@@ -1,4 +1,4 @@
-import { writeFile, mkdirSync, existsSync, rmSync, writeFileSync } from 'fs';
+import { writeFile, mkdirSync, existsSync, rmSync, writeFileSync, chmodSync } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import child_process from 'child_process';
@@ -92,7 +92,20 @@ export function det(det_target_base64: string, det_bg_base64: string) {
 
 /** 判断是否能够进行验证码识别 */
 export function canOCR() {
-	return existsSync(path.join(getOcrFolder(), getOCRFileName()));
+	const ocrPath = path.join(getOcrFolder(), getOCRFileName());
+	if (!existsSync(ocrPath)) {
+		return false;
+	}
+	// 资源中心下载解压可能丢失 unix 执行位（与 init.chrome 对浏览器可执行文件的处理同理），
+	// 非 win32 平台补一次 chmod，避免 child_process.exec 报 EACCES
+	if (process.platform !== 'win32') {
+		try {
+			chmodSync(ocrPath, 0o755);
+		} catch (e) {
+			logger.error('chmod ocr executable failed', { ocrPath, error: String(e) });
+		}
+	}
+	return true;
 }
 
 function getOCRFileName() {

@@ -25,7 +25,11 @@
 	"nsis": {
 		"oneClick": true
 	},
-	"electronLanguages": ["en-US", "en-GB", "zh-CN"],
+	"electronLanguages": [
+		"en-US",
+		"en-GB",
+		"zh-CN"
+	],
 	"publish": {
 		"provider": "generic",
 		"url": "https://cdn.ocsjs.com/app/electron-updater/"
@@ -37,8 +41,7 @@
 			{
 				"target": "nsis"
 			}
-		],
-		"requestedExecutionLevel": "highestAvailable"
+		]
 	},
 	"mac": {
 		"icon": "public/favicon.icns",

@@ -21,21 +21,18 @@ function getResourcesPath(): string | undefined {
 
 // 获取可用浏览器路径
 export function getValidBrowsers(): ValidBrowser[] {
-	switch (os.platform()) {
-		case 'darwin': {
-			return [
-				{
-					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBuiltinBrowserPath()
-				}
-			].filter((b) => b.path) as ValidBrowser[];
+	/** 内置浏览器（darwin/linux 同样解压到 userData，见 chrome.path.ts） */
+	const builtin = [
+		{
+			name: '软件内置浏览器-谷歌(Chrome)',
+			path: resolveBuiltinBrowserPath()
 		}
+	].filter((b) => b.path) as ValidBrowser[];
+
+	switch (os.platform()) {
 		case 'win32': {
 			return [
-				{
-					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBuiltinBrowserPath()
-				},
+				...builtin,
 				{
 					name: '微软浏览器(Microsoft Edge)',
 					path: resolveBrowserPath('Microsoft\\Edge\\Application\\msedge.exe')
@@ -47,7 +44,8 @@ export function getValidBrowsers(): ValidBrowser[] {
 			].filter((b) => b.path) as ValidBrowser[];
 		}
 		default: {
-			return [];
+			// darwin / linux：仅提供内置浏览器
+			return builtin;
 		}
 	}
 }

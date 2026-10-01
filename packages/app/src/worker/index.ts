@@ -964,6 +964,11 @@ export async function launchBrowser({
 					'--no-first-run',
 					'--no-default-browser-check',
 					'--allow-file-access-from-files',
+					// Linux：ignoreDefaultArgs 移除了 Playwright 默认的 --no-sandbox（沙箱启用），
+					// 而解压分发的 chrome-sandbox 无法满足 setuid root 要求，
+					// 且 Ubuntu 23.10+ AppArmor 限制非受限程序创建 user namespace（兜底方案同样被封堵），
+					// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）
+					...(process.platform === 'linux' ? ['--no-sandbox'] : []),
 					// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
 					...formatBrowserEnhancementArgs(config),
 					...args
