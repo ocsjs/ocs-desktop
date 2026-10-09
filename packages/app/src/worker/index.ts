@@ -263,7 +263,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 				/** 网页下载文件保存目录（软件设置中的"文件下载"目录） */
 				downloadsPath: this.store?.paths.downloadFolder,
 				...options
-				});
+			});
 		} catch (err) {
 			// 启动失败统一处理：发出 browser-closed 并退出进程，
 			// 避免渲染进程 Process.status 滞留 'launching'、卡片一直转圈只能重启软件恢复。
@@ -981,7 +981,12 @@ export async function launchBrowser({
 				const nativeDownloadRestored = await restoreNativeDownloadBehavior(browser);
 
 				// 处理浏览器初始（下载处理：http(s) 链接交给本地默认浏览器；blob/data 经本地代理转发）
-				handleBrowserInit(browser, { enable_dialog: config?.enable_dialog, userDataDir, downloadsPath, nativeDownloadRestored });
+				handleBrowserInit(browser, {
+					enable_dialog: config?.enable_dialog,
+					userDataDir,
+					downloadsPath,
+					nativeDownloadRestored
+				});
 
 				// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）
 				watchDownloadFolder(uid, downloadsPath);
@@ -1058,6 +1063,10 @@ async function initScripts(urls: string[], browser: BrowserContext): Promise<Ins
  * 安装单个脚本：触发安装页 -> 点击安装 -> 等待成功信号
  */
 async function installOneScript(url: string, browser: BrowserContext): Promise<InstallResult> {
+	// 触发前快照已有页面 URL：浏览器常驻的扩展页（如 OCS 快捷导航页 newtab，
+	// 地址为 chrome-extension://<id>/newtab.html）会命中 /extension:\/\//，
+	// 快照排除后才能正确识别本次新弹出的脚本管理器安装页
+	const existingUrls = new Set(browser.pages().map((p) => p.url()));
 	const trigger = await browser.newPage();
 	try {
 		// 触发拓展拦截 .user.js 并弹出安装页（3s 内未完成则关闭触发页）
@@ -1068,7 +1077,7 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 	} catch {}
 
 	// 等待 extension:// 安装页出现
-	const installPage = await waitForInstallPage(browser, 10 * 1000);
+	const installPage = await waitForInstallPage(browser, 10 * 1000, existingUrls);
 	if (!installPage) {
 		await trigger.close().catch(() => {});
 		return { url, success: false, reason: '安装页未出现' };
@@ -1094,11 +1103,20 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 
 /**
  * 轮询等待 extension:// 安装页出现
+ * @param existingUrls 触发安装前已存在的页面 URL 快照，
+ * 用于排除常驻扩展页（OCS 快捷导航页 newtab 等），仅匹配本次新弹出的扩展页面
  */
-async function waitForInstallPage(browser: BrowserContext, timeout: number): Promise<Page | undefined> {
+async function waitForInstallPage(
+	browser: BrowserContext,
+	timeout: number,
+	existingUrls: Set<string>
+): Promise<Page | undefined> {
 	const end = Date.now() + timeout;
 	while (Date.now() < end) {
-		const page = browser.pages().find((p) => /extension:\/\//.test(p.url()));
+		const candidates = browser.pages().filter((p) => /extension:\/\//.test(p.url()) && !existingUrls.has(p.url()));
+		// 多个候选时优先取 URL 含安装特征的页面（脚本管理器安装页路径含 install，
+		// 且 query 携带 .user.js / userScript 脚本地址），兜底取第一个
+		const page = candidates.find((p) => /install|user\.js|userscript/i.test(p.url())) || candidates[0];
 		if (page) return page;
 		await sleep(500);
 	}
