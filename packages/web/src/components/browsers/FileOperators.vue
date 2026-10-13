@@ -133,17 +133,20 @@ async function multipleCreate(
 	configsList: (RawAutomationScript['configs'] & { browserName: string })[]
 ) {
 	for (const configs of configsList) {
+		// browserName 是浏览器名而非脚本配置项：剔除后再入库，避免渲染出空 label 的配置输入框
+		const { browserName, ...scriptConfigs } = configs;
 		newBrowser({
-			name: configs.browserName,
+			name: browserName,
 			automationScripts: [
 				{
 					name: raw.name,
-					configs: configs
+					configs: scriptConfigs
 				}
 			]
 		});
 	}
 
+	Message.success(`成功创建 ${configsList.length} 个浏览器`);
 	state.showAutomationScriptTable = false;
 }
 

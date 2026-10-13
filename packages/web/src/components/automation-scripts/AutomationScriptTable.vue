@@ -17,7 +17,22 @@
 				@page-size-change="(size) => (state.pagination.pageSize = size)"
 			>
 				<template #index="{ record }">
-					<span class="text-nowrap"> {{ record.index }} </span>
+					<span class="text-nowrap"> {{ record.index + 1 }} </span>
+				</template>
+
+				<!-- select 类型列的表头：列名 + 全列填充选择框 -->
+				<template #data-header="{ column }">
+					<div class="ps-header-cell">
+						<div class="ps-header-title">{{ column.title }}</div>
+						<a-select
+							v-model="state.headerSelectValues[column.dataIndex]"
+							size="mini"
+							allow-clear
+							placeholder="全列填充"
+							:options="selectOptions[column.dataIndex]"
+							@change="(value) => applyHeaderSelect(column.dataIndex, value)"
+						></a-select>
+					</div>
 				</template>
 
 				<template #browserName="{ record, column }">
@@ -105,9 +120,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, toRefs, onDeactivated, computed, watch, onMounted } from 'vue';
+import { ref, reactive, toRefs, onDeactivated, computed, watch, onMounted, h } from 'vue';
 import { RawAutomationScript } from '.';
-import { Modal, TableColumnData } from '@arco-design/web-vue';
+import { Modal, Message, TableColumnData } from '@arco-design/web-vue';
 import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
 import Icon from '../Icon.vue';
@@ -156,6 +171,8 @@ const state = reactive({
 	},
 	/** 存在数据的行索引 */
 	validDataIndex: new Set<number>(),
+	/** select 类型列的表头"全列填充"当前值（key -> 选中的值） */
+	headerSelectValues: {} as Record<string, any>,
 	/** 浏览器名字生成规则 */
 	browserNameFields: arrayLikeConfigs.value.map((c) => c.key)
 });
@@ -167,6 +184,9 @@ const tableRef = ref();
 watch(rawAutomationScript, () => {
 	data.value = createData();
 	initColumns();
+	// 重置行有效标记与表头全列填充：模板切换后旧索引指向的是新空行，残留会导致创建出空数据浏览器
+	state.validDataIndex = new Set<number>();
+	state.headerSelectValues = {};
 	state.browserNameFields = arrayLikeConfigs.value.map((c) => c.key);
 });
 
@@ -176,6 +196,8 @@ onMounted(() => {
 
 onDeactivated(() => {
 	state.browserNameFields = [];
+	state.validDataIndex = new Set<number>();
+	state.headerSelectValues = {};
 	data.value = [];
 	columns.value = [
 		{
@@ -208,8 +230,24 @@ function initColumns() {
 			title: config.label,
 			dataIndex: config.key,
 			slotName: 'data',
+			// select 类型列在表头额外渲染"全列填充"选择框
+			titleSlotName: config.type === 'select' ? 'data-header' : undefined,
 			bodyCellClass: 'ps-body-cell'
 		});
+	}
+}
+
+/**
+ * 表头"全列填充"：将某 select 列的值应用到表格全部行（不标记行有效，行有效性仍由该行实际输入驱动）。
+ * 清空时移除所有行该列的值。
+ */
+function applyHeaderSelect(key: string, value: any) {
+	for (const row of data.value) {
+		if (value === undefined || value === '') {
+			Reflect.deleteProperty(row, key);
+		} else {
+			row[key] = value;
+		}
 	}
 }
 
@@ -235,17 +273,87 @@ function getValidData() {
 	return validData;
 }
 
+/**
+ * 点击批量创建：先清理/校验输入
+ * - 整行全部数值为空（含浏览器名）：视为无效输入，静默忽略该行
+ * - 行内存在任意一个未填写的配置项：整行视为无效数据，弹警告由用户选择"重新输入"或"忽略无效行、批量创建"
+ */
 function onConfirm() {
 	const validData = getValidData();
 
-	const configsList: (RawAutomationScript['configs'] & { browserName: string })[] = [];
+	/** 填写完整的行 */
+	const completeRows: any[] = [];
+	/** 填写不完整的行（行号 + 缺少的配置 label） */
+	const incompleteRows: { index: number; missing: string[] }[] = [];
 
 	for (const obj of validData) {
+		const missing: string[] = [];
+		let filledCount = 0;
+		for (const config of arrayLikeConfigs.value) {
+			const value = String(obj[config.key] ?? '').trim();
+			if (value) {
+				filledCount++;
+			} else if (!config.visibleWhen || obj[config.visibleWhen.key] === config.visibleWhen.value) {
+				// 条件显示（visibleWhen）且当前行不满足显示条件的配置项不参与必填校验
+				missing.push(config.label);
+			}
+		}
+		const hasBrowserName = !!String(obj.browserName ?? '').trim();
+
+		if (filledCount === 0 && !hasBrowserName) {
+			// 全部数值为空：无效输入，忽略该行
+			continue;
+		} else if (missing.length > 0) {
+			incompleteRows.push({ index: obj.index, missing });
+		} else {
+			completeRows.push(obj);
+		}
+	}
+
+	if (incompleteRows.length > 0) {
+		const lines = incompleteRows
+			.slice(0, 20)
+			.map((r) => `第 ${r.index + 1} 行的数据没有填写完整：缺少 ${r.missing.join('、')} 输入`);
+		if (incompleteRows.length > 20) {
+			lines.push(`... 共 ${incompleteRows.length} 行未填写完整`);
+		}
+		Modal.warning({
+			title: '存在未填写完整的数据',
+			content: () =>
+				h('div', { style: 'white-space: pre-line; max-height: 40vh; overflow: auto' }, [
+					lines.join('\n'),
+					h('br'),
+					'请重新输入，或忽略无效行后继续批量创建。'
+				]),
+			okText: '忽略无效行、批量创建',
+			cancelText: '重新输入',
+			hideCancel: false,
+			onOk: () => emitCreate(completeRows)
+		});
+		return;
+	}
+
+	emitCreate(completeRows);
+}
+
+/** 构建 configsList 并触发创建（browserName 不写入 configs，避免渲染为空 label 配置项） */
+function emitCreate(rows: any[]) {
+	if (rows.length === 0) {
+		Message.warning('没有可创建的有效数据');
+		return;
+	}
+
+	const configsList: (RawAutomationScript['configs'] & { browserName: string })[] = [];
+
+	for (const obj of rows) {
 		const configs: RawAutomationScript['configs'] & { browserName: string } = Object.create({});
-		const object: Record<string, any> & { browserName: string } = JSON.parse(JSON.stringify(obj));
+		const object: Record<string, any> = JSON.parse(JSON.stringify(obj));
 
 		Reflect.deleteProperty(object, 'index');
 		Reflect.deleteProperty(object, 'key');
+		// browserName 单独提取，不作为脚本配置项（否则渲染端会出现空 label、placeholder 为"输入 undefined"的配置框）
+		const inputBrowserName = String(object.browserName ?? '').trim();
+		Reflect.deleteProperty(object, 'browserName');
 
 		for (const key in object) {
 			if (Object.prototype.hasOwnProperty.call(object, key)) {
@@ -259,7 +367,12 @@ function onConfirm() {
 				} as Config);
 			}
 		}
-		configs.browserName = object.browserName || state.browserNameFields.map((f) => configs[f]?.value || '').join(' ');
+		// 浏览器名：手动输入 > 自动规则 > 模板名+行号 兜底，保证不会出现空名字的浏览器
+		const autoName = state.browserNameFields
+			.map((f) => String(configs[f]?.value ?? '').trim())
+			.filter(Boolean)
+			.join(' ');
+		configs.browserName = inputBrowserName || autoName || `${props.rawAutomationScript.name}-${obj.index + 1}`;
 		configsList.push(configs);
 	}
 
@@ -362,6 +475,19 @@ function importTemplateExcel() {
 		cursor: default;
 		text-align: center;
 		color: #969696;
+	}
+}
+
+// 表头"全列填充"选择框
+.ps-header-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 2px 0;
+
+	.ps-header-title {
+		font-size: 12px;
+		line-height: 1.4;
 	}
 }
 </style>
