@@ -157,7 +157,11 @@ export async function updater(config?: AppStore['updater']) {
 	applyUpdaterConfig();
 	logger.info('检查更新', { version: app.getVersion() });
 	try {
-		const result = await autoUpdater.checkForUpdates();
+		// 15s 超时兜底：electron-updater 无显式超时，弱网环境下检测可能长时间挂起
+		const result = await Promise.race([
+			autoUpdater.checkForUpdates(),
+			new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 15 * 1000))
+		]);
 		const latest = result?.updateInfo?.version || app.getVersion();
 		const hasUpdate =
 			!!result?.updateInfo && (autoUpdater.allowDowngrade ? latest !== app.getVersion() : gt(latest, app.getVersion()));

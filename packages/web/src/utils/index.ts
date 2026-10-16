@@ -138,7 +138,9 @@ export async function fetchRemoteNotify(readAll: boolean) {
  */
 export async function fetchRemoteLangs() {
 	try {
+		// 8s 超时：弱网环境下避免语言文件请求无限挂起
 		const infos = await axios.get(OCS_API.langs + '?t=' + Date.now(), {
+			timeout: 8000,
 			headers: {
 				'content-type': 'application/json'
 			}

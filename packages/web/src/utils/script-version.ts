@@ -67,7 +67,8 @@ export async function fetchRemoteVersion(codeUrl: string): Promise<FetchVersionR
 	const metaUrl = getMetaUrl(codeUrl);
 	console.log('脚本更新 meta-url', metaUrl);
 	try {
-		const res = await remote.methods.call('getWithStatus', metaUrl);
+		// 5s 超时：弱网环境下避免单脚本检查长时间挂起（并行检查 overall 预算随之收敛）
+		const res = await remote.methods.call('getWithStatus', metaUrl, { timeout: 5000 });
 		console.log('脚本更新 res', res);
 		// 区分 HTTP 状态码
 		const status: number | undefined = res?.status;
@@ -138,13 +139,15 @@ export interface ScriptToInstall {
  * 2. 强制安装开关开启 → 始终安装
  * 3. lastInstalledVersion 未设置 → 始终安装（首次安装）
  * 4. code_url 含 ?version=xxx（用户指定了版本）→ 比较 lastInstalledVersion 与指定版本，不同则安装
- * 5. 其他网络脚本 → fetchRemoteVersion 获取远程最新版本 → 与 lastInstalledVersion 比较
+ * 5. 其他网络脚本 → fetchRemoteVersion 获取远程最新版本 → 与 lastInstalledVersion 比较（并行检查，单请求 5s 超时）
  * 6. meta.js 返回 404/403 → 使用 info.version（本地缓存）与 lastInstalledVersion 比对
- * 7. 暂时性网络异常 → 降级为安装（保守策略）
+ * 7. 暂时性网络异常 → 跳过本次更新检查，沿用浏览器内已安装版本（弱网环境下避免触发完整重装）
  */
 export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): Promise<ScriptToInstall[]> {
 	const forceUpdate = store.render.setting.browser.forceUpdateScript;
 	const result: ScriptToInstall[] = [];
+	/** 需要远程版本检查（步骤 5/6/7）的脚本，先收集后并行请求 */
+	const needRemoteCheck: { script: StoreUserScript; codeUrl: string }[] = [];
 
 	for (const script of scripts) {
 		const codeUrl = script.info?.code_url || script.url;
@@ -176,13 +179,20 @@ export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): P
 			continue;
 		}
 
-		// 5, 6, 7. 获取远程最新版本
-		const fetchResult = await fetchRemoteVersion(codeUrl);
+		needRemoteCheck.push({ script, codeUrl });
+	}
+
+	// 5, 6, 7. 并行获取远程最新版本（N 个脚本同时请求，整体耗时从 N×单请求 降为 max(单请求)）
+	const fetchResults = await Promise.all(needRemoteCheck.map(({ codeUrl }) => fetchRemoteVersion(codeUrl)));
+
+	for (let i = 0; i < needRemoteCheck.length; i++) {
+		const { script } = needRemoteCheck[i];
+		const fetchResult = fetchResults[i];
 
 		if (fetchResult.metaSupported === false) {
 			// 6. 404/403：脚本源当前不支持 meta.js，使用本地缓存的 info.version 做比对
 			const cachedVersion = script.info?.version;
-			if (cachedVersion && compareVersions(script.lastInstalledVersion, cachedVersion) === 0) {
+			if (cachedVersion && compareVersions(script.lastInstalledVersion!, cachedVersion) === 0) {
 				// 本地缓存的版本与已安装版本一致，无需安装
 				continue;
 			}
@@ -192,13 +202,12 @@ export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): P
 		}
 
 		if (fetchResult.version === undefined) {
-			// 7. 暂时性网络异常 → 保守策略，仍然安装
-			result.push({ script, latestVersion: script.info?.version || '' });
+			// 7. 暂时性网络异常 → 跳过本次更新，沿用已安装版本（不阻塞启动，下次启动重试）
 			continue;
 		}
 
 		// 5. meta.js 成功获取到版本号，与已安装版本比较
-		if (compareVersions(script.lastInstalledVersion, fetchResult.version) !== 0) {
+		if (compareVersions(script.lastInstalledVersion!, fetchResult.version) !== 0) {
 			result.push({ script, latestVersion: fetchResult.version });
 		}
 	}

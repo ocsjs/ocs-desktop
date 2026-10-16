@@ -357,20 +357,31 @@ export class Process extends EventEmitter {
 			const port = store.server.port || DEFAULT_SERVER_PORT;
 			const userscripts: string[] = [];
 			const urlToItem = new Map<string, ScriptToInstall>();
+
+			// 本地脚本：直接通过本地服务器代理（拓展只能拦截 http/https）
+			const remoteItems: { item: ScriptToInstall; remoteUrl: string }[] = [];
 			for (const item of scriptsToInstall) {
 				const script = item.script;
 				if (script.isLocalScript) {
-					// 本地脚本：直接通过本地服务器代理（拓展只能拦截 http/https）
 					const localPath = script.info?.code_url || script.url;
 					const installUrl = `http://localhost:${port}/api/local-userscript?path=${encodeURIComponent(localPath)}`;
 					userscripts.push(installUrl);
 					urlToItem.set(installUrl, item);
 				} else {
-					// 远程脚本：主进程预下载到临时文件，再经本地服务器代理给拓展拦截
-					const remoteUrl = script.info?.code_url || script.url;
-					Status.loading(`正在下载脚本 ${script.info?.name || remoteUrl} ...`);
-					const results = await remote.methods.call('downloadUserscripts', [remoteUrl]);
-					const r = results?.[0];
+					remoteItems.push({ item, remoteUrl: script.info?.code_url || script.url });
+				}
+			}
+
+			// 远程脚本：一次性批量预下载（主进程内部并行），避免逐个串行等待（最坏 N×60s → 60s 封顶）
+			if (remoteItems.length > 0) {
+				Status.loading(`正在并行下载 ${remoteItems.length} 个脚本...`);
+				const results = await remote.methods.call(
+					'downloadUserscripts',
+					remoteItems.map((r) => r.remoteUrl)
+				);
+				for (let i = 0; i < remoteItems.length; i++) {
+					const { item, remoteUrl } = remoteItems[i];
+					const r = results?.[i];
 					if (r && r.success && r.path) {
 						const installUrl = `http://localhost:${port}/api/local-userscript?path=${encodeURIComponent(r.path)}`;
 						userscripts.push(installUrl);
@@ -379,7 +390,7 @@ export class Process extends EventEmitter {
 						// 预下载失败：剔除并通知，不更新 lastInstalledVersion（下次重试）
 						notify(
 							'脚本下载失败',
-							`${script.info?.name || remoteUrl} 下载失败：${r?.error || '未知原因'}，本次跳过，下次启动将重试`,
+							`${item.script.info?.name || remoteUrl} 下载失败：${r?.error || '未知原因'}，本次跳过，下次启动将重试`,
 							'download-fail-' + remoteUrl,
 							{ duration: 60 * 1000, type: 'warning', copy: true }
 						);

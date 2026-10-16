@@ -102,7 +102,9 @@ export async function breakSliderVerify(
 export function getBase64(url: string) {
 	return axios
 		.get(url, {
-			responseType: 'arraybuffer'
+			responseType: 'arraybuffer',
+			// 10s 超时：滑块背景图等外部资源在弱网环境下避免无限挂起
+			timeout: 10 * 1000
 		})
 		.then((response) => Buffer.from(response.data, 'binary').toString('base64'));
 }
