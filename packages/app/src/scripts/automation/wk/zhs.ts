@@ -364,7 +364,8 @@ async function isNotVerified(page: Page) {
 }
 
 async function isNotLogin(page: Page) {
-	await page.goto('https://www.zhihuishu.com/');
+	// domcontentloaded + 显式 15s 超时：弱网下默认 load/30s 上限会显著拖慢登录前置检查
+	await page.goto('https://www.zhihuishu.com/', { waitUntil: 'domcontentloaded', timeout: 15 * 1000 }).catch(() => {});
 	await page.waitForTimeout(2000);
 	// #login 为已登录用户信息区域，未登录时会隐藏
 	const loginBtnNotDisplay = await page.evaluate(

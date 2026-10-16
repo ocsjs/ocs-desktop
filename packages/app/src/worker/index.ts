@@ -877,19 +877,19 @@ function createStepFunction(page: Page, serverPort: number): StepTips {
 				return page.frames().find((f) => f !== page.mainFrame() && f.url().startsWith(navOrigin));
 			};
 
-			// iframe 为异步加载，轮询等待其出现（超时则跳过提示，不破坏页面）
+			// iframe 为异步加载，轮询等待其出现（8s 超时则跳过提示，不破坏页面）
 			let frame = findNavFrame();
-			const deadline = Date.now() + 15_000;
+			const deadline = Date.now() + 8_000;
 			while (!frame && Date.now() < deadline) {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 				frame = findNavFrame();
 			}
 			if (!frame) return;
 
-			// 等待导航页脚本就绪（setBookmarkLoadingState 定义后再执行），未就绪则跳过
+			// 等待导航页脚本就绪（setBookmarkLoadingState 定义后再执行），8s 未就绪则跳过
 			const ready = await frame
 				.waitForFunction(() => typeof (window as any).setBookmarkLoadingState === 'function', undefined, {
-					timeout: 15_000
+					timeout: 8_000
 				})
 				.then(() => true)
 				.catch(() => false);
@@ -1253,35 +1253,51 @@ async function runAutomationScripts(opts: {
 	const { automationScripts, browser, serverPort, step } = opts;
 
 	if (automationScripts.length) {
-		// 执行自动化程序
-		for (const ps of automationScripts) {
-			await step(`正在执行自动化程序 - ${ps.name} ...`);
-			let configs = transformScriptConfigToRaw(ps.configs);
+		await step(`正在执行自动化程序 - ${automationScripts.map((ps) => ps.name).join('、')} ...`);
 
-			// 优先匹配合并后的脚本名；未命中时兼容合并前的旧配置名（迁移补全登录方式）
-			const legacy = LegacyScriptMappings.find((m) => m.names.includes(ps.name));
-			const script = AutomationScripts.find((s) => s.name === ps.name) ?? legacy?.script;
-			if (script) {
+		// 多平台脚本互不依赖，并行执行（各开各的 page），弱网下整体耗时从「串行累加」降为「最慢单个」；
+		// 单脚本 45s 总超时：超时关闭其页面终止后续操作，避免单脚本挂起拖垮整体初始化
+		const SCRIPT_TIMEOUT = 45 * 1000;
+		await Promise.allSettled(
+			automationScripts.map(async (ps) => {
+				let configs = transformScriptConfigToRaw(ps.configs);
+
+				// 优先匹配合并后的脚本名；未命中时兼容合并前的旧配置名（迁移补全登录方式）
+				const legacy = LegacyScriptMappings.find((m) => m.names.includes(ps.name));
+				const script = AutomationScripts.find((s) => s.name === ps.name) ?? legacy?.script;
+				if (!script) return;
 				if (legacy) configs = legacy.migrate(configs);
 				script.on('script-data', (...msg) => console.log(...msg));
 				script.on('script-error', (...msg) =>
 					console.error('自动化程序错误：', ...msg.map((m) => ScriptWorker.getTransformedErrorMessage(m)))
 				);
+
+				const page = await browser.newPage();
+				const runPromise = script.run(page, configs, {
+					ocrApiUrl: `http://localhost:${serverPort}/ocr`,
+					ocrApiImageKey: 'image',
+					detBackgroundKey: 'det_bg',
+					detTargetKey: 'det_target'
+				});
 				try {
-					await script.run(await browser.newPage(), configs, {
-						ocrApiUrl: `http://localhost:${serverPort}/ocr`,
-						ocrApiImageKey: 'image',
-						detBackgroundKey: 'det_bg',
-						detTargetKey: 'det_target'
-					});
+					const result = await Promise.race([
+						runPromise.then(() => 'done' as const),
+						new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), SCRIPT_TIMEOUT))
+					]);
+					if (result === 'timeout') {
+						console.error(`自动化程序执行超时（${SCRIPT_TIMEOUT / 1000}s）：${ps.name}，已终止，可稍后手动重试`);
+						// 关闭页面使脚本内 pending 的 Playwright 调用立即 reject，终止后续操作
+						await page.close().catch(() => {});
+						await runPromise.catch(() => {});
+					}
 				} catch (err) {
 					console.error(
 						'自动化程序错误：',
 						ScriptWorker.getTransformedErrorMessage(err instanceof Error ? err.message : String(err))
 					);
 				}
-			}
-		}
+			})
+		);
 	}
 }
 
@@ -1294,7 +1310,7 @@ async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; cl
 			clearInterval(interval);
 			// 欢迎页未出现属正常情况（拓展已加载过），拓展加载是否成功已由 verifyExtensionsLoaded 检测
 			resolve();
-		}, 60 * 1000);
+		}, 20 * 1000);
 		const interval = setInterval(async () => {
 			const includes: Page[] = [];
 			for (const page of opts.browser.pages()) {

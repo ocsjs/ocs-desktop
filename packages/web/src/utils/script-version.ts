@@ -142,8 +142,14 @@ export interface ScriptToInstall {
  * 5. 其他网络脚本 → fetchRemoteVersion 获取远程最新版本 → 与 lastInstalledVersion 比较（并行检查，单请求 5s 超时）
  * 6. meta.js 返回 404/403 → 使用 info.version（本地缓存）与 lastInstalledVersion 比对
  * 7. 暂时性网络异常 → 跳过本次更新检查，沿用浏览器内已安装版本（弱网环境下避免触发完整重装）
+ *
+ * opts.skipRemoteCheck：弱网模式下整体跳过步骤 5/6/7 的远程检查，
+ * 已安装脚本一律视为最新（未安装过的脚本仍按步骤 3 安装）
  */
-export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): Promise<ScriptToInstall[]> {
+export async function filterScriptsNeedingInstall(
+	scripts: StoreUserScript[],
+	opts?: { skipRemoteCheck?: boolean }
+): Promise<ScriptToInstall[]> {
 	const forceUpdate = store.render.setting.browser.forceUpdateScript;
 	const result: ScriptToInstall[] = [];
 	/** 需要远程版本检查（步骤 5/6/7）的脚本，先收集后并行请求 */
@@ -180,6 +186,11 @@ export async function filterScriptsNeedingInstall(scripts: StoreUserScript[]): P
 		}
 
 		needRemoteCheck.push({ script, codeUrl });
+	}
+
+	// 弱网模式：跳过远程版本检查，已安装脚本视为最新
+	if (opts?.skipRemoteCheck) {
+		return result;
 	}
 
 	// 5, 6, 7. 并行获取远程最新版本（N 个脚本同时请求，整体耗时从 N×单请求 降为 max(单请求)）

@@ -65,8 +65,11 @@ export const CXLoginScript = new AutomationScript(
 				await ensureWideViewport(page);
 				if (await isNotLogin(page)) {
 					if (configs.loginType === 'unit') {
-						/** 其他登录 */
-						await Promise.all([page.waitForLoadState('networkidle'), page.click('#otherlogin')]);
+						/** 其他登录（domcontentloaded + 显式 15s 超时：networkidle 默认 30s 且弱网/长连接页面几乎必然等满） */
+						await Promise.all([
+							page.waitForLoadState('domcontentloaded', { timeout: 15 * 1000 }).catch(() => {}),
+							page.click('#otherlogin')
+						]);
 						await page.waitForTimeout(3000);
 						/** 输入机构名, 并等待搜索结果 */
 						await slowType(page, '#inputunitname', configs.unit);
@@ -236,7 +239,8 @@ function login(
 
 async function isNotLogin(page: Page) {
 	// 不能使用 https ，这里如果使用 https 在登录后会导致某些同学的课程无法访问
-	await page.goto('http://i.chaoxing.com/');
+	// 显式 15s 超时：弱网下默认 30s 上限会显著拖慢自动登录前置检查
+	await page.goto('http://i.chaoxing.com/', { timeout: 15 * 1000 }).catch(() => {});
 	await page.waitForTimeout(2000);
 
 	return page.url().includes('passport2.chaoxing.com');

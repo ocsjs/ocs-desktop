@@ -6,6 +6,7 @@ import { Logger } from '../logger';
 import { store } from '../store';
 import { getCurrentWebContents, moveWindowToTop } from '../utils';
 import { UpdateInformationResource, OCS_UPDATER, OCS_DOWNLOAD_PAGE, AppStore } from '@ocs-desktop/common';
+import { probeNetwork } from './net.status';
 
 const logger = Logger('updater');
 
@@ -156,6 +157,11 @@ export async function updater(config?: AppStore['updater']) {
 	}
 	applyUpdaterConfig();
 	logger.info('检查更新', { version: app.getVersion() });
+	// 弱网模式：3s 探测失败直接跳过更新检测，避免 checkForUpdates 在弱网下长时间挂起
+	if (!(await probeNetwork())) {
+		logger.info('弱网模式，跳过本次更新检测');
+		return undefined;
+	}
 	try {
 		// 15s 超时兜底：electron-updater 无显式超时，弱网环境下检测可能长时间挂起
 		const result = await Promise.race([

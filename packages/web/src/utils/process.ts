@@ -12,6 +12,7 @@ import { child_process, electron } from './node';
 import { notify } from './notify';
 import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
+import { detectWeakNetwork } from './index';
 
 /** 用户脚本安装结果（由 worker 回传） */
 interface InstallResult {
@@ -346,8 +347,10 @@ export class Process extends EventEmitter {
 				}
 			}
 
-			Status.loading('正在检查脚本更新...');
-			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts);
+			// 弱网探测（3s）：弱网模式下跳过脚本版本远程检查，已安装脚本视为最新，加速启动
+			const weakNetwork = await detectWeakNetwork();
+			Status.loading(weakNetwork ? '检测到弱网环境，跳过脚本更新检查...' : '正在检查脚本更新...');
+			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts, { skipRemoteCheck: weakNetwork });
 			if (scriptsToInstall.length > 0) {
 				Status.loading(`正在启动 ${this.browser.name}（需更新/安装 ${scriptsToInstall.length} 个脚本）...`);
 			} else {

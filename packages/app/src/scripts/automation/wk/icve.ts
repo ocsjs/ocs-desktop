@@ -94,7 +94,7 @@ export const ICVELoginScript = new AutomationScript(
  * 访问 SSO 登录页后若 URL 仍包含 sso/auth，视为未登录
  */
 async function isNotLogin(page: Page): Promise<boolean> {
-	await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+	await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 15 * 1000 }).catch(() => {});
 	// 等待表单渲染完成
 	await page.waitForSelector(SEL.username, { timeout: 15000 }).catch(() => {});
 	return page.url().includes('sso/auth');

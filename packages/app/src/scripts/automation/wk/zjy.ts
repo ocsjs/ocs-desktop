@@ -106,7 +106,7 @@ export const ZJYLoginScript = new AutomationScript(
  * 登录页默认渲染手机验证码表单，故等待 .demo-ruleForm（表单容器）作为页面就绪标志。
  */
 async function isNotLogin(page: Page): Promise<boolean> {
-	await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' });
+	await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 15 * 1000 }).catch(() => {});
 	await page.waitForSelector('.demo-ruleForm', { timeout: 15000 }).catch(() => {});
 	return page.url().includes('sso/auth');
 }

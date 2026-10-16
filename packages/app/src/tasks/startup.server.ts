@@ -11,6 +11,7 @@ import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils
 import { canOCR, det, ocr } from '../utils/ocr';
 import { randomUUID, createHash } from 'crypto';
 import { getInitStatus } from './init.status';
+import { probeNetwork } from './net.status';
 const logger = Logger('server');
 
 /** 图标内存缓存（进程内一级缓存） */
@@ -335,10 +336,13 @@ export async function startupServer() {
 			return;
 		}
 
-		// 三级：in-flight 去重，同一 URL 并发 miss 只发起一次外网请求
+		// 三级：in-flight 去重，同一 URL 并发 miss 只发起一次外网请求；
+		// 弱网模式（3s 探测失败）直接返回兜底图标，不再发起竞速请求
 		let inflight = iconInflight.get(iconUrl);
 		if (!inflight) {
-			inflight = fetchIcon(iconUrl).finally(() => iconInflight.delete(iconUrl));
+			inflight = (async () => ((await probeNetwork()) ? fetchIcon(iconUrl) : FALLBACK_ICON))().finally(() =>
+				iconInflight.delete(iconUrl)
+			);
 			iconInflight.set(iconUrl, inflight);
 		}
 		const result = await inflight;

@@ -156,6 +156,37 @@ export async function fetchRemoteLangs() {
 }
 
 /**
+ * 弱网探测：3s 内拿不到 CDN 响应即判定弱网，结果缓存 30s（并发调用合并）。
+ * 用于启动前快速降级：弱网时跳过脚本版本检查等非关键外网请求。
+ */
+let _weakNetProbeAt = 0;
+let _weakNetResult = false;
+let _weakNetInflight: Promise<boolean> | undefined;
+export function detectWeakNetwork(): Promise<boolean> {
+	const now = Date.now();
+	if (now - _weakNetProbeAt < 30 * 1000) {
+		return Promise.resolve(_weakNetResult);
+	}
+	if (_weakNetInflight) {
+		return _weakNetInflight;
+	}
+	_weakNetInflight = remote.methods
+		.call('getWithStatus', OCS_API.infos, { timeout: 3000 })
+		.then((res) => !((res?.status ?? 0) > 0))
+		.catch(() => true)
+		.then((weak) => {
+			_weakNetProbeAt = Date.now();
+			_weakNetResult = weak;
+			_weakNetInflight = undefined;
+			if (weak) {
+				console.warn('[net] 网络探测失败（3s 无响应），进入弱网模式');
+			}
+			return weak;
+		});
+	return _weakNetInflight;
+}
+
+/**
  * 获取 infos.json
  */
 let temp_infos: Infos | undefined;
