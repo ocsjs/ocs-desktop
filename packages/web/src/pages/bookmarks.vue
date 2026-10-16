@@ -260,6 +260,7 @@
 					>
 						<img
 							class="icon"
+							loading="lazy"
 							:src="localIcon(site.url)"
 						/>
 						<span class="bookmark-name">{{ site.name }}</span>
@@ -328,6 +329,7 @@
 									<img
 										:data-img-src="bookmark?.icon || ''"
 										class="icon"
+										loading="lazy"
 										:src="iconUrl(bookmark?.icon)"
 									/>
 									<span class="bookmark-name">{{ bookmark?.name }}</span>
@@ -351,8 +353,8 @@
 <script setup lang="ts">
 import { onMounted, ref, reactive, computed } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
-import { OCSApi, BookmarkResource } from '@ocs-desktop/common/web';
-import { iconUrl } from '../utils/index';
+import { BookmarkResource } from '@ocs-desktop/common/web';
+import { iconUrl, getRemoteInfos } from '../utils/index';
 
 type BookMark = BookmarkResource;
 
@@ -544,66 +546,71 @@ window.setBookmarkLoadingState = (_state) => {
 };
 
 onMounted(async () => {
-	const infos = await OCSApi.getInfos();
-	console.log('OCS API infos:', infos);
-	console.log('bookmark data:', infos.bookmark);
-
 	document.title = 'OCS - 快捷导航页';
-
-	// 直接同步填充书签数据
-	for (let i = 0; i < infos.bookmark.length; i++) {
-		const bookmark = infos.bookmark[i] as BookMark;
-		console.log(`Processing bookmark[${i}]:`, bookmark);
-
-		bookmarks.value[i] = {
-			group: bookmark.group,
-			values: bookmark.values.filter(Boolean)
-		};
-	}
-
-	// 主动通过本地 API 获取浏览器信息
+	const port = location.port || '15319';
 	const uid = getCurrentUid();
-	if (uid) {
-		try {
-			const port = location.port || '15319';
-			const res = await fetch(`http://localhost:${port}/api/bookmark/browser-info?uid=${uid}`);
-			const info = await res.json();
-			if (info) {
-				const nameEl = document.querySelector('#browser-name');
-				const tagsEl = document.querySelector('#browser-tags');
-				const notesEl = document.querySelector('#browser-notes');
-				if (nameEl) nameEl.innerHTML = info.name || '未知名称';
-				if (tagsEl) {
-					tagsEl.innerHTML = (info.tags || [])
-						.map(
-							(t: { color: string; name: string }) =>
-								`<span style="background: linear-gradient(135deg, ${t.color}, ${adjustColor(
-									t.color,
-									-20
-								)});" class="browser-tag">${t.name}</span>`
-						)
-						.join('');
-				}
-				if (notesEl) notesEl.innerHTML = info.notes || '未知';
-			}
-		} catch (e) {
-			console.error('获取浏览器信息失败', e);
-		}
-	}
 
-	// 获取导航页设置（搜索引擎开关、快捷访问开关、自定义网站）
-	try {
-		const port = location.port || '15319';
-		const res = await fetch(`http://localhost:${port}/api/bookmark/page-settings`);
-		const settings = await res.json();
-		if (settings) {
-			pageSettings.enableSearch = settings.enableSearch !== false;
-			pageSettings.enableQuickAccess = settings.enableQuickAccess !== false;
-			pageSettings.customSites = Array.isArray(settings.customSites) ? settings.customSites : [];
-		}
-	} catch (e) {
-		console.error('获取导航页设置失败', e);
-	}
+	// 三个数据源并行加载：CDN 书签分组（复用会话缓存，失败不阻塞其余内容）、
+	// 本地浏览器信息、本地导航页设置。原串行 await 在弱网下首屏最长被 CDN 15s 阻塞。
+	await Promise.all([
+		// 官方书签分组（CDN，复用 getRemoteInfos 会话级缓存）
+		(async () => {
+			try {
+				const infos = await getRemoteInfos();
+				for (let i = 0; i < infos.bookmark.length; i++) {
+					const bookmark = infos.bookmark[i] as BookMark;
+					bookmarks.value[i] = {
+						group: bookmark.group,
+						values: bookmark.values.filter(Boolean)
+					};
+				}
+			} catch (e) {
+				console.error('获取书签数据失败', e);
+			}
+		})(),
+		// 主动通过本地 API 获取浏览器信息
+		(async () => {
+			if (!uid) return;
+			try {
+				const res = await fetch(`http://localhost:${port}/api/bookmark/browser-info?uid=${uid}`);
+				const info = await res.json();
+				if (info) {
+					const nameEl = document.querySelector('#browser-name');
+					const tagsEl = document.querySelector('#browser-tags');
+					const notesEl = document.querySelector('#browser-notes');
+					if (nameEl) nameEl.innerHTML = info.name || '未知名称';
+					if (tagsEl) {
+						tagsEl.innerHTML = (info.tags || [])
+							.map(
+								(t: { color: string; name: string }) =>
+									`<span style="background: linear-gradient(135deg, ${t.color}, ${adjustColor(
+										t.color,
+										-20
+									)});" class="browser-tag">${t.name}</span>`
+							)
+							.join('');
+					}
+					if (notesEl) notesEl.innerHTML = info.notes || '未知';
+				}
+			} catch (e) {
+				console.error('获取浏览器信息失败', e);
+			}
+		})(),
+		// 获取导航页设置（搜索引擎开关、快捷访问开关、自定义网站）
+		(async () => {
+			try {
+				const res = await fetch(`http://localhost:${port}/api/bookmark/page-settings`);
+				const settings = await res.json();
+				if (settings) {
+					pageSettings.enableSearch = settings.enableSearch !== false;
+					pageSettings.enableQuickAccess = settings.enableQuickAccess !== false;
+					pageSettings.customSites = Array.isArray(settings.customSites) ? settings.customSites : [];
+				}
+			} catch (e) {
+				console.error('获取导航页设置失败', e);
+			}
+		})()
+	]);
 });
 
 function adjustColor(hex: string, percent: number): string {
@@ -625,7 +632,8 @@ function openInApp() {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500&display=swap');
+/* 已移除 Google Fonts 外链 @import：弱网/国内环境下该请求会阻塞导航页样式渲染，
+   字体声明（font-family: 'Outfit', -apple-system, sans-serif）自动回退系统字体 */
 
 .browser-tag {
 	display: inline-block;

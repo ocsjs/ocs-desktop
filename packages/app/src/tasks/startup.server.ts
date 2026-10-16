@@ -3,18 +3,69 @@ import { Logger } from '../logger';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
+import { app as electronApp } from 'electron';
 import { store } from '../store';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 import { getDecryptedRenderData } from '../crypto';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { getInitStatus } from './init.status';
 const logger = Logger('server');
 
-/** 图标内存缓存 */
+/** 图标内存缓存（进程内一级缓存） */
 const iconCache = new Map<string, { data: Buffer; contentType: string }>();
 const ICON_CACHE_MAX = 200;
+
+/** 同一 URL 的并发请求合并（in-flight 去重），避免缓存未命中时同一图标重复打外网 */
+const iconInflight = new Map<string, Promise<{ data: Buffer; contentType: string }>>();
+
+/** 图标磁盘缓存目录（userData/icons，应用重启后仍有效） */
+const ICON_DISK_DIR = path.join(electronApp.getPath('userData'), 'icons');
+/** 正常图标磁盘缓存有效期：7 天 */
+const ICON_DISK_TTL = 7 * 24 * 60 * 60 * 1000;
+/** 兜底图标磁盘缓存有效期：6 小时（弱网恢复后允许重新尝试获取真实图标） */
+const FALLBACK_DISK_TTL = 6 * 60 * 60 * 1000;
+
+interface IconDiskMeta {
+	contentType: string;
+	/** 是否为兜底图标（短 TTL） */
+	fallback: boolean;
+	time: number;
+}
+
+function iconDiskKey(url: string) {
+	return createHash('md5').update(url).digest('hex');
+}
+
+/** 读取磁盘缓存的图标，过期/损坏返回 null */
+function readDiskIcon(url: string): { data: Buffer; contentType: string } | null {
+	try {
+		const key = iconDiskKey(url);
+		const metaPath = path.join(ICON_DISK_DIR, `${key}.json`);
+		const dataPath = path.join(ICON_DISK_DIR, `${key}.bin`);
+		if (!fs.existsSync(metaPath) || !fs.existsSync(dataPath)) return null;
+		const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8')) as IconDiskMeta;
+		const ttl = meta.fallback ? FALLBACK_DISK_TTL : ICON_DISK_TTL;
+		if (Date.now() - meta.time > ttl) return null;
+		return { data: fs.readFileSync(dataPath), contentType: meta.contentType };
+	} catch {
+		return null;
+	}
+}
+
+/** 写入磁盘缓存（静默容错） */
+function writeDiskIcon(url: string, result: { data: Buffer; contentType: string }, fallback: boolean) {
+	try {
+		fs.mkdirSync(ICON_DISK_DIR, { recursive: true });
+		const key = iconDiskKey(url);
+		const meta: IconDiskMeta = { contentType: result.contentType, fallback, time: Date.now() };
+		fs.writeFileSync(path.join(ICON_DISK_DIR, `${key}.json`), JSON.stringify(meta), 'utf-8');
+		fs.writeFileSync(path.join(ICON_DISK_DIR, `${key}.bin`), result.data);
+	} catch (err) {
+		logger.warn('图标磁盘缓存写入失败', err);
+	}
+}
 
 /** 从 URL 中提取域名 */
 function extractDomain(url: string): string | null {
@@ -100,10 +151,10 @@ async function tryFetchImage(url: string): Promise<{ data: Buffer; contentType: 
 }
 
 /**
- * 获取网站图标 — 多源降级策略：
- * 原始 URL → 站点自带 favicon.ico → 第三方 favicon 服务 → Google Favicon API → 降级图标
- * 原始 URL 常为站点首页（返回 HTML），因此优先尝试站点 /favicon.ico（国内最稳），
- * 再依次尝试第三方服务与 Google（部分地区不可达），最终降级。
+ * 获取网站图标 — 多源竞速策略：
+ * 原始 URL、站点自带 favicon.ico、第三方 favicon 服务、Google Favicon API 全部并行请求，
+ * 第一个返回有效图片的源胜出；单请求 3s 超时，整体 4s 预算，超时返回兜底图标。
+ * （原串行降级单图标最坏 5 源 × 3s ≈ 15s+，弱网环境下导航页 icons 长时间空白）
  */
 async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: string }> {
 	const candidates: string[] = [iconUrl];
@@ -112,7 +163,6 @@ async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: 
 	if (domain) {
 		// 站点自带 favicon.ico，国内可达性最好
 		candidates.push(`https://${domain}/favicon.ico`);
-		candidates.push(`http://${domain}/favicon.ico`);
 		// 第三方可达的 favicon 服务
 		candidates.push(`https://icons.duckduckgo.com/ip3/${domain}.png`);
 		candidates.push(`https://api.iowen.cn/favicon/${domain}.png`);
@@ -120,12 +170,26 @@ async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: 
 		candidates.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
 	}
 
-	for (const url of candidates) {
-		const result = await tryFetchImage(url);
-		if (result) return result;
-	}
+	// 竞速：任一源返回有效图片即胜出；全部失败/超时返回 null（手写 any，兼容 ES2020 编译目标）
+	const raceAll = new Promise<{ data: Buffer; contentType: string } | null>((resolve) => {
+		let settled = false;
+		let pending = candidates.length;
+		for (const url of candidates) {
+			tryFetchImage(url).then((r) => {
+				if (settled) return;
+				if (r) {
+					settled = true;
+					resolve(r);
+				} else if (--pending === 0) {
+					settled = true;
+					resolve(null);
+				}
+			});
+		}
+	});
+	const result = await Promise.race([raceAll, new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))]);
 
-	return FALLBACK_ICON;
+	return result ?? FALLBACK_ICON;
 }
 
 export async function startupServer() {
@@ -242,7 +306,7 @@ export async function startupServer() {
 		});
 	});
 
-	/** 获取网站图标（带内存缓存） */
+	/** 获取网站图标（内存缓存 → 磁盘缓存 → in-flight 去重 → 多源竞速） */
 	app.get('/icon', async (req, res) => {
 		const iconUrl = req.query.url as string;
 		if (!iconUrl) {
@@ -250,28 +314,44 @@ export async function startupServer() {
 			return;
 		}
 
-		// 查缓存
+		const sendIcon = (icon: { data: Buffer; contentType: string }) => {
+			res.setHeader('Content-Type', icon.contentType);
+			res.setHeader('Cache-Control', 'public, max-age=86400');
+			res.send(icon.data);
+		};
+
+		// 一级：内存缓存
 		const cached = iconCache.get(iconUrl);
 		if (cached) {
-			res.setHeader('Content-Type', cached.contentType);
-			res.setHeader('Cache-Control', 'public, max-age=86400');
-			res.send(cached.data);
+			sendIcon(cached);
 			return;
 		}
 
-		// 缓存未命中，走三级降级获取
-		const result = await fetchIcon(iconUrl);
+		// 二级：磁盘缓存（应用重启后仍有效）
+		const disk = readDiskIcon(iconUrl);
+		if (disk) {
+			iconCache.set(iconUrl, disk);
+			sendIcon(disk);
+			return;
+		}
 
-		// 写入缓存（降级图标也缓存，避免重复降级）
+		// 三级：in-flight 去重，同一 URL 并发 miss 只发起一次外网请求
+		let inflight = iconInflight.get(iconUrl);
+		if (!inflight) {
+			inflight = fetchIcon(iconUrl).finally(() => iconInflight.delete(iconUrl));
+			iconInflight.set(iconUrl, inflight);
+		}
+		const result = await inflight;
+
+		// 写入内存 + 磁盘缓存（兜底图标也缓存：内存避免重复竞速，磁盘短 TTL 允许弱网恢复后重试）
 		if (iconCache.size >= ICON_CACHE_MAX) {
 			const firstKey = iconCache.keys().next().value;
 			if (firstKey !== undefined) iconCache.delete(firstKey);
 		}
 		iconCache.set(iconUrl, result);
+		writeDiskIcon(iconUrl, result, result === FALLBACK_ICON);
 
-		res.setHeader('Content-Type', result.contentType);
-		res.setHeader('Cache-Control', 'public, max-age=86400');
-		res.send(result.data);
+		sendIcon(result);
 	});
 
 	/** 请求转发 */
