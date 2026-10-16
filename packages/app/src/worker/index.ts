@@ -1011,23 +1011,32 @@ export async function launchBrowser({
 					// 关闭拓展加载时弹出的首页（并行清理，不阻塞；未出现欢迎页属正常情况）
 					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
 
-					// 安装用户脚本
-					const { warn, results } = await setupUserScripts({ browser, userscripts, step, enabledScriptCount });
-					// 回传安装结果（供渲染进程按成功情况更新 lastInstalledVersion）
-					send('userscript-install-result', results);
-
-					// 监听网络请求
+					// 监听网络请求（注册快且自动化程序依赖，放关键段）
 					browserNetworkRoute(authToken, browser);
 
-					// 运行自动化程序
-					await runAutomationScripts({ browser, automationScripts, serverPort, step });
-
-					await step(['浏览器初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
-
-					// 触发onLaunch事件
+					// 关键路径就绪：立即通知渲染进程浏览器已可用（launched）。
+					// 用户脚本安装与自动化登录耗时随网络波动大（弱网可达分钟级），转入后台执行，
+					// 进度仍通过 step 提示渲染到导航页，不再阻塞浏览器可用状态。
 					onLaunch?.(browser);
-					// 启动完成
 					resolve();
+
+					// 后台段：安装用户脚本 → 运行自动化程序（失败不影响浏览器可用状态，仅提示）
+					(async () => {
+						try {
+							// 安装用户脚本
+							const { warn, results } = await setupUserScripts({ browser, userscripts, step, enabledScriptCount });
+							// 回传安装结果（供渲染进程按成功情况更新 lastInstalledVersion）
+							send('userscript-install-result', results);
+
+							// 运行自动化程序
+							await runAutomationScripts({ browser, automationScripts, serverPort, step });
+
+							await step(['浏览器初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
+						} catch (err) {
+							// 后台任务异常（如浏览器被用户提前关闭）：仅记录，不再中断启动流程
+							console.warn('后台初始化任务中断：', err instanceof Error ? err.message : String(err));
+						}
+					})();
 				} catch (err) {
 					reject(err);
 				}
