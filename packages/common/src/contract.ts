@@ -110,8 +110,6 @@ export interface RemoteMethods {
 	getValidBrowsers: typeof getValidBrowsers;
 	getBrowserMajorVersion: (executablePath: string) => number | undefined;
 	getExtensionPaths: (extensionsFolder: string) => string[];
-	/** 生成（或复用）浏览器专属的导航页扩展（chrome_url_overrides.newtab），返回扩展目录路径 */
-	ensureNewTabExtension: (dir: string, opts: { uid: string; port: number }) => string;
 	/** 下载并安装内置浏览器，返回安装完成后的可执行文件路径 */
 	installBuiltinChrome: () => Promise<string>;
 	exportExcel: (excel: { sheetName: string; list: any[] }[], filename: string) => void;

@@ -13,7 +13,7 @@ import { exportExcel } from '../utils/index';
 import { readdir, stat } from 'fs/promises';
 import { updateApp, updater } from './updater';
 import { AutomationScripts } from '../scripts';
-import { getBrowserMajorVersion, getExtensionPaths, ensureNewTabExtension } from '../utils/browser';
+import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { installBuiltinChrome } from './init.chrome';
 import type { AppStore, RawAutomationScript, RemoteMethods } from '@ocs-desktop/common';
 import { encryptRenderString, decryptRenderString } from '../crypto';
@@ -112,7 +112,6 @@ const methods: RemoteMethods = {
 	getValidBrowsers: getValidBrowsers,
 	getBrowserMajorVersion: getBrowserMajorVersion,
 	getExtensionPaths: getExtensionPaths,
-	ensureNewTabExtension: ensureNewTabExtension,
 	/**
 	 * 下载并安装内置浏览器（供前端「环境修复」复用多源下载，不重启应用）。
 	 * 进度通过 webContents.send('builtin-chrome-install-progress', progress) 推送。

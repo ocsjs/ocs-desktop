@@ -76,20 +76,11 @@ export class Browser extends Entity implements BrowserOptions {
 	async onlyLaunch() {
 		// 复用主进程 getExtensionPaths，确保与正常启动一致的过滤逻辑（仅含 manifest.json 的目录）
 		const extensionPaths: string[] = await remote.methods.call('getExtensionPaths', store.paths.extensionsFolder);
-		// 导航页扩展：新建标签页显示导航页（chrome_url_overrides.newtab），地址栏保持空白
-		// 未启用自定义导航页时跳过，浏览器保持默认空白导航页
-		if (store.render.setting.browser.bookmarkPage.enable !== false) {
-			const newtabExtension: string = await remote.methods.call(
-				'ensureNewTabExtension',
-				`${this.cachePath}/ocs-newtab`,
-				{
-					uid: this.uid,
-					port: store.server.port || DEFAULT_SERVER_PORT
-				}
-			);
-			extensionPaths.push(newtabExtension);
-		}
-		// 初始页面使用 about:blank，导航页由导航页扩展接管，避免地址栏暴露 localhost 地址
+		// 起始页：启用自定义导航页时直接以导航页 URL 启动，否则为空白页。
+		const startPage =
+			store.render.setting.browser.bookmarkPage.enable !== false
+				? `http://localhost:${store.server.port || DEFAULT_SERVER_PORT}/index.html#/bookmarks?uid=${encodeURIComponent(this.uid)}`
+				: 'about:blank';
 		const cmd = ` "${store.render.setting.launchOptions.executablePath}" ${[
 			'--window-position=0,0',
 			'--no-first-run',
@@ -97,7 +88,7 @@ export class Browser extends Entity implements BrowserOptions {
 			`--user-data-dir="${this.cachePath}"`
 		]
 			.concat(formatExtensionArguments(extensionPaths))
-			.join(' ')} about:blank`;
+			.join(' ')} "${startPage}"`;
 		console.log(cmd);
 		child_process.exec(cmd);
 	}

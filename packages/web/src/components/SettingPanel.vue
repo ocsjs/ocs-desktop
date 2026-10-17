@@ -345,7 +345,7 @@
 			</Description>
 
 			<Description label="自定义导航页">
-				<a-tooltip content="关闭后，浏览器的新建页面将显示默认空白导航页，不再使用自定义导航页，重启浏览器后生效">
+				<a-tooltip content="开启后，浏览器启动时自动打开自定义导航页；关闭后启动时显示浏览器默认新标签页。重启浏览器后生效。（新建标签页始终为浏览器默认页）">
 					<a-switch v-model="store.render.setting.browser.bookmarkPage.enable" />
 				</a-tooltip>
 			</Description>

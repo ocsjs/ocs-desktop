@@ -404,9 +404,9 @@ function switchEngine(key: EngineKey) {
 	}
 }
 
-/** 跳转链接：在扩展 iframe 中运行时跳转顶层窗口，避免搜索结果困在 iframe 内且地址栏不可见 */
+/** 跳转链接 */
 function navigateTo(url: string) {
-	(window.top || window).location.href = url;
+	window.location.href = url;
 }
 
 function doSearch() {

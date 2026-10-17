@@ -11,7 +11,7 @@ import http from 'http';
 import os from 'os';
 import crypto from 'crypto';
 import type { AddressInfo } from 'net';
-import { getBrowserMajorVersion, getExtensionPaths, ensureNewTabExtension } from '../utils/browser';
+import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 
 const { bgRedBright, bgBlueBright, bgYellowBright, bgGray } = new Chalk({ level: 2 });
 
@@ -48,7 +48,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 	automationScripts: AS[] = [];
 	/** 可关闭的浏览器拓展主页 */
 	store?: AppStore;
-	/** 是否启用自定义导航页（关闭后：不加载导航页扩展、初始页面为空白页） */
+	/** 是否启用自定义导航页（关闭后：初始页面为浏览器默认新标签页） */
 	bookmarkPageEnabled: boolean = true;
 	/** 浏览器中软件设置的名字 */
 	browserInfo?: BrowserInfo;
@@ -118,16 +118,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 			(store as AppStore & { render?: any }).render?.setting?.browser?.bookmarkPage?.enable !== false;
 		// 拓展文件夹路径
 		this.extensionPaths = getExtensionPaths(store.paths.extensionsFolder);
-		// 导航页扩展：通过 chrome_url_overrides.newtab 将「新建标签页」重定向到本地导航页（按浏览器独立生成，携带 uid）
-		// 未启用自定义导航页时不加载该扩展，浏览器保持默认空白导航页
-		if (this.bookmarkPageEnabled) {
-			this.extensionPaths.push(
-				ensureNewTabExtension(path.join(cachePath, 'ocs-newtab'), {
-					uid,
-					port: store.server?.port || DEFAULT_SERVER_PORT
-				})
-			);
-		}
+		// 导航页由 worker 启动后直接导航初始页展示（见 launchBrowser 的 startPage）
 
 		// 自动化程序
 		this.automationScripts = automationScripts;
@@ -248,6 +239,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 				},
 
 				automationScripts: this.automationScripts,
+				extensionPaths: this.extensionPaths,
+				// 起始页：自定义导航页（localhost）或浏览器默认新标签页
+				startPage: this.bookmarkPageEnabled
+					? `http://localhost:${this.store?.server.port || DEFAULT_SERVER_PORT}/index.html#/bookmarks?uid=${encodeURIComponent(this.uid)}`
+					: 'chrome://newtab',
 				serverPort: this.store?.server.port || DEFAULT_SERVER_PORT,
 				closeableExtensionHomepages: [
 					'docs.scriptcat.org',
@@ -858,10 +854,8 @@ async function injectEnhancementKeepalive(browser: BrowserContext, config?: Brow
 }
 
 /**
- * 创建步骤提示函数：将初始化进度渲染到导航页。
- * 导航页可能位于新标签页扩展的 iframe 中（chrome_url_overrides），
- * 直接在顶层页执行会命中清空页面的兜底逻辑、破坏扩展页（iframe 被移除），
- * 因此需要定位到导航页所在的 frame（顶层页或扩展页 iframe）再执行；
+ * 创建步骤提示函数：将初始化进度渲染到导航页（顶层页，worker 直接导航 localhost 导航页 URL）。
+ * 页面导航/加载存在时序窗口，轮询等待导航页就绪后再执行；
  * 未找到导航页时静默跳过，不再使用 textContent 覆盖页面。
  */
 function createStepFunction(page: Page, serverPort: number): StepTips {
@@ -871,13 +865,9 @@ function createStepFunction(page: Page, serverPort: number): StepTips {
 		const navOrigin = `http://localhost:${serverPort}`;
 
 		try {
-			// 定位导航页 frame：顶层页（直接打开导航页）或扩展新标签页内的 iframe
-			const findNavFrame = () => {
-				if (page.url().startsWith(navOrigin)) return page.mainFrame();
-				return page.frames().find((f) => f !== page.mainFrame() && f.url().startsWith(navOrigin));
-			};
+			// 定位导航页：起始页 goto 与导航完成存在时序窗口，轮询等待（8s 超时则跳过提示，不破坏页面）
+			const findNavFrame = () => (page.url().startsWith(navOrigin) ? page.mainFrame() : undefined);
 
-			// iframe 为异步加载，轮询等待其出现（8s 超时则跳过提示，不破坏页面）
 			let frame = findNavFrame();
 			const deadline = Date.now() + 8_000;
 			while (!frame && Date.now() < deadline) {
@@ -915,6 +905,8 @@ export async function launchBrowser({
 	userDataDir,
 	userscripts,
 	enabledScriptCount,
+	extensionPaths,
+	startPage,
 	automationScripts,
 	closeableExtensionHomepages,
 	serverPort,
@@ -931,6 +923,10 @@ export async function launchBrowser({
 	userscripts: string[];
 	/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
 	enabledScriptCount: number;
+	/** 本次加载的扩展路径列表（用于精确匹配脚本管理器扩展的 service worker） */
+	extensionPaths: string[];
+	/** 起始页 URL：自定义导航页（localhost）或 chrome://newtab */
+	startPage: string;
 	/** 可关闭的浏览器拓展主页 */
 	closeableExtensionHomepages: string[];
 	/** 自动化程序 */
@@ -995,17 +991,17 @@ export async function launchBrowser({
 				await injectEnhancementKeepalive(browser, config);
 
 				try {
-					// 加载本地导航页
+					// 加载起始页：自定义导航页（localhost URL）或浏览器默认新标签页，启动即导航
 					const [blankPage] = browser.pages();
-					await blankPage.goto('chrome://newtab').catch(() => {});
+					await blankPage?.goto(startPage).catch(() => {});
 
 					// 显示步骤提示（渲染到导航页，兼容新标签页扩展 iframe）
 					const step = createStepFunction(blankPage, serverPort);
 
 					// 打开开发者模式（MV3 运行脚本必需）
 					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
-					// 通过 service worker 验证脚本管理器拓展已加载（间接确认开发者模式开启）
-					await verifyExtensionsLoaded(browser);
+					// 通过 service worker 验证脚本管理器拓展已加载（按路径推导扩展 ID 精确匹配，间接确认开发者模式开启）
+					await verifyExtensionsLoaded(browser, extensionPaths);
 
 					// 必须先打开开发者模式，才能关闭额外拓展页，否则打开开发者模式可能会重启插件，导致出现新的额外页面
 					// 关闭拓展加载时弹出的首页（并行清理，不阻塞；未出现欢迎页属正常情况）
@@ -1072,8 +1068,7 @@ async function initScripts(urls: string[], browser: BrowserContext): Promise<Ins
  * 安装单个脚本：触发安装页 -> 点击安装 -> 等待成功信号
  */
 async function installOneScript(url: string, browser: BrowserContext): Promise<InstallResult> {
-	// 触发前快照已有页面 URL：浏览器常驻的扩展页（如 OCS 快捷导航页 newtab，
-	// 地址为 chrome-extension://<id>/newtab.html）会命中 /extension:\/\//，
+	// 触发前快照已有页面 URL：浏览器常驻的扩展页（如脚本管理器后台页）会命中 /extension:\/\//，
 	// 快照排除后才能正确识别本次新弹出的脚本管理器安装页
 	const existingUrls = new Set(browser.pages().map((p) => p.url()));
 	const trigger = await browser.newPage();
@@ -1113,7 +1108,7 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 /**
  * 轮询等待 extension:// 安装页出现
  * @param existingUrls 触发安装前已存在的页面 URL 快照，
- * 用于排除常驻扩展页（OCS 快捷导航页 newtab 等），仅匹配本次新弹出的扩展页面
+ * 用于排除常驻扩展页（如脚本管理器后台页），仅匹配本次新弹出的扩展页面
  */
 async function waitForInstallPage(
 	browser: BrowserContext,
