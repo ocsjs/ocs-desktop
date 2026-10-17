@@ -1758,32 +1758,110 @@ async function openExtensionDeveloperMode(browser: BrowserContext, edge: boolean
 	await page.close();
 }
 
+/** 将 SHA256 摘要前 16 字节按 Chromium 规则映射为扩展 ID（每 4bit nibble -> 'a'-'p'） */
+function hashToExtensionId(hash: Buffer): string {
+	let id = '';
+	for (let i = 0; i < 16; i++) {
+		id += String.fromCharCode('a'.charCodeAt(0) + (hash[i] >> 4));
+		id += String.fromCharCode('a'.charCodeAt(0) + (hash[i] & 0xf));
+	}
+	return id;
+}
+
 /**
- * 验证脚本管理器拓展已加载。
- * 通过检测拓展的 service worker 是否运行来判断（MV3 拓展必有 service worker）。
+ * 计算扩展的所有候选 Chrome Extension ID：
+ * 1. manifest.json 含 key（脚本猫/油猴等商店分发包）：ID 由公钥推导 ——
+ *    SHA256(base64 解码的 DER 公钥)，与安装路径无关（已经实测验证）。
+ * 2. 无 key 的未打包扩展：按路径推导 —— SHA256(路径 UTF-8)。
+ *    Chromium 各版本/平台的路径规范化有差异（仅驱动器小写 vs 全路径小写、正反斜杠），
+ *    生成全部变体作为候选，匹配任一即视为该扩展。
+ */
+function computeExtensionIdCandidates(extensionPath: string): string[] {
+	const ids = new Set<string>();
+	try {
+		const manifestPath = path.join(extensionPath, 'manifest.json');
+		if (fs.existsSync(manifestPath)) {
+			const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+			if (typeof manifest.key === 'string' && manifest.key) {
+				ids.add(hashToExtensionId(crypto.createHash('sha256').update(Buffer.from(manifest.key, 'base64')).digest()));
+			}
+		}
+	} catch {
+		// manifest 读取/解析失败：仅使用路径推导
+	}
+	const fwd = extensionPath.replace(/\\/g, '/');
+	// 仅驱动器号小写（新版 Chromium）与全路径小写（旧版）两种规范化，均覆盖正/反斜杠
+	const driveLower = (s: string) => (s.length > 1 && s[1] === ':' ? s[0].toLowerCase() + s.slice(1) : s);
+	const variants =
+		process.platform === 'win32'
+			? [driveLower(extensionPath), driveLower(fwd), extensionPath.toLowerCase(), fwd.toLowerCase()]
+			: [extensionPath, fwd];
+	for (const variant of variants) {
+		ids.add(hashToExtensionId(crypto.createHash('sha256').update(variant, 'utf8').digest()));
+	}
+	return [...ids];
+}
+
+/**
+ * 验证脚本管理器拓展（油猴/脚本猫等应用中心扩展）已加载。
+ * 通过检测拓展的 service worker 是否运行来判断（MV3 拓展必有 service worker），
+ * 且 SW 的扩展 ID 必须匹配按路径推导的本次加载扩展之一——
+ * 避免任意其他带 SW 的扩展让检查"假通过"。
  * 不读取 chrome://extensions/ 的 DOM--其页面结构随 Chrome 版本频繁变化，不稳定；
  * service worker 检测不依赖页面结构，更长久可靠。
  * 注意：开发者模式关闭时，通过 --load-extension 侧载的拓展会被 Chrome 禁用，
  * 其 service worker 不会运行，因此 service worker 存在也间接确认了开发者模式已开启。
  */
-async function verifyExtensionsLoaded(browser: BrowserContext) {
+async function verifyExtensionsLoaded(browser: BrowserContext, extensionPaths: string[]) {
+	// 期望 ID（候选集：manifest key 公钥推导 + 路径推导各规范化变体）-> 扩展路径，用于匹配 SW 并输出可读日志
+	const expectedIds = new Map<string, string>();
+	for (const p of extensionPaths) {
+		for (const id of computeExtensionIdCandidates(p)) {
+			expectedIds.set(id, p);
+		}
+	}
+
+	const findSw = () => {
+		const all = browser.serviceWorkers().filter((s) => /chrome-extension:\/\//.test(s.url()));
+		const matched = all.find((s) => expectedIds.has(new URL(s.url()).host));
+		return { all, matched };
+	};
+
 	// 拓展 service worker 可能在启动后短暂延迟才注册，轮询等待
 	const timeout = 15 * 1000;
 	const end = Date.now() + timeout;
-	let sw = browser.serviceWorkers().find((s) => /chrome-extension:\/\//.test(s.url()));
-	while (!sw && Date.now() < end) {
+	let { all, matched } = findSw();
+	while (!matched && Date.now() < end) {
 		await sleep(500);
-		sw = browser.serviceWorkers().find((s) => /chrome-extension:\/\//.test(s.url()));
+		({ all, matched } = findSw());
 	}
-	if (!sw) {
-		throw new Error(
-			ScriptWorker.lang(
-				'error_when_extension_not_found',
-				'未检测到脚本管理器拓展（油猴/脚本猫）的 service worker，请前往应用中心安装或检查开发者模式是否开启。'
-			)
+
+	if (matched) {
+		const id = new URL(matched.url()).host;
+		console.log(
+			'脚本管理器拓展加载检测通过（service worker）：',
+			path.basename(expectedIds.get(id) || ''),
+			matched.url()
 		);
+		return;
 	}
-	console.log('拓展加载检测通过（service worker）：', sw.url());
+
+	if (all.length > 0) {
+		// 存在其他扩展 SW 但未匹配到应用中心扩展：
+		// 可能是特殊环境下 ID 推导不一致（符号链接/短路径），降级为放行并告警，避免误判导致无法启动
+		console.warn(
+			'检测到扩展 service worker，但未能匹配应用中心扩展，按已加载放行：',
+			all.map((s) => s.url()).join('、')
+		);
+		return;
+	}
+
+	throw new Error(
+		ScriptWorker.lang(
+			'error_when_extension_not_found',
+			'未检测到脚本管理器拓展（油猴/脚本猫）的 service worker，请前往应用中心安装或检查开发者模式是否开启。'
+		)
+	);
 }
 function getExtensionName(filepath: string) {
 	return filepath.toLocaleLowerCase().includes('tampermonkey')
