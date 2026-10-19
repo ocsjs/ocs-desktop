@@ -182,17 +182,32 @@ verify_electron() {
 		exit 1
 	fi
 
-	local ok=0
+	# 去重（子包 node_modules 中的 electron 是指向 .pnpm 的符号链接）
+	local real d
+	local uniq=()
 	for d in "${candidates[@]}"; do
-		if [ ! -f "$d/path.txt" ]; then
+		real="$(cd "$d" && pwd -P)"
+		case " ${uniq[*]} " in
+			*" $real "*) ;;
+			*) uniq+=("$real") ;;
+		esac
+	done
+	log "检测到 Electron 包目录: ${uniq[*]}"
+
+	local ok=0
+	for d in "${uniq[@]}"; do
+		local bin=""
+		[ -f "$d/path.txt" ] && bin="$d/dist/$(cat "$d/path.txt")"
+		# path.txt 与真实二进制都必须存在，否则重新下载
+		if [ -z "$bin" ] || [ ! -e "$bin" ]; then
 			warn "Electron 二进制未下载完成: $d，尝试手动下载 ..."
 			( cd "$d" && node install.js ) || {
 				err "Electron 二进制下载失败: $d，可设置 ELECTRON_MIRROR 后重试"
 				exit 1
 			}
 		fi
-		if [ -f "$d/path.txt" ]; then
-			log "Electron 已就绪: $d/$(cat "$d/path.txt")"
+		if [ -f "$d/path.txt" ] && [ -e "$d/dist/$(cat "$d/path.txt")" ]; then
+			log "Electron 已就绪: $d/dist/$(cat "$d/path.txt")"
 			ok=1
 		fi
 	done
@@ -200,6 +215,15 @@ verify_electron() {
 		err "Electron 二进制校验失败"
 		exit 1
 	}
+
+	# 冒烟测试：确认 electron 可执行（与 electron-vite 的解析方式一致）
+	local ver
+	if ver="$(pnpm --filter @ocs-desktop/app exec electron --version 2>/dev/null)"; then
+		log "Electron 启动校验通过: $ver"
+	else
+		err "Electron 启动校验失败，请手动执行排查: pnpm --filter @ocs-desktop/app exec electron --version"
+		exit 1
+	fi
 }
 
 main() {

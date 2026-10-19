@@ -326,6 +326,9 @@ importers:
       '@vue/compiler-sfc':
         specifier: ^3.2.6
         version: 3.5.34
+      electron:
+        specifier: 42.11.3
+        version: 42.11.3
       electron-store:
         specifier: ^8.0.1
         version: 8.2.0

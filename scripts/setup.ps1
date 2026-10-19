@@ -161,10 +161,23 @@ function Verify-Electron {
 		Err '未在 workspace 中找到 electron 包，请检查 pnpm install 是否成功'
 	}
 
-	$ok = $false
+	# 去重（子包 node_modules 中的 electron 是指向 .pnpm 的符号链接）
+	$uniq = @{}
 	foreach ($dir in $candidates) {
+		$real = (Resolve-Path $dir).Path
+		$uniq[$real] = $true
+	}
+	Log "检测到 Electron 包目录: $($uniq.Keys -join ', ')"
+
+	$ok = $false
+	foreach ($dir in $uniq.Keys) {
 		$pathTxt = Join-Path $dir 'path.txt'
-		if (-not (Test-Path $pathTxt)) {
+		$bin = $null
+		if (Test-Path $pathTxt) {
+			$bin = Join-Path $dir ('dist\' + (Get-Content $pathTxt).Trim())
+		}
+		# path.txt 与真实二进制都必须存在，否则重新下载
+		if (-not $bin -or -not (Test-Path $bin)) {
 			Warn "Electron 二进制未下载完成: $dir，尝试手动下载 ..."
 			Push-Location $dir
 			try {
@@ -174,12 +187,21 @@ function Verify-Electron {
 				Pop-Location
 			}
 		}
-		if (Test-Path $pathTxt) {
-			Log "Electron 已就绪: $dir\$(Get-Content $pathTxt)"
+		if ((Test-Path $pathTxt) -and (Test-Path (Join-Path $dir ('dist\' + (Get-Content $pathTxt).Trim())))) {
+			Log "Electron 已就绪: $dir\dist\$(Get-Content $pathTxt)"
 			$ok = $true
 		}
 	}
 	if (-not $ok) { Err 'Electron 二进制校验失败' }
+
+	# 冒烟测试：确认 electron 可执行（与 electron-vite 的解析方式一致）
+	$ver = $null
+	try { $ver = (pnpm --filter @ocs-desktop/app exec electron --version 2>$null) } catch {}
+	if ($LASTEXITCODE -eq 0 -and $ver) {
+		Log "Electron 启动校验通过: $ver"
+	} else {
+		Err 'Electron 启动校验失败，请手动执行排查: pnpm --filter @ocs-desktop/app exec electron --version'
+	}
 }
 
 Log '=== ocs-desktop 环境初始化 ==='
