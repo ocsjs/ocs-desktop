@@ -4,6 +4,30 @@
 
 ## 初始化项目依赖
 
+### 方式一：一键环境初始化（推荐）
+
+使用环境构建脚本，自动完成 Node.js（>= 22）、pnpm（>= 10）的检测与安装，并配置 Electron 国内镜像源后安装依赖：
+
+```bash
+# macOS / Linux / Windows Git Bash
+pnpm setup            # 或 bash ./scripts/setup.sh
+
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File ./scripts/setup.ps1
+```
+
+可选环境变量：
+
+```bash
+# Node.js 下载镜像（国内加速）
+export NODEJS_MIRROR=https://npmmirror.com/mirrors/node
+
+# 禁用 Electron 国内镜像（默认使用 npmmirror）
+export ELECTRON_MIRROR=off
+```
+
+### 方式二：手动安装
+
 ```bash
 # 启用 Corepack（Node.js 自带的包管理器管理工具，会自动识别 packageManager 字段安装对应版本的 pnpm）
 corepack enable

@@ -15,6 +15,7 @@
 		"lint:fix": "prettier -c ./.prettierrc.json --write \"**/*.{ts,js,vue,css}\" && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
 		"test": "pnpm --filter @ocs-desktop/common test && pnpm --filter @ocs-desktop/app test",
 		"prepare": "husky",
+		"setup": "bash ./scripts/setup.sh",
 		"dev": "pnpm --filter @ocs-desktop/app dev"
 	},
 	"devDependencies": {
@@ -69,7 +70,14 @@
 	"pnpm": {
 		"overrides": {
 			"@types/minimatch@6.0.0": "npm:minimatch@10.2.5"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"electron",
+			"esbuild",
+			"fsevents",
+			"keytar",
+			"vue-demi"
+		]
 	},
 	"config": {
 		"commitizen": {
