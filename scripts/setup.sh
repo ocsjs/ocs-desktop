@@ -183,14 +183,20 @@ verify_electron() {
 	fi
 
 	# 去重（子包 node_modules 中的 electron 是指向 .pnpm 的符号链接）
-	local real d
+	# 注意：macOS 自带 bash 3.2 在 set -u 下展开空数组会报 unbound variable，
+	# 因此用下标遍历而不是 ${uniq[*]} 匹配
+	local real dup i
 	local uniq=()
 	for d in "${candidates[@]}"; do
 		real="$(cd "$d" && pwd -P)"
-		case " ${uniq[*]} " in
-			*" $real "*) ;;
-			*) uniq+=("$real") ;;
-		esac
+		dup=0
+		for ((i = 0; i < ${#uniq[@]}; i++)); do
+			if [ "${uniq[i]}" = "$real" ]; then
+				dup=1
+				break
+			fi
+		done
+		[ "$dup" -eq 0 ] && uniq+=("$real")
 	done
 	log "检测到 Electron 包目录: ${uniq[*]}"
 

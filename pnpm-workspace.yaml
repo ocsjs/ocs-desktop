@@ -13,6 +13,13 @@ catalog:
   vitest: ^3.0.0
   xlsx: ^0.17.5
 
+# pnpm >= 10.18 起不再读取 package.json 的 "pnpm" 字段，配置统一放在这里
+overrides:
+  '@types/minimatch@6.0.0': npm:minimatch@10.2.5
+
 onlyBuiltDependencies:
   - electron
+  - esbuild
+  - fsevents
   - keytar
+  - vue-demi
