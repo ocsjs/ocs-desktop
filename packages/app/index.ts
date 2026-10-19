@@ -11,7 +11,7 @@ import { handleError } from './src/tasks/error.handler';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
-import { initAesKey } from './src/crypto';
+import { initCrypto } from './src/crypto';
 
 app.setName('OCS Desktop');
 
@@ -43,7 +43,7 @@ function bootstrap() {
 		Promise.all([
 			task('初始化错误处理', () => handleError()),
 			// 密钥初始化必须在 initStore 之前完成（initStore 同步调用 getDecryptedRenderData）
-			task('初始化加密密钥', () => initAesKey()).then(() =>
+			task('初始化加密密钥', () => initCrypto()).then(() =>
 				task('初始化本地设置', async () => {
 					initStore();
 					await task('启动接口服务', () => startupServer());
@@ -82,9 +82,9 @@ function bootstrap() {
 				task('初始化系统托盘', () => createTray(window));
 
 				// 渲染进程启动时会同步调用 decryptRenderString/saveStore 等加密 IPC，
-				// 必须先确保 AES 密钥就绪（initAesKey 并发幂等，此处等待并行的初始化任务完成），
+				// 必须先确保主密钥就绪（initCrypto 并发幂等，此处等待并行的初始化任务完成），
 				// 否则解密失败会导致渲染端把密文当数据再次加密写回（重复加密），进而引发响应式失效。
-				await initAesKey();
+				await initCrypto();
 
 				if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
 					await window.loadURL(process.env.ELECTRON_RENDERER_URL);

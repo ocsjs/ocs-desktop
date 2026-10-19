@@ -11,6 +11,12 @@ package-lock.json
 .codebuddy/plans
 .claude/plans
 
+# OCS 数据导出文件（含账号密码等敏感数据的本地测试样本，永不入库）
+*.ocsdata
+
+# 加密测试文件（本地维护，不入库）
+packages/app/tests/crypto.test.ts
+
 # tsc
 
 lib/

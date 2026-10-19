@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog, BrowserWindow, safeStorage, nativeTheme, net } from 'electron';
+import { ipcMain, app, dialog, BrowserWindow, nativeTheme, net } from 'electron';
 import { Logger } from '../logger';
 import { autoLaunch } from './auto.launch';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -16,7 +16,14 @@ import { AutomationScripts } from '../scripts';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { installBuiltinChrome } from './init.chrome';
 import type { AppStore, RawAutomationScript, RemoteMethods } from '@ocs-desktop/common';
-import { encryptRenderString, decryptRenderString } from '../crypto';
+import {
+	encryptRenderString,
+	decryptRenderString,
+	isCryptoReady,
+	encryptWithPassword,
+	decryptWithPassword,
+	isPasswordEncrypted
+} from '../crypto';
 import { hideToTray, quitApp, cancelQuit, destroyTray } from '../tray';
 
 /**
@@ -147,17 +154,29 @@ const methods: RemoteMethods = {
 		app.relaunch();
 		quitApp(0);
 	},
+	/**
+	 * 数据加密是否可用（信封加密方案：主密钥就绪即可加密）。
+	 * 语义变更：历史上返回 safeStorage.isEncryptionAvailable()（Linux 无密钥环时为 false，
+	 * 数据明文落盘）；信封加密下 safeStorage 不可用时主密钥以 v1:plain: 明文回退存储，
+	 * 数据仍可 AES 加密（混淆级防护），故此处统一返回主密钥就绪状态。
+	 */
 	isEncryptionAvailable: () => {
-		return safeStorage.isEncryptionAvailable();
+		return isCryptoReady();
 	},
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,
 	decryptRenderString,
+	/** 导出数据：用户密码加密（跨机器可移植，scrypt 派生密钥） */
+	encryptExportString: encryptWithPassword,
+	/** 导入数据：用户密码解密（密码错误时 GCM 校验抛错） */
+	decryptExportString: decryptWithPassword,
+	/** 判断导出文件中的 render 是否为密码加密格式 */
+	isPasswordEncrypted,
 	/** 一次性完成加密和存储，避免二次 IPC 调用 */
 	saveStore: (plainStoreJson: string, shouldEncrypt: boolean): void => {
 		const storeData: AppStore = JSON.parse(plainStoreJson);
-		if (shouldEncrypt && safeStorage.isEncryptionAvailable()) {
+		if (shouldEncrypt && isCryptoReady()) {
 			if (typeof storeData.render === 'string') {
 				// render 应为对象；字符串说明渲染端数据已损坏（如历史解密竞态残留的密文）。
 				// 绝不能再加密写回（会产生重复加密导致解密后是字符串而非对象），保留磁盘原数据。

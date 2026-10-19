@@ -75,11 +75,11 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
+import { h, ref } from 'vue';
 import { fetchRemoteNotify, date, about, getRemoteInfos } from '../utils';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
-import { Message, Modal } from '@arco-design/web-vue';
+import { Message, Modal, InputPassword } from '@arco-design/web-vue';
 import { store, devSession } from '../store/index';
 import { OCS_WEBSITE, OCS_DOWNLOAD_PAGE } from '@ocs-desktop/common/web';
 import { electron } from '../utils/node';
@@ -117,6 +117,32 @@ function allNotify() {
 	fetchRemoteNotify(true);
 }
 
+/** 弹出密码输入框：确定返回密码（可为空字符串），取消返回 null */
+function promptPassword(options: { title: string; notice: string; placeholder: string }): Promise<string | null> {
+	return new Promise((resolve) => {
+		const password = ref('');
+		Modal.confirm({
+			title: options.title,
+			content: () =>
+				h('div', [
+					h('div', { style: 'margin-bottom: 12px; line-height: 1.6' }, options.notice),
+					h(InputPassword, {
+						modelValue: password.value,
+						'onUpdate:modelValue': (v: string) => {
+							password.value = v;
+						},
+						placeholder: options.placeholder,
+						allowClear: true
+					})
+				]),
+			okText: '确定',
+			cancelText: '取消',
+			onOk: () => resolve(password.value),
+			onCancel: () => resolve(null)
+		});
+	});
+}
+
 function importData() {
 	remote.dialog
 		.call('showOpenDialog', {
@@ -133,8 +159,31 @@ function importData() {
 					// 如果 render 是加密字符串，先解密为明文再导入
 					if (typeof _store.render === 'string') {
 						const renderStr = _store.render as string;
-						const data = JSON.parse(remote.methods.callSync('decryptRenderString' as any, renderStr) as string);
-						(_store as any).render = data;
+						let decrypted: string;
+						if (remote.methods.callSync('isPasswordEncrypted' as any, renderStr)) {
+							// 密码加密的导出文件（跨机器可移植）
+							const password = await promptPassword({
+								title: '导入加密数据',
+								notice: '该文件已使用导出密码加密，请输入导出时设置的密码。',
+								placeholder: '导出密码'
+							});
+							if (password === null) return;
+							try {
+								decrypted = remote.methods.callSync('decryptExportString' as any, renderStr, password) as string;
+							} catch {
+								Message.error('密码错误或文件已损坏，导入失败。');
+								return;
+							}
+						} else {
+							// 本机加密格式：仅限在导出它的那台电脑上导入
+							decrypted = remote.methods.callSync('decryptRenderString' as any, renderStr) as string;
+							const probe = JSON.parse(decrypted);
+							if (typeof probe !== 'object' || probe === null || Object.keys(probe).length === 0) {
+								Message.error('该文件由其他电脑加密导出，无法在本机解密。请在原电脑上导出时设置导出密码后重新导出。');
+								return;
+							}
+						}
+						(_store as any).render = JSON.parse(decrypted);
 					}
 
 					const root = _store.render.browser.root;
@@ -186,64 +235,78 @@ function importData() {
 			}
 		});
 }
-function exportData() {
-	Modal.confirm({
+async function exportData() {
+	const password = await promptPassword({
 		title: '导出数据',
-		content: '数据中包含自动化程序的配置（例如账号密码），请小心保存防止泄露。导出后可在其他电脑中恢复数据。',
-		okText: '确认',
-		cancelText: '取消',
-		onOk() {
-			remote.dialog
-				.call('showSaveDialog', {
-					title: '选择导出位置',
-					buttonLabel: '导出',
-					defaultPath: `OCS软件数据导出_-${date(Date.now())}`
-				})
-				.then(async ({ canceled, filePath }) => {
-					if (canceled === false && filePath) {
-						const _store: typeof store = JSON.parse(JSON.stringify(store));
+		notice:
+			'数据中包含自动化程序的配置（例如账号密码），请小心保存防止泄露。设置导出密码后可在其他电脑导入恢复（跨电脑必须设置密码）；留空将以明文导出。',
+		placeholder: '导出密码（留空为明文导出）'
+	});
+	if (password === null) return;
+	if (password === '') {
+		const confirmed = await new Promise<boolean>((resolve) => {
+			Modal.confirm({
+				title: '明文导出确认',
+				content: '未设置导出密码，数据将以明文保存，任何获得该文件的人都能读取其中的敏感信息。确定继续？',
+				okText: '继续导出',
+				cancelText: '取消',
+				onOk: () => resolve(true),
+				onCancel: () => resolve(false)
+			});
+		});
+		if (!confirmed) return;
+	}
 
-						const root = _store.render.browser.root;
-						// 遍历文件夹，将每个浏览器的缓存路径改成相对路径
-						const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
-						while (folders.length) {
-							const folder = folders.shift();
-							if (!folder) continue;
-							if (Object.keys(folder.children || {}).length) {
-								for (const key in folder.children) {
-									if (Object.prototype.hasOwnProperty.call(folder.children, key)) {
-										const entity = folder.children[key];
-										if (!entity) continue;
-										if (entity.type === 'folder') {
-											folders.push(entity as any);
-										} else if (entity.type === 'browser') {
-											(entity as any).cachePath = '$CACHE_PATH';
-										}
-									}
+	remote.dialog
+		.call('showSaveDialog', {
+			title: '选择导出位置',
+			buttonLabel: '导出',
+			defaultPath: `OCS软件数据导出_-${date(Date.now())}`
+		})
+		.then(async ({ canceled, filePath }) => {
+			if (canceled === false && filePath) {
+				const _store: typeof store = JSON.parse(JSON.stringify(store));
+
+				const root = _store.render.browser.root;
+				// 遍历文件夹，将每个浏览器的缓存路径改成相对路径
+				const folders: FolderOptions<any, Folder<FolderType> | Browser>[] = [root];
+				while (folders.length) {
+					const folder = folders.shift();
+					if (!folder) continue;
+					if (Object.keys(folder.children || {}).length) {
+						for (const key in folder.children) {
+							if (Object.prototype.hasOwnProperty.call(folder.children, key)) {
+								const entity = folder.children[key];
+								if (!entity) continue;
+								if (entity.type === 'folder') {
+									folders.push(entity as any);
+								} else if (entity.type === 'browser') {
+									(entity as any).cachePath = '$CACHE_PATH';
 								}
 							}
 						}
-
-						// 导出前加密 render 数据，防止明文泄露
-						if (typeof _store.render !== 'string') {
-							(_store as any).render = remote.methods.callSync(
-								'encryptRenderString' as any,
-								JSON.stringify(_store.render)
-							) as string;
-						}
-
-						// 删除多余数据
-						const filter_keys: (keyof typeof _store)[] = ['paths', 'window', 'server'];
-						for (const key of filter_keys) {
-							delete _store[key];
-						}
-
-						await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
-						Message.success('导出成功！');
 					}
-				});
-		}
-	});
+				}
+
+				// 导出前加密 render 数据：设置导出密码时用密码加密（跨电脑可导入），留空则明文导出
+				if (password && typeof _store.render !== 'string') {
+					(_store as any).render = remote.methods.callSync(
+						'encryptExportString' as any,
+						JSON.stringify(_store.render),
+						password
+					) as string;
+				}
+
+				// 删除多余数据
+				const filter_keys: (keyof typeof _store)[] = ['paths', 'window', 'server'];
+				for (const key of filter_keys) {
+					delete _store[key];
+				}
+
+				await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
+				Message.success('导出成功！');
+			}
+		});
 }
 
 function openDevTools() {

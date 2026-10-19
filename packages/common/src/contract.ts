@@ -133,6 +133,12 @@ export interface RemoteMethods {
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;
 	decryptRenderString: (encrypted: string) => string;
+	/** 导出数据：用户密码加密（跨机器可移植） */
+	encryptExportString: (plaintext: string, password: string) => string;
+	/** 导入数据：用户密码解密（密码错误抛错） */
+	decryptExportString: (payload: string, password: string) => string;
+	/** 判断密文是否为密码加密的导出格式 */
+	isPasswordEncrypted: (payload: string) => boolean;
 	saveStore: (plainStoreJson: string, shouldEncrypt: boolean) => void;
 	downloadUserscripts: (urls: string[]) => Promise<DownloadUserscriptResult[]>;
 }

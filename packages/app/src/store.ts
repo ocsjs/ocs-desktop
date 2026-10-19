@@ -66,7 +66,8 @@ export const OriginalAppStore: AppStore = {
 /**
  * 低版本（< 3.0）配置文件备份
  *
- * 背景：3.0 引入 keytar + AES 加密迁移（旧版为 safeStorage 纯 base64），
+ * 背景：3.0 引入 AES 加密迁移（旧版为 safeStorage 纯 base64；3.x 后续版本
+ * 演进为信封加密：自管理主密钥 + safeStorage 包裹，见 crypto.ts），
  * 迁移/解密一旦异常可能污染 config.json，需要保留迁移前的原始配置用于恢复。
  *
  * 时机约束：必须在 new Store()（electron-store 实例化即首次读取 config.json）
