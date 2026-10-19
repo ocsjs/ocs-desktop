@@ -143,20 +143,43 @@ function Install-Deps {
 	Log '执行 pnpm install ...'
 	pnpm install
 	if ($LASTEXITCODE -ne 0) { Err 'pnpm install 失败' }
+	Verify-Electron
+}
 
-	# Electron 二进制校验（postinstall 可能因网络问题未下载成功）
-	$electronDir = Join-Path (Get-Location) 'node_modules\electron'
-	$pathTxt = Join-Path $electronDir 'path.txt'
-	if ((Test-Path $electronDir) -and (-not (Test-Path $pathTxt))) {
-		Warn 'Electron 二进制未下载完成，尝试手动触发下载 ...'
-		node (Join-Path $electronDir 'install.js')
-		if ($LASTEXITCODE -ne 0) { Err 'Electron 二进制下载失败，可设置 $env:ELECTRON_MIRROR 后重试' }
+# Electron 二进制校验（postinstall 可能因网络问题未下载成功）。
+# pnpm workspace 下 electron 通常在子包或 .pnpm 虚拟 store 中，需全局查找。
+function Verify-Electron {
+	$candidates = @()
+	if (Test-Path 'node_modules\electron') { $candidates += 'node_modules\electron' }
+	$candidates += Get-ChildItem -Path 'packages\*\node_modules\electron' -ErrorAction SilentlyContinue |
+		ForEach-Object { $_.FullName }
+	$candidates += Get-ChildItem -Path 'node_modules\.pnpm' -Directory -Filter 'electron@*' -ErrorAction SilentlyContinue |
+		ForEach-Object { Join-Path $_.FullName 'node_modules\electron' } |
+		Where-Object { Test-Path $_ }
+
+	if ($candidates.Count -eq 0) {
+		Err '未在 workspace 中找到 electron 包，请检查 pnpm install 是否成功'
 	}
-	if (Test-Path $pathTxt) {
-		Log "Electron 已就绪: $(Get-Content $pathTxt)"
-	} else {
-		Warn '未检测到 node_modules/electron，Electron 可能由子包管理，跳过校验'
+
+	$ok = $false
+	foreach ($dir in $candidates) {
+		$pathTxt = Join-Path $dir 'path.txt'
+		if (-not (Test-Path $pathTxt)) {
+			Warn "Electron 二进制未下载完成: $dir，尝试手动下载 ..."
+			Push-Location $dir
+			try {
+				node install.js
+				if ($LASTEXITCODE -ne 0) { Err "Electron 二进制下载失败: $dir，可设置 `$env:ELECTRON_MIRROR 后重试" }
+			} finally {
+				Pop-Location
+			}
+		}
+		if (Test-Path $pathTxt) {
+			Log "Electron 已就绪: $dir\$(Get-Content $pathTxt)"
+			$ok = $true
+		}
 	}
+	if (-not $ok) { Err 'Electron 二进制校验失败' }
 }
 
 Log '=== ocs-desktop 环境初始化 ==='

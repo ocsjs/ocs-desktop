@@ -160,20 +160,46 @@ setup_electron_mirror() {
 install_deps() {
 	log "执行 pnpm install ..."
 	pnpm install
+	verify_electron
+}
 
-	# Electron 二进制校验（postinstall 可能因网络问题未下载成功）
-	if [ -d node_modules/electron ] && [ ! -f node_modules/electron/path.txt ]; then
-		warn "Electron 二进制未下载完成，尝试手动触发下载 ..."
-		node node_modules/electron/install.js || {
-			err "Electron 二进制下载失败，可设置 ELECTRON_MIRROR 后重试"
-			exit 1
-		}
+# Electron 二进制校验（postinstall 可能因网络问题未下载成功）。
+# pnpm workspace 下 electron 通常在子包或 .pnpm 虚拟 store 中，需全局查找。
+verify_electron() {
+	local candidates=()
+	local d
+
+	[ -d node_modules/electron ] && candidates+=("node_modules/electron")
+	for d in packages/*/node_modules/electron; do
+		[ -e "$d" ] && candidates+=("$d")
+	done
+	for d in node_modules/.pnpm/electron@*/node_modules/electron; do
+		[ -d "$d" ] && candidates+=("$d")
+	done
+
+	if [ "${#candidates[@]}" -eq 0 ]; then
+		err "未在 workspace 中找到 electron 包，请检查 pnpm install 是否成功"
+		exit 1
 	fi
-	if [ -f node_modules/electron/path.txt ]; then
-		log "Electron 已就绪: $(cat node_modules/electron/path.txt)"
-	else
-		warn "未检测到 node_modules/electron，Electron 可能由子包管理，跳过校验"
-	fi
+
+	local ok=0
+	for d in "${candidates[@]}"; do
+		if [ ! -f "$d/path.txt" ]; then
+			warn "Electron 二进制未下载完成: $d，尝试手动下载 ..."
+			( cd "$d" && node install.js ) || {
+				err "Electron 二进制下载失败: $d，可设置 ELECTRON_MIRROR 后重试"
+				exit 1
+			}
+		fi
+		if [ -f "$d/path.txt" ]; then
+			log "Electron 已就绪: $d/$(cat "$d/path.txt")"
+			ok=1
+		fi
+	done
+	[ "$ok" -eq 0 ] && {
+		err "Electron 二进制校验失败"
+		exit 1
+	}
 }
 
 main() {
