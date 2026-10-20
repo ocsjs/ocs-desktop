@@ -67,8 +67,8 @@ export type WebStore = {
 			screenshotPreview: boolean;
 			/** 预览帧率档位：high(~30fps) / medium(~15fps) / low(~6fps) */
 			screenshotFramerate: 'high' | 'medium' | 'low';
-			/** 预览画质档位：控制分辨率与 jpeg 质量（分辨率上限受浏览器视口限制），original(4K) / ultra(2K) / high / medium / low */
-			screenshotQuality: 'original' | 'ultra' | 'high' | 'medium' | 'low';
+			/** 预览画质档位：控制分辨率与 jpeg 质量（帧尺寸 = min(显示尺寸×DPR, 档位上限)，背压自动降速），ultra(2K) / high / medium / low */
+			screenshotQuality: 'ultra' | 'high' | 'medium' | 'low';
 			/** 浏览器增强（防休眠/防冻结）：启动时附加防节流参数并注入静音音频豁免，仅对新启动的浏览器生效 */
 			browserEnhancement: boolean;
 			/** 导航页设置 */
