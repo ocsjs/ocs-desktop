@@ -34,6 +34,8 @@ function formatConfigValue(key: string, cfg: Config): string | undefined {
 
 /** 配置项是否应展示（与 AutomationScriptList.vue 的可见性规则一致） */
 function isConfigVisible(script: RawAutomationScript, key: string, cfg: Config): boolean {
+	// 防御：历史数据/异常数据中配置项可能为 null 或非对象，读取字段会抛错导致整个卡片列表渲染崩溃
+	if (!cfg || typeof cfg !== 'object') return false;
 	if (cfg.visibleWhen) {
 		return script.configs[cfg.visibleWhen.key]?.value === cfg.visibleWhen.value;
 	}
@@ -47,7 +49,8 @@ function isConfigVisible(script: RawAutomationScript, key: string, cfg: Config):
 function buildAutomationText(scripts: RawAutomationScript[]): string {
 	const blocks: string[] = [];
 	for (const script of scripts || []) {
-		if (!script?.configs) continue;
+		// 防御：configs 必须为对象（异常数据可能为 null/数组/字符串）
+		if (!script?.configs || typeof script.configs !== 'object') continue;
 		const lines: string[] = [];
 		for (const key of Object.keys(script.configs)) {
 			const cfg = script.configs[key];
