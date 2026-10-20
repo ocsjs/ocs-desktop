@@ -6,7 +6,7 @@ import bookmarks from '@/pages/bookmarks.vue';
 import { GreasyForkUserScript, ScriptCatUserScript, CommonUserScript } from '../types/user.script';
 import { remote } from '../utils/remote';
 import { ScriptSearchEngine } from '../types/search';
-import { store, StoreUserScript } from '../store';
+import { StoreUserScript } from '../store';
 
 export const config = reactive({
 	/**
@@ -21,9 +21,7 @@ export const config = reactive({
 		{
 			name: 'index',
 			path: '/',
-			// 按软件设置中的布局模式决定首页（专业→浏览器列表 / 简洁→简洁模式），
-			// 修复重启后无论设置如何都被重定向到简洁布局、导致设置与显示不一致的问题
-			redirect: () => (store.render.setting.mode === 'professional' ? '/browsers' : '/simple'),
+			redirect: () => '/browsers',
 			component: shallowRef(page),
 			children: [
 				{
@@ -45,15 +43,6 @@ export const config = reactive({
 					}
 				},
 				{
-					name: 'dashboard',
-					path: 'dashboard',
-					component: () => import('@/pages/dashboard/index.vue'),
-					meta: {
-						icon: 'image',
-						title: '监控列表'
-					}
-				},
-				{
 					name: 'setting',
 					path: 'setting',
 					component: () => import('@/pages/setting/index.vue'),
@@ -72,16 +61,6 @@ export const config = reactive({
 				icon: 'view_list',
 				title: '书签列表',
 				/** 隐藏在左侧菜单栏 */
-				hideInMenu: true
-			}
-		},
-		{
-			name: 'simple',
-			path: '/simple',
-			component: () => import('@/pages/simple/index.vue'),
-			meta: {
-				icon: 'view_list',
-				title: '简洁模式',
 				hideInMenu: true
 			}
 		}

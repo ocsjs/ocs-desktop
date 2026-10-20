@@ -3,82 +3,84 @@
 		id="browsers"
 		class="h-100 browsers-page"
 	>
-		<!-- ====================== 浏览器列表内容部分 ======================-->
-
 		<!-- Banner 提示 -->
 		<NotificationBanner class="mb-2" />
 
-		<a-card
-			class="operations-card"
-			:bordered="true"
-			size="small"
-		>
-			<div class="operations">
-				<!-- 路径栏 / 统计栏 -->
-				<FileBreadcrumb
-					v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
-					:key="currentFolder.uid"
-				></FileBreadcrumb>
-				<div
-					v-else-if="currentSearchedEntities === undefined && currentFolder.type === 'root'"
-					class="stats-bar"
-				>
-					<span><icon-desktop /> {{ stats.browsers }}</span>
-					<span><icon-code /> {{ stats.scripts }}</span>
-					<span><icon-folder /> {{ stats.folders }}</span>
-					<span><icon-tag /> {{ stats.tags }}</span>
-				</div>
-				<!-- 撑开间距，将搜索和筛选推到最右边 -->
-				<div class="flex-grow-1"></div>
-				<!-- 文件筛选 -->
-				<FileFilters></FileFilters>
+		<!-- 简洁模式：卡片平铺布局（布局切换按钮已整合进组件内，与卡片网格同容器对齐边缘） -->
+		<SimpleBrowserCards v-if="isSimpleMode" />
 
-				<!-- 搜索时禁止文件操作 -->
-				<template v-if="currentSearchedEntities">
-					<a-button
-						size="mini"
-						@click="resetSearch"
+		<template v-else>
+			<!-- 专业模式：container 自适应宽度居中；操作区域脱离卡片位于浅灰背景上，仅浏览器列表为白色卡片 -->
+			<div class="professional-wrapper container-md">
+				<div class="operations-panel mb-2 p-1">
+					<!-- 路径栏（独立一行，长路径可横向滚动，避免挤压操作行的搜索/切换按钮） -->
+					<div
+						v-if="currentSearchedEntities === undefined && currentFolder.type !== 'root'"
+						class="breadcrumb-row"
 					>
-						<Icon type="restart_alt"> 重置 </Icon>
-					</a-button>
-				</template>
-			</div>
-
-			<!-- 文件操作 -->
-			<FileMultipleOperators></FileMultipleOperators>
-		</a-card>
-
-		<EnvironmentAlert class="p-2"> </EnvironmentAlert>
-
-		<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
-			<a-empty
-				class="p-3"
-				description="暂无浏览器搜索结果"
-			></a-empty>
-		</template>
-
-		<div class="entities-wrapper">
-			<Transition
-				name="entities-slide"
-				appear
-			>
-				<div
-					:key="currentFolder.uid"
-					class="entities-container"
-				>
-					<!-- 显示浏览器以及文件夹列表 -->
-					<div class="entities">
-						<BrowserList
-							:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
-						></BrowserList>
+						<FileBreadcrumb :key="currentFolder.uid"></FileBreadcrumb>
 					</div>
-					<!-- 右键菜单提示 -->
-					<div class="text-end">
-						<RightClickOpenMenuTip />
+
+					<div class="operations mb-1">
+						<!-- 文件筛选（标签搜索、名字搜索等，左对齐） -->
+						<FileFilters></FileFilters>
+
+						<!-- 搜索时禁止文件操作 -->
+						<template v-if="currentSearchedEntities">
+							<a-button
+								size="mini"
+								@click="resetSearch"
+							>
+								<Icon type="restart_alt"> 重置 </Icon>
+							</a-button>
+						</template>
+
+						<!-- 撑开间距，将布局切换按钮推到最右边 -->
+						<div class="flex-grow-1"></div>
+						<a-button
+							size="mini"
+							@click="toggleLayoutMode"
+						>
+							<Icon type="grid_view">简洁模式</Icon>
+						</a-button>
+					</div>
+
+					<!-- 文件操作 -->
+					<FileMultipleOperators></FileMultipleOperators>
+				</div>
+
+				<!-- 浏览器列表：白色卡片背景 -->
+				<div class="list-card">
+					<EnvironmentAlert class="p-2"> </EnvironmentAlert>
+
+					<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
+						<a-empty
+							class="p-3"
+							description="暂无浏览器搜索结果"
+						></a-empty>
+					</template>
+
+					<div class="entities-wrapper">
+						<!-- 不使用过渡动画：切换布局模式时动画会导致文档流抖动、产生滚动条闪烁 -->
+						<div
+							:key="currentFolder.uid"
+							class="entities-container"
+						>
+							<!-- 显示浏览器以及文件夹列表 -->
+							<div class="entities">
+								<BrowserList
+									:entities="currentSearchedEntities ? currentSearchedEntities : currentEntities || []"
+								></BrowserList>
+							</div>
+							<!-- 右键菜单提示 -->
+							<div class="text-end">
+								<RightClickOpenMenuTip />
+							</div>
+						</div>
 					</div>
 				</div>
-			</Transition>
-		</div>
+			</div>
+		</template>
 	</div>
 </template>
 
@@ -88,45 +90,82 @@ import { resetSearch } from '../../utils/entity';
 import FileFilters from '../../components/browsers/FileFilters.vue';
 import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
 import { currentEntities, currentSearchedEntities, currentFolder } from '../../fs';
-import { root } from '../../fs/folder';
 import FileMultipleOperators from '../../components/browsers/FileMultipleOperators.vue';
 import BrowserList from '../../components/BrowserList.vue';
 import { computed } from 'vue';
 import NotificationBanner from '../../components/NotificationBanner.vue';
-import { IconDesktop, IconTag, IconCode, IconFolder } from '@arco-design/web-vue/es/icon';
 import { store } from '../../store';
 import RightClickOpenMenuTip from '../../components/RightClickOpenMenuTip.vue';
 import EnvironmentAlert from '../../components/EnvironmentAlert.vue';
+import SimpleBrowserCards from '../../components/browsers/SimpleBrowserCards.vue';
 
-const stats = computed(() => {
-	const r = root();
-	const allBrowsers = r.findAll((e) => e.type === 'browser');
-	const allFolders = r.findAll((e) => e.type === 'folder');
+/** 简洁模式：浏览器列表页渲染卡片平铺布局（与专业模式共用同一界面和左侧菜单栏） */
+const isSimpleMode = computed(() => store.render.setting.mode === 'simple');
 
-	const tagSet = new Set<string>();
-	for (const b of allBrowsers) {
-		if (b.type === 'browser') {
-			b.tags.forEach((t) => tagSet.add(t.name));
-		}
-	}
-	return {
-		browsers: allBrowsers.length,
-		folders: allFolders.length,
-		tags: tagSet.size,
-		scripts: store.render.scripts.length
-	};
-});
+/** 切换布局模式（简洁/专业），仅控制浏览器列表界面的布局 */
+function toggleLayoutMode() {
+	store.render.setting.mode = isSimpleMode.value ? 'professional' : 'simple';
+}
 </script>
 
 <style scoped lang="less">
 .browsers-page {
 	display: flex;
 	flex-direction: column;
+	/* 背景对齐简洁模式的浅灰色 */
+	background-color: var(--theme-bg-color-deep);
 }
 
-.operations-card {
+/* 专业模式容器：container-md 自适应宽度居中，撑满剩余高度 */
+.professional-wrapper {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	padding-top: 6px;
+	padding-bottom: 8px;
+}
+
+/* 浏览器列表卡片：白色背景（操作区域脱离卡片，位于浅灰页面背景上） */
+.list-card {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--theme-card-bg);
+	border: 1px solid var(--theme-border-color-light);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+/* 操作面板：脱离卡片的工具行，直接位于浅灰页面背景上（padding 由 p-3 提供） */
+.operations-panel {
 	flex-shrink: 0;
-	margin: 6px 8px 0;
+
+	/* 浅灰底上的输入框/下拉框（单选+多选）/默认按钮改为 outline 样式（透明底 + 边框），防止与背景重合 */
+	:deep(.arco-input-wrapper),
+	:deep(.arco-select-view-single),
+	:deep(.arco-select-view-multiple),
+	:deep(.arco-btn-secondary) {
+		background-color: transparent;
+		border: 1px solid var(--theme-border-color);
+	}
+
+	/* outline 控件的悬浮/聚焦边框高亮（覆盖上方边框规则，保持 arco 交互反馈） */
+	:deep(.arco-input-wrapper):hover,
+	:deep(.arco-input-wrapper):focus-within,
+	:deep(.arco-select-view-single):hover,
+	:deep(.arco-select-view-multiple):hover,
+	:deep(.arco-btn-secondary):hover {
+		border-color: var(--theme-primary-color);
+	}
+}
+
+/* 路径栏：独立一行，与操作行分离；长路径横向滚动而非挤压 */
+.breadcrumb-row {
+	margin-bottom: 6px;
+	overflow-x: auto;
+	white-space: nowrap;
 }
 
 .operations {
@@ -160,37 +199,5 @@ const stats = computed(() => {
 	overflow: overlay;
 
 	padding: 4px 12px 0;
-}
-
-.stats-bar {
-	display: flex;
-	align-items: center;
-	gap: 16px;
-	font-size: 12px;
-	color: #86909c;
-	white-space: nowrap;
-	user-select: none;
-
-	span {
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-	}
-}
-
-/* 浏览器列表过渡动画 */
-.entities-slide-enter-active {
-	transition: opacity 0.2s ease 0.2s, transform 0.2s ease 0.2s;
-}
-.entities-slide-leave-active {
-	transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.entities-slide-enter-from {
-	opacity: 0;
-	transform: translateY(8px);
-}
-.entities-slide-leave-to {
-	opacity: 0;
-	transform: translateY(8px);
 }
 </style>

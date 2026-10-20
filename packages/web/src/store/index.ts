@@ -25,23 +25,14 @@ export type WebStore = {
 			tags: string[];
 		};
 	};
-	dashboard: {
-		/** 显示标签和备注 */
-		details: {
-			tags: boolean;
-			notes: boolean;
-		};
-		/** 列数控制 */
-		num: number;
-	};
 	setting: {
 		browserType: 'diy' | 'local' | 'setup';
 		/** 界面模式：简洁模式 / 专业模式 */
 		mode: 'simple' | 'professional';
-		/** 是否显示侧边栏文字 */
-		showSideBarText: boolean;
 		/** 简洁模式卡片布局列数 */
 		simpleCardColumns: 1 | 2 | 3 | 4;
+		/** 简洁模式紧凑模式：移除卡片样式，浏览器间仅 1px 间隔 */
+		simpleCardCompact: boolean;
 		/** 浏览器启动参数 */
 		launchOptions: {
 			custom: boolean;
@@ -70,8 +61,6 @@ export type WebStore = {
 			enableDialog: boolean;
 			/** 是否强制更新/安装脚本 */
 			forceUpdateScript: boolean;
-			/** 点击「新建浏览器」时是否自动打开初始化弹窗并执行初始化 */
-			autoInitNewBrowser: boolean;
 			/** 是否在浏览器卡片/监控页面中显示运行时界面预览（Page.startScreencast 推流） */
 			screenshotPreview: boolean;
 			/** 预览帧率档位：high(~30fps) / medium(~15fps) / low(~6fps) */
@@ -112,8 +101,6 @@ export type WebStore = {
 			automation_script_usage: boolean;
 			/** 应用设置-使用提示：折叠状态 */
 			resources_usage: boolean;
-			/** 监控列表的-使用提示：折叠状态 */
-			dashboard_usage: boolean;
 		};
 		/** 新手使用指引完成记录（达成一次即永久标记） */
 		guide: {
@@ -151,18 +138,11 @@ export const DEFAULT_RENDER = {
 			results: undefined
 		}
 	},
-	dashboard: {
-		details: {
-			tags: false,
-			notes: false
-		},
-		num: 4
-	},
 	setting: {
 		browserType: 'diy',
 		mode: 'simple' as const,
-		showSideBarText: true,
 		simpleCardColumns: 2 as const,
+		simpleCardCompact: false,
 		launchOptions: {
 			custom: false,
 			executablePath: ''
@@ -180,7 +160,6 @@ export const DEFAULT_RENDER = {
 			cachesSizeWarningPoint: 10,
 			enableDialog: false,
 			forceUpdateScript: false,
-			autoInitNewBrowser: true,
 			screenshotPreview: true,
 			screenshotFramerate: 'low' as const,
 			screenshotQuality: 'medium' as const,
@@ -206,8 +185,7 @@ export const DEFAULT_RENDER = {
 			user_script_usage: false,
 			browser_usage: false,
 			automation_script_usage: false,
-			resources_usage: false,
-			dashboard_usage: false
+			resources_usage: false
 		},
 		guide: {
 			init: false,
