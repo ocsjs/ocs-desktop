@@ -7,7 +7,7 @@ import { Process } from '../utils/process';
  * 按 ~60fps 合成帧率估算：everyNthFrame = N 表示每 N 帧取 1 帧。
  * 实际帧率随页面内容动态变化（静态画面浏览器不合成，自动停止推流）。
  */
-const FRAMERATE_TO_NTH_FRAME: Record<'high' | 'medium' | 'low', number> = {
+export const FRAMERATE_TO_NTH_FRAME: Record<'high' | 'medium' | 'low', number> = {
 	high: 2, // ~30 fps
 	medium: 4, // ~15 fps（默认）
 	low: 10 // ~6 fps
@@ -18,11 +18,7 @@ const FRAMERATE_TO_NTH_FRAME: Record<'high' | 'medium' | 'low', number> = {
  * 分辨率越高、jpeg 质量越高，画面越清晰但每帧数据量越大。
  * 注意 maxWidth/maxHeight 为帧尺寸上限（只降采样不放大），实际分辨率 = min(浏览器视口, 上限)。
  */
-const QUALITY_TO_PARAMS: Record<
-	'original' | 'ultra' | 'high' | 'medium' | 'low',
-	{ maxWidth: number; maxHeight: number; quality: number }
-> = {
-	original: { maxWidth: 3840, maxHeight: 2160, quality: 95 }, // 原画：视口原生分辨率（上限 4K），单帧体积大
+export const QUALITY_TO_PARAMS: Record<'ultra' | 'high' | 'medium' | 'low', { maxWidth: number; maxHeight: number; quality: number }> = {
 	ultra: { maxWidth: 2560, maxHeight: 1440, quality: 85 }, // 超清：上限 2K
 	high: { maxWidth: 1280, maxHeight: 720, quality: 70 },
 	medium: { maxWidth: 640, maxHeight: 360, quality: 50 }, // 默认
@@ -68,6 +64,25 @@ export function useScreencastVisibility(opts: {
 		return observer;
 	}
 
+	/**
+	 * 计算某卡片的推流参数：帧尺寸按卡片实际显示宽度 × DPR 请求（预览区域 16:9），
+	 * 封顶到用户选择的画质档位——卡片只需卡片大小的图，2K/高档位不再全量浪费。
+	 */
+	function resolveFrameParams(el: Element | null) {
+		const cap = qualityParams.value;
+		let maxWidth = cap.maxWidth;
+		let maxHeight = cap.maxHeight;
+		if (el) {
+			const dpr = window.devicePixelRatio || 1;
+			const displayW = Math.round(el.getBoundingClientRect().width * dpr);
+			if (displayW > 0) {
+				maxWidth = Math.min(displayW, cap.maxWidth);
+				maxHeight = Math.min(Math.round((displayW * 9) / 16), cap.maxHeight);
+			}
+		}
+		return { everyNthFrame: everyNthFrame.value, maxWidth, maxHeight, quality: cap.quality };
+	}
+
 	function applyVisibility(el: Element, isIntersecting: boolean) {
 		const uid = (el as HTMLElement).dataset.uid;
 		if (!uid) return;
@@ -76,7 +91,7 @@ export function useScreencastVisibility(opts: {
 		if (!previewEnabled.value || !isIntersecting) {
 			p.setScreencastActive(false);
 		} else {
-			p.setScreencastActive(true, { everyNthFrame: everyNthFrame.value, ...qualityParams.value });
+			p.setScreencastActive(true, resolveFrameParams(el));
 		}
 	}
 
@@ -125,9 +140,19 @@ export function useScreencastVisibility(opts: {
 	// 配置变化（预览开关 / 帧率 / 画质）时同步所有已启动进程
 	watch([previewEnabled, everyNthFrame, qualityParams], () => syncAll());
 
+	// 窗口尺寸变化（卡片显示宽度变化）时按新尺寸重新请求帧（防抖）
+	let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+	function onWindowResize() {
+		clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(() => syncAll(), 300);
+	}
+	window.addEventListener('resize', onWindowResize);
+
 	onUnmounted(() => {
 		observer?.disconnect();
 		observer = null;
+		window.removeEventListener('resize', onWindowResize);
+		clearTimeout(resizeTimer);
 	});
 
 	return { refresh, syncAll, previewEnabled };

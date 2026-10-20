@@ -116,6 +116,7 @@
 									:dismissed="dismissedClosedPreviews"
 									show-overlay
 									@dismiss="dismissClosedPreview"
+									@resync-screencast="syncAllScreencast"
 								/>
 
 								<template #extra>
@@ -196,9 +197,9 @@
 							</a-card>
 						</template>
 
-						<!-- 新增浏览器卡片（平铺模式下隐藏） -->
+						<!-- 新增浏览器卡片（仅显示运行中时隐藏） -->
 						<div
-							v-if="!isTile"
+							v-if="!store.render.setting.simpleRunningOnly"
 							class="browser-card add-card"
 							@click="handleAddBrowser"
 						>
@@ -380,7 +381,7 @@ watch(
 );
 
 /** 卡片可见性驱动 Page.startScreencast 启停（仅可见卡片推流，滚出视口自动停止） */
-const { refresh: refreshScreencast } = useScreencastVisibility({
+const { refresh: refreshScreencast, syncAll: syncAllScreencast } = useScreencastVisibility({
 	cardSelector: '.browser-card[data-uid]',
 	root: () => document.querySelector('.cards-scroll')
 });
@@ -504,6 +505,11 @@ onActivated(() => {
 			box-shadow: none !important;
 			transform: none;
 		}
+	}
+
+	.add-card {
+		/* 平铺模式下保留虚线边框，仍可辨识为新建入口（browser-card 的 border:none 会命中，需在此恢复） */
+		border: 1px dashed var(--theme-border-color-strong);
 	}
 }
 

@@ -155,13 +155,14 @@
 		</template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import Icon from '../Icon.vue';
 import BrowserOperators from './BrowserOperators.vue';
 import { store } from '../../store';
 import { Process, closedPreviews } from '../../utils/process';
 import { iconUrl } from '../../utils/index';
 import { BrowserOptions } from '../../fs/interface';
+import { FRAMERATE_TO_NTH_FRAME, QUALITY_TO_PARAMS } from '../../composables/useScreencastVisibility';
 
 const props = withDefaults(
 	defineProps<{
@@ -176,9 +177,26 @@ const props = withDefaults(
 
 const emit = defineEmits<{
 	(e: 'dismiss', uid: string): void;
+	/** 大图预览关闭：请求按可见性/画质档位重新同步推流参数 */
+	(e: 'resync-screencast'): void;
 }>();
 
 const previewVisible = ref(false);
+
+/**
+ * 按需高清：打开大图预览时将该浏览器临时切换为 2K 高清推流（列表卡片按显示尺寸低清推流），
+ * 关闭弹窗后通知父组件按可见性/画质档位回落，避免常态承担高清成本。
+ */
+watch(previewVisible, (visible) => {
+	const p = process.value;
+	if (!p) return;
+	if (visible) {
+		const nth = FRAMERATE_TO_NTH_FRAME[store.render.setting.browser.screenshotFramerate] ?? FRAMERATE_TO_NTH_FRAME.medium;
+		p.setScreencastActive(true, { everyNthFrame: nth, ...QUALITY_TO_PARAMS.ultra });
+	} else {
+		emit('resync-screencast');
+	}
+});
 
 /** 切换页面弹窗显隐 */
 const pageSwitchVisible = ref(false);
