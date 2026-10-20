@@ -343,10 +343,8 @@ function onResize() {
 	store.render.state.responsive = isInMobile ? 'mini' : 'small';
 
 	if (document.documentElement.clientWidth < 800) {
-		store.render.setting.showSideBarText = false;
 		store.render.state.mini = true;
 	} else {
-		store.render.setting.showSideBarText = true;
 		store.render.state.mini = false;
 	}
 }

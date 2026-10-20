@@ -29,8 +29,8 @@
 								:class="{ active: item.name === currentRoute.name }"
 								@click="clickMenu(item)"
 							>
-								<component
-									:is="store.render.setting.showSideBarText ? 'div' : Tooltip"
+								<!-- 仅图标模式：菜单文字通过 tooltip 展示，节省横向空间 -->
+								<Tooltip
 									style="height: 28px"
 									:content="item.meta.title"
 									position="right"
@@ -40,14 +40,7 @@
 										:type="item.meta.icon"
 										theme="outlined"
 									/>
-								</component>
-
-								<div
-									v-if="store.render.setting.showSideBarText"
-									class="ms-2 sider-item-title text-secondary"
-								>
-									{{ item.meta.title }}
-								</div>
+								</Tooltip>
 							</div>
 						</template>
 					</div>
@@ -70,10 +63,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import { routes, CustomRouteType, router } from '../route';
-import { store } from '../store';
 import { remote } from '../utils/remote';
 import Icon from '../components/Icon.vue';
 import { Tooltip } from '@arco-design/web-vue';
@@ -83,7 +75,8 @@ import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue
 const currentRoute = useRouter().currentRoute;
 
 const state = reactive({
-	sideBarWidth: computed(() => (store.render.setting.showSideBarText ? 142 : 56))
+	/** 侧边栏宽度：固定仅图标模式（56px） */
+	sideBarWidth: 56
 });
 
 const version = ref('');
@@ -123,10 +116,6 @@ function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 			/* 激活态跟随主题颜色：底色取主色最浅档（暗色下由 theme.less 覆盖为深灰） */
 			background-color: rgb(var(--primary-1));
 			border-left: 6px solid var(--theme-primary-color);
-		}
-
-		.sider-item-title {
-			font-size: 13px;
 		}
 
 		.sider-item + .sider-item {
