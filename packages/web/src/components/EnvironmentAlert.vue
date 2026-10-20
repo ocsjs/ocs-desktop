@@ -1,13 +1,13 @@
 <template>
-	<div>
-		<div v-if="!envState.isReady">
-			<div
-				v-if="envState.isLoading"
-				class="w-100 text-center"
-			>
-				<a-spin />
-			</div>
-			<div v-else>
+	<!-- 环境正常时不渲染根节点，避免空 div 携带父级 margin 类占据空间 -->
+	<div v-if="!envState.isReady">
+		<div
+			v-if="envState.isLoading"
+			class="w-100 text-center"
+		>
+			<a-spin />
+		</div>
+		<div v-else>
 				<a-alert
 					title="警告"
 					type="warning"
@@ -45,10 +45,9 @@
 						</a-button>
 					</div>
 				</a-alert>
-			</div>
-		</div>
-		<div>
-			<Setup
+				</div>
+				<div>
+				<Setup
 				v-model:visible="envState.envSetupFixVisible"
 				confirm-text="开始修复"
 				cancel-text="稍后再说"

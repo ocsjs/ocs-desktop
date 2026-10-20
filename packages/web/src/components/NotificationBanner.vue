@@ -1,5 +1,6 @@
 <template>
-	<div>
+	<!-- 无数据时不渲染根节点，避免空 div 携带父级 margin 类占据空间 -->
+	<div v-if="visibleBanners.length">
 		<template
 			v-for="(banner, index) in visibleBanners"
 			:key="index"

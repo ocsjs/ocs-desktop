@@ -2,57 +2,6 @@
 	<div class="setting container-md">
 		<a-card>
 			<template #title>
-				<span class="card-title-icon"
-					><img
-						src="../../public/favicon.png"
-						width="22px"
-				/></span>
-				<a-space>
-					OCS脚本配置
-					<a-tag
-						v-if="store.render.setting.ocs.openSync"
-						color="green"
-					>
-						<a-space> <IconCheckCircleFill /> 同步中 </a-space>
-					</a-tag>
-				</a-space>
-			</template>
-			<template #extra>
-				<a-space>
-					<a-tooltip
-						v-if="store.render.setting.ocs.openSync"
-						content="取消配置同步、每个浏览器可手动调整OCS脚本的设置"
-					>
-						<a-button
-							size="small"
-							@click="
-								() => {
-									store.render.setting.ocs.openSync = false;
-								}
-							"
-						>
-							<IconClose /> 取消配置同步
-						</a-button>
-					</a-tooltip>
-					<a-button
-						v-else
-						type="primary"
-						size="small"
-						@click="onSyncOCSConfig"
-					>
-						<IconSync />同步配置到各浏览器
-					</a-button>
-				</a-space>
-			</template>
-			<div>
-				<OCSConfigs v-model:store="store.render.setting.ocs.store"></OCSConfigs>
-			</div>
-		</a-card>
-
-		<ResourcesCard />
-
-		<a-card>
-			<template #title>
 				<span class="card-title-icon">⚙️</span>
 				基本设置
 			</template>
@@ -73,64 +22,10 @@
 				<a-switch v-model="store.window.alwaysOnTop" />
 			</Description>
 
-			<Description>
-				<template #label>
-					软件布局
-					<a-popover>
-						<template #content>
-							<div style="max-width: 300px">
-								<div>专业模式相比简洁模式的差异：</div>
-								<div>【额外软件设置】</div>
-								<div>显示侧边栏文字、浏览器路径设置、浏览器缓存预警阈值</div>
-								<div>【浏览器列表页】</div>
-								<div>
-									文件夹层级管理与路径导航、按名称/备注/标签搜索筛选、批量启动/关闭/删除/移动等批量操作、右侧浏览器面板（运行日志/备注/自动化程序配置）
-								</div>
-								<div>【监控页】</div>
-								<div>可同时查看多个浏览器的实时画面</div>
-								<div>【简洁模式】</div>
-								<div>浏览器以卡片平铺展示（可设置 1-4 列），无文件夹与批量操作，适合简单场景</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-select
-					v-model="store.render.setting.mode"
-					style="width: 160px"
-					@change="changeMode"
-				>
-					<a-option
-						v-for="item of layoutOptions"
-						:key="item.value"
-						:value="item.value"
-					>
-						<Icon
-							:type="item.icon"
-							:size="16"
-							class="option-icon"
-						/>
-						{{ item.label }}
-					</a-option>
-					<!-- 选中框自定义渲染（默认行为会把插槽拍平成纯文本，导致图标连字文本外泄） -->
-					<template #label>
-						<Icon
-							:type="currentLayoutOption.icon"
-							:size="16"
-							class="option-icon"
-						/>
-						{{ currentLayoutOption.label }}
-					</template>
-				</a-select>
-			</Description>
-
 			<Description label="主题样式">
 				<a-select
 					v-model="store.render.setting.theme.mode"
-					style="width: 160px"
+					style="width: 200px"
 					@change="changeTheme"
 				>
 					<a-option
@@ -159,7 +54,7 @@
 			<Description label="主题颜色">
 				<a-select
 					v-model="store.render.setting.theme.color"
-					style="width: 160px"
+					style="width: 200px"
 					@change="changeTheme"
 				>
 					<a-option
@@ -183,30 +78,6 @@
 					</template>
 				</a-select>
 			</Description>
-			<Description
-				v-if="!simple"
-				label="显示侧边栏文字"
-			>
-				<a-switch
-					v-model="store.render.setting.showSideBarText"
-					@click="changeTheme"
-				/>
-			</Description>
-
-			<Description
-				v-if="simple"
-				label="简洁模式卡片布局"
-			>
-				<a-select
-					v-model="store.render.setting.simpleCardColumns"
-					style="width: 160px"
-				>
-					<a-option :value="1">1 列</a-option>
-					<a-option :value="2">2 列</a-option>
-					<a-option :value="3">3 列</a-option>
-					<a-option :value="4">4 列</a-option>
-				</a-select>
-			</Description>
 		</a-card>
 
 		<a-card>
@@ -214,7 +85,7 @@
 				<span class="card-title-icon">🌐</span>
 				浏览器设置
 			</template>
-			<BrowserPath v-if="!simple"></BrowserPath>
+			<BrowserPath></BrowserPath>
 
 			<Description>
 				<template #label>
@@ -248,14 +119,6 @@
 			<Description label="强制安装脚本">
 				<a-tooltip content="启用后，启动浏览器时将跳过版本检查，强制安装所有启用的脚本">
 					<a-switch v-model="store.render.setting.browser.forceUpdateScript" />
-				</a-tooltip>
-			</Description>
-
-			<Description label="新建浏览器自动初始化">
-				<a-tooltip
-					content="启用后，点击新建浏览器将自动打开初始化弹窗并执行（新建浏览器、添加自动化程序），关闭则直接创建空浏览器"
-				>
-					<a-switch v-model="store.render.setting.browser.autoInitNewBrowser" />
 				</a-tooltip>
 			</Description>
 
@@ -322,7 +185,7 @@
 				</Description>
 			</div>
 
-			<Description v-if="!simple">
+			<Description>
 				<template #label>
 					浏览器缓存预警阈值
 					<a-popover>
@@ -345,7 +208,9 @@
 			</Description>
 
 			<Description label="自定义导航页">
-				<a-tooltip content="开启后，浏览器启动时自动打开自定义导航页；关闭后启动时显示浏览器默认新标签页。重启浏览器后生效。（新建标签页始终为浏览器默认页）">
+				<a-tooltip
+					content="开启后，浏览器启动时自动打开自定义导航页；关闭后启动时显示浏览器默认新标签页。重启浏览器后生效。（新建标签页始终为浏览器默认页）"
+				>
 					<a-switch v-model="store.render.setting.browser.bookmarkPage.enable" />
 				</a-tooltip>
 			</Description>
@@ -455,7 +320,7 @@
 			<Path
 				label="浏览器缓存"
 				name="userDataDirsFolder"
-				:setting="!simple"
+				:setting="true"
 				@on-path-change="onUserDataDirsFolderChange"
 			/>
 			<Path
@@ -663,24 +528,12 @@ import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/
 import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
 import BrowserPath from './setting/BrowserPath.vue';
-import OCSConfigs from './OCSConfigs.vue';
-import ResourcesCard from './ResourcesCard.vue';
 import { changeTheme } from '../utils';
 import Icon from './Icon.vue';
 import { forceClearBrowserCache } from '../utils/browser';
-import { Message, Modal } from '@arco-design/web-vue';
+import { Message } from '@arco-design/web-vue';
 import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
-import { IconCheckCircleFill } from '@arco-design/web-vue/es/icon';
-import { router } from '../route';
-
-interface SettingPanelProps {
-	simple?: boolean;
-}
-
-withDefaults(defineProps<SettingPanelProps>(), {
-	simple: false
-});
 
 /** 主题颜色选项（value 对应 theme.less 中 body[theme-color='xxx'] 预设，color 用于选择器色点展示） */
 const themeColors = [
@@ -691,12 +544,6 @@ const themeColors = [
 	{ value: 'cyan', label: '静谧青', color: '#14c9c9' }
 ] as const;
 
-/** 软件布局选项 */
-const layoutOptions = [
-	{ value: 'simple', label: '简洁模式', icon: 'grid_view' },
-	{ value: 'professional', label: '专业模式', icon: 'view_sidebar' }
-] as const;
-
 /** 主题样式选项 */
 const themeModeOptions = [
 	{ value: 'auto', label: '自动（跟随系统）', icon: 'brightness_auto' },
@@ -705,9 +552,6 @@ const themeModeOptions = [
 ] as const;
 
 /** 当前选中项（用于 select #label 插槽渲染图标；兜底取第一项，兼容历史遗留值） */
-const currentLayoutOption = computed(
-	() => layoutOptions.find((o) => o.value === store.render.setting.mode) ?? layoutOptions[0]
-);
 const currentThemeModeOption = computed(
 	() => themeModeOptions.find((o) => o.value === store.render.setting.theme.mode) ?? themeModeOptions[0]
 );
@@ -735,19 +579,6 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 	}
 
 	await forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
-}
-
-/** 同步OCS配置到各浏览器 */
-function onSyncOCSConfig() {
-	store.render.setting.ocs.openSync = true;
-	Modal.success({
-		content: t('setting_browser_ocs_config_sync_tip_v3', '已同步配置，请重启浏览器即可应用~')
-	});
-}
-
-/** 切换软件布局模式（简洁/专业），并跳转到对应页面 */
-function changeMode() {
-	router.push(store.render.setting.mode === 'professional' ? '/browsers' : '/simple');
 }
 
 /** 手动检查更新（配合自定义更新源可做更新流程测试） */
@@ -832,10 +663,19 @@ function removeCustomSite(index: number) {
 <style scoped lang="less">
 .setting {
 	min-height: 500px;
-	max-width: 800px;
+	max-width: 720px;
 }
 
-.arco-card + .arco-card {
+/* 设置分组去卡片化：移除边框/圆角/阴影（覆盖 arco-custom 的全局 !important 规则），
+   各小段以分割线区分（嵌套在子布局整体卡片内，无需重复卡片样式） */
+.setting > .arco-card {
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+/* 各设置小段之间保留间距（无卡片样式、无分割线） */
+.setting > .arco-card + .arco-card {
 	margin-top: 12px;
 }
 
