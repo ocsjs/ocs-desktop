@@ -473,6 +473,14 @@ export class Process extends EventEmitter {
 		this.status = 'closing';
 		return new Promise<void>((resolve) => {
 			this.once('browser-closed', resolve);
+			// 兜底：worker 异常（如 browser.close 与推流竞争挂起、进程崩溃）时
+			// 15s 后强制回落 closed，避免卡片永久转圈、重启/关闭流程悬挂
+			setTimeout(() => {
+				if (this.status === 'closing') {
+					this.status = 'closed';
+					resolve();
+				}
+			}, 15 * 1000);
 			// 关闭进程
 			this.worker?.('close');
 		});
@@ -515,6 +523,9 @@ export class Process extends EventEmitter {
 		this.worker?.('switchScreencastPage', url);
 	}
 
+	/** 背压汇报计数：自上次向 worker 汇报以来已消费的帧数 */
+	private _consumedSinceReport = 0;
+
 	/**
 	 * 设置预览帧：base64 -> Blob URL，更新前 revoke 上一帧避免内存泄漏。
 	 * 同时节流（2s）持久化到磁盘，保证软件整体退出后重启仍能恢复最后一帧。
@@ -525,6 +536,12 @@ export class Process extends EventEmitter {
 		this.frameUrl = this._blobUrl;
 		this._lastFrameBase64 = base64;
 		this.persistFrameThrottled();
+		// 背压：渲染端每消费 3 帧向 worker 汇报一次消费量，
+		// worker 在途未消费帧超限时会暂缓 ack 让 Chromium 自动降速，防止 IPC 积压卡死
+		if (++this._consumedSinceReport >= 3) {
+			this._consumedSinceReport = 0;
+			this.worker?.('screencastConsumed', 3);
+		}
 	}
 
 	/** 节流落盘：推流期间最多每 2s 写一次，静默容错 */

@@ -222,6 +222,8 @@ export interface ScriptWorker {
 	startScreencast(opts?: ScreencastOptions): Promise<void>;
 	pauseScreencast(): Promise<void>;
 	stopScreencast(): Promise<void>;
+	/** 渲染端汇报已消费的推流帧数（背压反馈：释放在途额度并冲刷暂缓的 ack） */
+	screencastConsumed(count: number): void;
 	/** 切换 screencast 推流目标到指定 URL 的页面（用户在预览卡片上手动选择） */
 	switchScreencastPage(url: string): Promise<void>;
 	kill(): void;

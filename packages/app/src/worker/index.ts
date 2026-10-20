@@ -67,6 +67,14 @@ export class ScriptWorker implements ScriptWorkerContract {
 	private screencastLoadListeners = new Map<Page, () => void>();
 	/** Screencast 启动中标志，防止并发重入导致 session 泄漏 */
 	private screencastStarting = false;
+	/** 关闭屏障：close() 开始后阻止新的 screencast session 附着，避免 browser.close() 与推流竞争挂起 */
+	private closing = false;
+	/** 背压：允许渲染端在途未消费的最大帧数（超限暂缓 ack，Chromium 自动降速） */
+	private static readonly SCREENCAST_MAX_IN_FLIGHT = 6;
+	/** 在途未消费帧数（渲染端汇报消费后递减） */
+	private screencastInFlight = 0;
+	/** 因背压暂缓的 screencast ack 队列 */
+	private screencastAckQueue: number[] = [];
 	/** 用户手动固定的推流目标页 URL（页面关闭或 URL 变化后自动清除） */
 	private screencastPinnedUrl?: string;
 	/** 页面列表广播防抖定时器 */
@@ -299,11 +307,23 @@ export class ScriptWorker implements ScriptWorkerContract {
 	}
 
 	async close() {
+		// 先置关闭屏障：阻止在途的 startScreencast 后续附着新的 CDP screencast session，
+		// 否则 browser.close() 撞上活跃 screencast 可能永久挂起（渲染端一直转圈）
+		this.closing = true;
+		this.stopPageListTracking();
 		// 仅内部停止推流（detach session），不发 screencast-cleared：
 		// 渲染进程在 browser-closed 时保留最后一帧，用于"浏览器关闭后的预览图"展示
-		this.stopPageListTracking();
-		await this.stopScreencastInternal();
-		await this.browser?.close();
+		await this.stopScreencastInternal().catch(() => {});
+		// 兜底：browser.close() 挂起（如与在途推流操作竞争）时不阻塞退出，
+		// worker 进程退出后管道断开，Chromium 会随之自行退出
+		await Promise.race([
+			(async () => {
+				try {
+					await this.browser?.close();
+				} catch {}
+			})(),
+			new Promise((resolve) => setTimeout(resolve, 10 * 1000))
+		]);
 		this.browser = undefined;
 		send('browser-closed');
 		process.exit();
@@ -470,7 +490,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 	 * 不再使用"首帧看门狗 + 自动重试"：首帧由截图兜底，重选由页面 load / 新页面事件驱动。
 	 */
 	async startScreencast(opts?: { everyNthFrame?: number; maxWidth?: number; maxHeight?: number; quality?: number }) {
-		if (!this.browser || this.screencastStarting) return;
+		if (!this.browser || this.screencastStarting || this.closing) return;
 		this.screencastStarting = true;
 		try {
 			// 合并参数：优先用 opts，其次沿用已存参数（用于 page 切换重选），最后默认值
@@ -510,7 +530,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 			// 直接截图作为首帧并推送（不依赖 Page.startScreencast 的首帧）
 			await this.captureScreencastFirstFrame(page, params);
-			if (!this.screencastParams || page.isClosed()) return; // 等待期间被暂停/停止或页面已关闭
+			// 等待期间被暂停/停止、页面已关闭或浏览器进入关闭流程：终止，禁止在关闭途中附着新 session
+			if (!this.screencastParams || page.isClosed() || this.closing) return;
 
 			try {
 				const session = await page.context().newCDPSession(page);
@@ -518,8 +539,10 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 				session.on('Page.screencastFrame', ({ data, sessionId }) => {
 					if (this.screencastSession !== sess) return; // 旧会话迟到的帧，忽略
-					// 先 ack，保证浏览器持续推帧（ack 延迟会导致停推）
-					session.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+					// 背压：记录在途帧并按额度 ack（在途超限时暂缓 ack，Chromium 自动降速防止 IPC 积压）
+					this.screencastInFlight++;
+					this.screencastAckQueue.push(sessionId);
+					this.flushScreencastAcks();
 					// 帧直接 IPC 直传渲染进程（base64），不再写盘
 					send('screencast-frame', this.uid, data);
 				});
@@ -595,6 +618,28 @@ export class ScriptWorker implements ScriptWorkerContract {
 		this.screencastParams = undefined; // 标记暂停，避免 handleScreencastPageGone 误重选；恢复时由 opts 重建
 	}
 
+	/** 冲刷 screencast ack 队列：在途帧未超限时立即 ack；超限则保留（ack 延迟会让 Chromium 自动降速） */
+	private flushScreencastAcks() {
+		const session = this.screencastSession;
+		if (!session) return;
+		while (this.screencastInFlight <= ScriptWorker.SCREENCAST_MAX_IN_FLIGHT && this.screencastAckQueue.length) {
+			const sessionId = this.screencastAckQueue.shift()!;
+			session.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+		}
+	}
+
+	/** 渲染端汇报已消费的推流帧数：释放在途额度并冲刷暂缓的 ack（背压反馈回路，由渲染进程调用） */
+	screencastConsumed(count: number) {
+		this.screencastInFlight = Math.max(0, this.screencastInFlight - count);
+		this.flushScreencastAcks();
+	}
+
+	/** 重置背压状态（停止/重建推流时调用） */
+	private resetScreencastBackpressure() {
+		this.screencastInFlight = 0;
+		this.screencastAckQueue = [];
+	}
+
 	/**
 	 * 仅停止 screencast session，不清理文件、不发事件（用于内部切换/重选）
 	 */
@@ -613,6 +658,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 		this.screencastPageCloseListener = undefined;
 		// 停止目标跟踪（各页 load 监听 / 新页面监听），暂停或停止后不再误重选
 		this.stopScreencastTracking();
+		// 重置背压状态，避免旧额度/旧 ack 队列污染下一次推流
+		this.resetScreencastBackpressure();
 	}
 
 	/**
