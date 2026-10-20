@@ -432,7 +432,10 @@ async function showVersionLogs() {
 
 body.platform-darwin {
 	.title {
-		justify-content: center;
+		/* mac 红绿灯控制按钮在左侧：左侧预留其区域，全部操作按钮右对齐 */
+		justify-content: flex-end;
+		padding-left: 84px;
+		padding-right: 8px;
 	}
 }
 </style>
