@@ -115,18 +115,10 @@ export function newBrowser(opts?: {
 
 /**
  * 新建浏览器：打开「新建浏览器自动初始化」弹窗并自动执行初始化流程（新建浏览器 + 添加自动化程序）。
- * 如需一键创建空浏览器（不询问创建内容），使用 newEmptyBrowser。
+ * 浏览器名称由命名算法自动生成（流程内不再询问），如需自定义可在浏览器列表中重命名。
  */
 export function newBrowserOrInit(): void {
 	store.render.state.newBrowserSetup = true;
-}
-
-/**
- * 新建空浏览器：使用默认名称（自动去重）、不包含自动化程序，一键创建无需询问。
- * （替代原「新建浏览器自动初始化」开关的关闭模式）
- */
-export function newEmptyBrowser(): Browser | undefined {
-	return newBrowser();
 }
 
 export async function checkBrowserCaches() {

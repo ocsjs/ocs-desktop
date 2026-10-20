@@ -25,14 +25,6 @@
 		>
 			<Icon type="add"> 新建 </Icon>
 			<template #content>
-				<a-doption value="emptyBrowser">
-					<a-tooltip
-						content="一键创建空浏览器：使用默认名称、不包含自动化程序，无需询问创建内容"
-						position="left"
-					>
-						<span class="d-block"><Icon type="web">新建空浏览器</Icon></span>
-					</a-tooltip>
-				</a-doption>
 				<a-doption value="folder">
 					<Icon type="folder">新建文件夹</Icon>
 				</a-doption>
@@ -121,7 +113,7 @@ import { reactive, h } from 'vue';
 import { RawAutomationScript } from '../automation-scripts';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScriptTable from '../automation-scripts/AutomationScriptTable.vue';
-import { newBrowser, newBrowserOrInit, newEmptyBrowser, newFolder } from '../../utils/browser';
+import { newBrowser, newBrowserOrInit, newFolder } from '../../utils/browser';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
@@ -140,9 +132,7 @@ const state = reactive({
 
 /** 新建下拉按钮的选项分发 */
 function onCreateSelect(value: string | number | Record<string, unknown> | undefined) {
-	if (value === 'emptyBrowser') {
-		newEmptyBrowser();
-	} else if (value === 'folder') {
+	if (value === 'folder') {
 		newFolder();
 	}
 }

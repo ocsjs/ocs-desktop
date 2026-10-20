@@ -138,40 +138,6 @@
 			</a-col>
 		</a-row>
 
-		<!-- 浏览器名称输入弹窗 -->
-		<a-modal
-			v-model:visible="setupState.showBrowserNameInput"
-			:footer="false"
-			unmount-on-close
-			:mask-closable="false"
-			:closable="false"
-		>
-			<template #title> 新建浏览器 </template>
-			<div class="text-secondary mb-2">请输入浏览器名称：</div>
-			<a-input
-				v-model="setupState.browserName"
-				size="small"
-				placeholder="请输入浏览器名称"
-				@press-enter="onBrowserNameConfirm"
-			></a-input>
-			<div class="d-flex justify-content-end mt-2">
-				<a-space>
-					<a-button
-						size="small"
-						@click="skipBrowserNameInput"
-					>
-						跳过
-					</a-button>
-					<a-button
-						type="primary"
-						size="small"
-						@click="onBrowserNameConfirm"
-					>
-						确定
-					</a-button>
-				</a-space>
-			</div>
-		</a-modal>
 
 		<!-- 自动化程序选择弹窗 -->
 		<a-modal
@@ -407,12 +373,15 @@ const _preset_steps = {
 		title: '新建浏览器',
 		async action(step) {
 			await sleep(500);
-			step.description = '请输入浏览器名称...';
-			// 弹出名称输入弹窗，默认值来自 newBrowser 的命名生成算法
-			const name = await onInputBrowserName();
+			// 不再询问命名，直接使用命名算法生成的默认名（可在浏览器列表中重命名）
+			const name = getDefaultBrowserName();
 			step.description = `正在创建浏览器：${name}...`;
 
 			const browser = newBrowser({ name });
+			if (browser) {
+				// 自动命名的浏览器不进入重命名状态（否则卡片标题会显示为空的输入框而非名称）
+				browser.renaming = false;
+			}
 			if (!browser) {
 				step.error = '浏览器创建失败，请确保已在左侧软件设置中配置浏览器路径。';
 				return;
@@ -503,9 +472,6 @@ const state = reactive({
 const setupState = reactive({
 	showScriptSelector: false,
 	showScriptConfig: false,
-	showBrowserNameInput: false,
-	/** 浏览器名称输入弹窗的当前值 */
-	browserName: '',
 	/** 用户已选中的自动化程序（用于配置弹窗编辑） */
 	configScripts: [] as RawAutomationScript[],
 	/** 新建的浏览器实例 */
@@ -515,33 +481,6 @@ const setupState = reactive({
 /** 弹窗的 Promise resolve 回调（非响应式，无需放入 reactive） */
 let selectorResolver: ((v: RawAutomationScript[] | null) => void) | null = null;
 let configResolver: ((v: RawAutomationScript[] | null) => void) | null = null;
-let browserNameResolver: ((v: string) => void) | null = null;
-
-/** 弹出浏览器名称输入弹窗，默认值为命名算法生成的默认名；返回用户确认的名称（跳过则返回默认名） */
-function onInputBrowserName(): Promise<string> {
-	setupState.browserName = getDefaultBrowserName();
-	return new Promise((resolve) => {
-		browserNameResolver = resolve;
-		setupState.showBrowserNameInput = true;
-	});
-}
-
-function onBrowserNameConfirm() {
-	const name = setupState.browserName.trim() || getDefaultBrowserName();
-	setupState.showBrowserNameInput = false;
-	if (browserNameResolver) {
-		browserNameResolver(name);
-		browserNameResolver = null;
-	}
-}
-
-function skipBrowserNameInput() {
-	setupState.showBrowserNameInput = false;
-	if (browserNameResolver) {
-		browserNameResolver(getDefaultBrowserName());
-		browserNameResolver = null;
-	}
-}
 
 /** 弹出自动化程序选择弹窗，返回用户选择的脚本（跳过/未选时返回 null） */
 function openScriptSelector(): Promise<RawAutomationScript[] | null> {
@@ -629,8 +568,6 @@ function prepare() {
 	state.finish_animate = false;
 	setupState.showScriptSelector = false;
 	setupState.showScriptConfig = false;
-	setupState.showBrowserNameInput = false;
-	setupState.browserName = '';
 	setupState.configScripts = [] as RawAutomationScript[];
 	setupState.newBrowserInstance = null as Browser | null;
 
