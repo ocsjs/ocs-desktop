@@ -422,8 +422,55 @@ export async function startupServer() {
 		}
 	});
 
-	// 静态资源（渲染产物经 electron-vite 输出到 out/renderer）
-	app.use(express.static(path.join(getProjectPath(), './out/renderer')));
+	// 静态资源：
+	// 生产模式 —— 渲染产物经 electron-vite 输出到 out/renderer，直接静态托管；
+	// 开发模式 —— out/renderer 不存在（首次运行尤其如此），渲染页面由 vite dev server 托管，
+	//   将页面/静态请求代理过去，保证主窗口与启动的浏览器（导航页等）都能直接访问最新页面。
+	const devRendererUrl = process.env.ELECTRON_RENDERER_URL;
+	if (devRendererUrl) {
+		const devOrigin = devRendererUrl.replace(/\/+$/, '');
+		const devHost = new URL(devOrigin).host;
+		app.use((req, res, next) => {
+			if (req.method !== 'GET' && req.method !== 'HEAD') {
+				next();
+				return;
+			}
+			axios
+				.get(devOrigin + req.originalUrl, {
+					responseType: 'stream',
+					timeout: 10000,
+					maxRedirects: 0,
+					validateStatus: () => true,
+					headers: {
+						host: devHost,
+						accept: req.headers.accept || '*/*',
+						// 让上游返回未压缩内容，避免压缩流与响应头转发不一致
+						'accept-encoding': 'identity',
+						// 保留条件请求头，维持 vite 的 304 缓存行为
+						...(typeof req.headers['if-none-match'] === 'string'
+							? { 'if-none-match': req.headers['if-none-match'] }
+							: {}),
+						...(typeof req.headers['if-modified-since'] === 'string'
+							? { 'if-modified-since': req.headers['if-modified-since'] }
+							: {})
+					}
+				})
+				.then((upstream) => {
+					res.status(upstream.status);
+					for (const [key, value] of Object.entries(upstream.headers)) {
+						// 逐跳头与流式传输冲突，交由 express 自行处理
+						if (['transfer-encoding', 'connection', 'content-length'].includes(key)) continue;
+						if (typeof value === 'string') res.setHeader(key, value);
+					}
+					upstream.data.pipe(res);
+				})
+				.catch(() => {
+					res.status(502).send(`Vite dev server 未就绪，请稍后刷新（${devOrigin}）`);
+				});
+		});
+	} else {
+		app.use(express.static(path.join(getProjectPath(), './out/renderer')));
+	}
 
 	return new Promise<void>((resolve, reject) => {
 		const server = app.listen(store.store.server.port, () => {

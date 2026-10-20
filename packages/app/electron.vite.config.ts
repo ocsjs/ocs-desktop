@@ -68,7 +68,10 @@ export default defineConfig({
 		base: './',
 		server: {
 			port: 3000,
-			open: false
+			open: false,
+			// 开发模式下页面经应用本地服务（默认 15319）代理访问，HMR 客户端默认
+			// 会连接页面所在端口导致失败；显式指定回 dev server 端口
+			hmr: { host: 'localhost', port: 3000 }
 		},
 		plugins: [
 			commonjs({ filter: (id) => (id.includes('xlsx') ? undefined : false) }) as any,
