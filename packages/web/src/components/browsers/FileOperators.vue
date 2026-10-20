@@ -8,7 +8,6 @@
 				<Icon type="more_horiz"> 更多 </Icon>
 			</a-button>
 			<template #content>
-				<a-doption @click="newFolder"> <Icon type="folder">新建文件夹</Icon> </a-doption>
 				<a-doption @click="state.showAutomationScriptSelector = true">
 					<Icon type="add"> 批量创建-自动化程序浏览器</Icon>
 				</a-doption>
@@ -16,13 +15,29 @@
 			</template>
 		</a-dropdown>
 
-		<a-button
+		<!-- 新建下拉按钮：主按钮点击 = 新建浏览器（初始化弹窗），悬浮展开更多新建入口 -->
+		<a-dropdown-button
 			size="small"
 			type="primary"
+			trigger="hover"
 			@click="newBrowserOrInit()"
+			@select="onCreateSelect"
 		>
-			<Icon type="web"> 新建浏览器 </Icon>
-		</a-button>
+			<Icon type="add"> 新建 </Icon>
+			<template #content>
+				<a-doption value="emptyBrowser">
+					<a-tooltip
+						content="一键创建空浏览器：使用默认名称、不包含自动化程序，无需询问创建内容"
+						position="left"
+					>
+						<span class="d-block"><Icon type="web">新建空浏览器</Icon></span>
+					</a-tooltip>
+				</a-doption>
+				<a-doption value="folder">
+					<Icon type="folder">新建文件夹</Icon>
+				</a-doption>
+			</template>
+		</a-dropdown-button>
 
 		<a-modal
 			v-model:visible="state.showAutomationScriptSelector"
@@ -106,7 +121,7 @@ import { reactive, h } from 'vue';
 import { RawAutomationScript } from '../automation-scripts';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScriptTable from '../automation-scripts/AutomationScriptTable.vue';
-import { newBrowser, newBrowserOrInit, newFolder } from '../../utils/browser';
+import { newBrowser, newBrowserOrInit, newEmptyBrowser, newFolder } from '../../utils/browser';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
@@ -122,6 +137,15 @@ const state = reactive({
 		tags: [] as string[]
 	}
 });
+
+/** 新建下拉按钮的选项分发 */
+function onCreateSelect(value: string | number | Record<string, unknown> | undefined) {
+	if (value === 'emptyBrowser') {
+		newEmptyBrowser();
+	} else if (value === 'folder') {
+		newFolder();
+	}
+}
 
 function showMultipleCreateTable() {
 	state.showAutomationScriptTable = true;

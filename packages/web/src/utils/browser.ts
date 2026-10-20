@@ -114,22 +114,19 @@ export function newBrowser(opts?: {
 }
 
 /**
- * 新建浏览器（或触发自动初始化）
- *
- * 当「新建浏览器自动初始化」开关开启时，不直接创建浏览器，
- * 而是打开「新建浏览器自动初始化」弹窗并自动执行初始化流程（新建浏览器 + 添加自动化程序）。
- * 关闭时退化为直接调用 newBrowser。
+ * 新建浏览器：打开「新建浏览器自动初始化」弹窗并自动执行初始化流程（新建浏览器 + 添加自动化程序）。
+ * 如需一键创建空浏览器（不询问创建内容），使用 newEmptyBrowser。
  */
-export function newBrowserOrInit(opts?: {
-	name: string;
-	automationScripts?: RawAutomationScript[];
-	store?: object;
-}): Browser | undefined {
-	if (store.render.setting.browser.autoInitNewBrowser) {
-		store.render.state.newBrowserSetup = true;
-		return;
-	}
-	return newBrowser(opts);
+export function newBrowserOrInit(): void {
+	store.render.state.newBrowserSetup = true;
+}
+
+/**
+ * 新建空浏览器：使用默认名称（自动去重）、不包含自动化程序，一键创建无需询问。
+ * （替代原「新建浏览器自动初始化」开关的关闭模式）
+ */
+export function newEmptyBrowser(): Browser | undefined {
+	return newBrowser();
 }
 
 export async function checkBrowserCaches() {
