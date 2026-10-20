@@ -16,8 +16,14 @@ const FRAMERATE_TO_NTH_FRAME: Record<'high' | 'medium' | 'low', number> = {
 /**
  * 预览画质档位 -> Page.startScreencast 的 maxWidth/maxHeight/quality 映射。
  * 分辨率越高、jpeg 质量越高，画面越清晰但每帧数据量越大。
+ * 注意 maxWidth/maxHeight 为帧尺寸上限（只降采样不放大），实际分辨率 = min(浏览器视口, 上限)。
  */
-const QUALITY_TO_PARAMS: Record<'high' | 'medium' | 'low', { maxWidth: number; maxHeight: number; quality: number }> = {
+const QUALITY_TO_PARAMS: Record<
+	'original' | 'ultra' | 'high' | 'medium' | 'low',
+	{ maxWidth: number; maxHeight: number; quality: number }
+> = {
+	original: { maxWidth: 3840, maxHeight: 2160, quality: 95 }, // 原画：视口原生分辨率（上限 4K），单帧体积大
+	ultra: { maxWidth: 2560, maxHeight: 1440, quality: 85 }, // 超清：上限 2K
 	high: { maxWidth: 1280, maxHeight: 720, quality: 70 },
 	medium: { maxWidth: 640, maxHeight: 360, quality: 50 }, // 默认
 	low: { maxWidth: 480, maxHeight: 270, quality: 30 }

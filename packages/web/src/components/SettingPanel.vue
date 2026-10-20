@@ -166,6 +166,7 @@
 						<a-popover>
 							<template #content>
 								<div>控制预览画质（分辨率与压缩率），越高越清晰但占用更多资源，实时生效。</div>
+							<div>超清/原画为视口原生分辨率（上限 2K/4K，窗口越大画面越清晰），单帧数据量与 CPU 占用显著上升，建议搭配中低帧率使用。</div>
 							</template>
 							<Icon
 								class="label-help-icon"
@@ -178,6 +179,8 @@
 						style="width: 200px"
 						:placeholder="''"
 					>
+						<a-option value="original">原画（视口原生，最高 4K）</a-option>
+						<a-option value="ultra">超清（最高 2K）</a-option>
 						<a-option value="high">高（1280×720）</a-option>
 						<a-option value="medium">中（640×360）</a-option>
 						<a-option value="low">低（480×270）</a-option>
@@ -523,7 +526,7 @@
 import { computed, reactive, ref } from 'vue';
 import Description from './Description.vue';
 import Path from './Path.vue';
-import { t, store, DEFAULT_RENDER, devSession } from '../store';
+import { store, DEFAULT_RENDER, devSession } from '../store';
 import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
