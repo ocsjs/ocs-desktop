@@ -196,7 +196,7 @@ function renderOCS() {
 						item.append(h('span', { className: 'ocs-list-item-arrow' }));
 						item.addEventListener('click', () => {
 							const panel = $ui.scriptPanel(script, $store);
-							$modal.simple({ content: panel, maskCloseable: true }, root);
+							$modal.simple({ content: panel, maskCloseable: true }, root ?? undefined);
 						});
 						list.append(item);
 					}

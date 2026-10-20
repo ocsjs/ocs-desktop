@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+// 引入 arco 全局组件类型声明（GlobalComponents 增强），恢复模板中 a-xxx 组件的属性/插槽联想
+/// <reference types="@arco-design/web-vue/es/components" />
 
 declare module '*.vue' {
 	import { DefineComponent } from 'vue';
