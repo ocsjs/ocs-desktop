@@ -3,8 +3,8 @@
 		<!-- 顶部工具行：固定不滚动（与内容滚动区分离，防止滚动时操作按钮被带走） -->
 		<div class="toolbar-fixed">
 			<div
-				class="container-md"
-				:style="{ maxWidth: cardGridMaxWidth }"
+				:class="isTile ? 'tile-toolbar' : 'container-md'"
+				:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
 			>
 				<div class="layout-switch mb-2 mt-1">
 				<a-select
@@ -18,16 +18,37 @@
 					<a-option :value="3">3 列</a-option>
 					<a-option :value="4">4 列</a-option>
 				</a-select>
-				<!-- 样式选择框：卡片 / 紧凑（紧凑模式移除卡片样式，浏览器间仅 2px 间隔） -->
+				<!-- 样式选择框：卡片 / 紧凑（去卡片样式 2px 间隔） / 平铺（全部浏览器去边距平铺铺满） -->
 				<a-select
-					v-model="store.render.setting.simpleCardCompact"
+					v-model="store.render.setting.simpleCardStyle"
 					size="mini"
 					class="ms-2"
 					style="width: 96px"
 				>
-					<a-option :value="false">卡片</a-option>
-					<a-option :value="true">紧凑</a-option>
-				</a-select>
+					<a-option value="card">卡片</a-option>
+						<a-option value="compact">紧凑</a-option>
+						<a-option value="tile">
+							<a-tooltip
+								content="全部浏览器移除边距平铺铺满整个区域，可配合「仅显示运行中」开关只查看正在运行的浏览器"
+								position="bottom"
+							>
+								平铺
+							</a-tooltip>
+						</a-option>
+					</a-select>
+					<!-- 仅显示运行中开关（卡片/紧凑/平铺均生效） -->
+					<span class="d-flex align-items-center ms-2">
+						<a-switch
+							v-model="store.render.setting.simpleRunningOnly"
+							size="small"
+						/>
+						<span
+							class="ms-1 text-secondary"
+							style="font-size: 12px; white-space: nowrap"
+						>
+							仅显示运行中
+						</span>
+					</span>
 				<a-button
 					type="outline"
 					size="mini"
@@ -43,34 +64,43 @@
 				<!-- 内容滚动区 -->
 				<div class="cards-scroll">
 				<div
-					class="container-md"
-					:style="{ maxWidth: cardGridMaxWidth }"
+					:class="isTile ? 'tile-container' : 'container-md'"
+					:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
 				>
-					<!-- 环境检测提示 -->
-					<EnvironmentAlert class="mb-3" />
+					<!-- 环境检测提示（平铺模式下隐藏，铺满整个区域） -->
+					<EnvironmentAlert
+						v-if="!isTile"
+						class="mb-3"
+					/>
 
-					<BeginnerGuide class="mb-2" />
+					<BeginnerGuide
+						v-if="!isTile"
+						class="mb-2"
+					/>
 
 					<div class="cards-area entities">
-				<template v-if="allBrowsers.length === 0">
+					<!-- 无任何浏览器：新建引导卡片 -->
+					<template v-if="allBrowsers.length === 0">
 					<a-card class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
 						<EmptyBrowserCard />
 					</a-card>
-				</template>
-				<template v-else>
+					</template>
+					<!-- 有浏览器但「仅显示运行中」筛选后为空 -->
+					<template v-else-if="gridBrowsers.length === 0">
+					<a-empty
+						class="p-5"
+						description="暂无正在运行的浏览器"
+					/>
+					</template>
+					<template v-else>
 					<div
 						class="cards-grid"
-						:class="{ compact: store.render.setting.simpleCardCompact }"
-						:style="{
-							'--simple-card-columns': store.render.setting.simpleCardColumns,
-							'--card-max-width': cardGridMaxWidth,
-							/* 最小宽度仅作用于卡片网格：顶部工具行不受限，防止右对齐按钮超出可视区域无法点击 */
-							minWidth: cardGridMinWidth
-						}"
+						:class="{ compact: isCompact, tile: isTile }"
+						:style="gridStyle"
 					>
 						<!-- 浏览器卡片 -->
 						<template
-							v-for="browser in allBrowsers"
+							v-for="browser in gridBrowsers"
 							:key="browser.uid"
 						>
 							<a-card
@@ -166,8 +196,9 @@
 							</a-card>
 						</template>
 
-						<!-- 新增浏览器卡片 -->
+						<!-- 新增浏览器卡片（平铺模式下隐藏） -->
 						<div
+							v-if="!isTile"
 							class="browser-card add-card"
 							@click="handleAddBrowser"
 						>
@@ -276,6 +307,33 @@ function handleAddBrowser() {
 function switchToProfessional() {
 	store.render.setting.mode = 'professional';
 }
+
+/** 卡片样式：平铺模式（全部浏览器去边距平铺铺满，可开关仅显示运行中） */
+const isTile = computed(() => store.render.setting.simpleCardStyle === 'tile');
+
+/** 卡片样式：紧凑模式（移除卡片样式，2px 间隔） */
+const isCompact = computed(() => store.render.setting.simpleCardStyle === 'compact');
+
+/** 网格中实际展示的浏览器：开启「仅显示运行中」时为运行中的子集（任何模式生效），否则为全部 */
+const gridBrowsers = computed(() => {
+	if (store.render.setting.simpleRunningOnly) {
+		return allBrowsers.value.filter((b) => Process.fromRunning(b.uid));
+	}
+	return allBrowsers.value;
+});
+
+/** 网格内联样式：平铺模式移除 container/宽度约束（保留列数控制），平铺铺满整个区域 */
+const gridStyle = computed(() => {
+	if (isTile.value) {
+		return { '--simple-card-columns': store.render.setting.simpleCardColumns };
+	}
+	return {
+		'--simple-card-columns': store.render.setting.simpleCardColumns,
+		'--card-max-width': cardGridMaxWidth.value,
+		/* 最小宽度仅作用于卡片网格：顶部工具行不受限，防止右对齐按钮超出可视区域无法点击 */
+		minWidth: cardGridMinWidth.value
+	};
+});
 
 /** 卡片网格最大宽度：3/4 列时加宽，避免卡片被挤得太小 */
 const cardGridMaxWidth = computed(() => {
@@ -407,6 +465,46 @@ onActivated(() => {
 	gap: 16px;
 	max-width: var(--card-max-width, 900px);
 	margin: 0 auto;
+}
+
+/* 平铺模式：移除外侧 margin/container 约束，卡片平铺铺满整个区域 */
+.tile-container {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* 平铺模式顶部操作栏：平铺铺满，与下方浏览器区域左右对齐 */
+.tile-toolbar {
+	padding: 0 2px;
+}
+
+.tile-area {
+	flex: 1;
+	min-height: 0;
+}
+
+.cards-grid.tile {
+	/* 与布局选项联动的列数，平铺铺满，不受最大宽度约束 */
+	grid-template-columns: repeat(var(--simple-card-columns, 2), minmax(0, 1fr));
+	gap: 2px;
+	max-width: none;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+
+	.browser-card {
+		border: none;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		aspect-ratio: 16 / 9;
+
+		&:hover {
+			border-color: transparent;
+			box-shadow: none !important;
+			transform: none;
+		}
+	}
 }
 
 /* 紧凑模式：移除全部卡片样式（边框/圆角/悬浮阴影位移），浏览器间仅 2px 间隔。

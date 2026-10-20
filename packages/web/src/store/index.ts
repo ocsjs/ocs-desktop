@@ -31,8 +31,10 @@ export type WebStore = {
 		mode: 'simple' | 'professional';
 		/** 简洁模式卡片布局列数 */
 		simpleCardColumns: 1 | 2 | 3 | 4;
-		/** 简洁模式紧凑模式：移除卡片样式，浏览器间仅 1px 间隔 */
-		simpleCardCompact: boolean;
+		/** 简洁模式卡片样式：卡片 / 紧凑（去卡片样式 2px 间隔） / 平铺（全部浏览器去边距平铺铺满） */
+		simpleCardStyle: 'card' | 'compact' | 'tile';
+		/** 简洁模式下仅显示正在运行的浏览器（卡片/紧凑/平铺均生效） */
+		simpleRunningOnly: boolean;
 		/** 浏览器启动参数 */
 		launchOptions: {
 			custom: boolean;
@@ -65,8 +67,8 @@ export type WebStore = {
 			screenshotPreview: boolean;
 			/** 预览帧率档位：high(~30fps) / medium(~15fps) / low(~6fps) */
 			screenshotFramerate: 'high' | 'medium' | 'low';
-			/** 预览画质档位：控制分辨率与 jpeg 质量，high / medium / low */
-			screenshotQuality: 'high' | 'medium' | 'low';
+			/** 预览画质档位：控制分辨率与 jpeg 质量（分辨率上限受浏览器视口限制），original(4K) / ultra(2K) / high / medium / low */
+			screenshotQuality: 'original' | 'ultra' | 'high' | 'medium' | 'low';
 			/** 浏览器增强（防休眠/防冻结）：启动时附加防节流参数并注入静音音频豁免，仅对新启动的浏览器生效 */
 			browserEnhancement: boolean;
 			/** 导航页设置 */
@@ -142,7 +144,8 @@ export const DEFAULT_RENDER = {
 		browserType: 'diy',
 		mode: 'simple' as const,
 		simpleCardColumns: 2 as const,
-		simpleCardCompact: false,
+		simpleCardStyle: 'card' as const,
+		simpleRunningOnly: false,
 		launchOptions: {
 			custom: false,
 			executablePath: ''
