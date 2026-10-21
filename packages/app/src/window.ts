@@ -1,14 +1,30 @@
 // @ts-check
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import path from 'path';
 import url from 'url';
 import { store } from './store';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 
+/**
+ * 窗口图标路径：
+ * Linux 对 .ico 支持差（任务栏/dock 缩放锯齿），使用 256px PNG；
+ * Windows 使用 .ico；macOS 窗口图标由系统 Dock/包内 icns 负责。
+ */
+function windowIconPath() {
+	return process.platform === 'linux'
+		? path.resolve('./public/icons/256.png')
+		: path.resolve('./public/favicon.ico');
+}
+
 export function createWindow() {
+	if (process.platform === 'darwin' && !app.isPackaged) {
+		// 开发模式下 macOS Dock 默认显示 Electron 图标，替换为应用图标
+		app.dock?.setIcon(nativeImage.createFromPath(path.resolve('./public/icons/512.png')));
+	}
+
 	const win = new BrowserWindow({
 		title: 'ocs',
-		icon: path.resolve('./public/favicon.ico'),
+		icon: windowIconPath(),
 		minWidth: 700,
 		minHeight: 400,
 		width: 900,
@@ -72,7 +88,7 @@ export function createWindow() {
 export function createLoadingWindow(): BrowserWindow {
 	const win = new BrowserWindow({
 		title: 'ocs-loading',
-		icon: path.resolve('./public/favicon.ico'),
+		icon: windowIconPath(),
 		width: 480,
 		height: 360,
 		center: true,

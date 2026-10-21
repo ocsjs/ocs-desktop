@@ -8,6 +8,9 @@ public/*
 !public/favicon.png
 !public/favicon.ico
 !public/favicon.icns
+# 托盘/窗口多尺寸图标（scripts/generate-icons.js 生成，运行时引用）
+!public/icons/
+!public/icons/**
 bin/
 
 # rollup-plugin-visualizer

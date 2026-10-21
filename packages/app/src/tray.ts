@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, Tray, nativeImage, NativeImage } from 'electron';
 import path from 'path';
 
 let tray: Tray | null = null;
@@ -23,10 +23,46 @@ let isQuitting = false;
  * 托盘提供「显示主窗口」「退出」两个菜单项；左键单击托盘图标同样会显示主窗口。
  * 配合 `hideToTray()` 实现「关闭窗口时后台运行」。
  */
+/**
+ * 构建跨平台托盘图标。
+ *
+ * 多尺寸 representation：各平台按面板尺寸/DPI 选择最接近的图，
+ * 避免单张 512px 大图被系统粗暴缩放产生锯齿。
+ * macOS 菜单栏固定 22pt（retina 用 44px@2x）：原 favicon.ico 实为 512px PNG，
+ * 直接传入会被 macOS 按原始点位渲染，图标占据大片菜单栏。
+ */
+function createTrayIcon(): NativeImage {
+	const dir = path.resolve('./public/icons');
+	const img = nativeImage.createEmpty();
+	if (process.platform === 'darwin') {
+		const rep1 = nativeImage.createFromPath(path.join(dir, '22.png'));
+		const rep2 = nativeImage.createFromPath(path.join(dir, '44.png'));
+		if (!rep1.isEmpty()) img.addRepresentation({ scaleFactor: 1, width: 22, height: 22, buffer: rep1.toPNG() });
+		if (!rep2.isEmpty()) img.addRepresentation({ scaleFactor: 2, width: 22, height: 22, buffer: rep2.toPNG() });
+	} else {
+		// Windows 托盘 16px（随 DPI 缩放）/ Linux 面板一般 22-24px
+		for (const size of [16, 22, 24, 32, 48]) {
+			const rep = nativeImage.createFromPath(path.join(dir, `${size}.png`));
+			if (!rep.isEmpty()) {
+				img.addRepresentation({ scaleFactor: 1, width: size, height: size, buffer: rep.toPNG() });
+			}
+			const rep2x = nativeImage.createFromPath(path.join(dir, `${size * 2}.png`));
+			if (!rep2x.isEmpty()) {
+				img.addRepresentation({ scaleFactor: 2, width: size, height: size, buffer: rep2x.toPNG() });
+			}
+		}
+	}
+	if (img.isEmpty()) {
+		// 回退：兼容旧资源
+		const ico = nativeImage.createFromPath(path.resolve('./public/favicon.ico'));
+		return ico.isEmpty() ? nativeImage.createFromPath(path.resolve('./public/favicon.png')) : ico;
+	}
+	return img;
+}
+
 export function createTray(win: BrowserWindow) {
 	mainWindow = win;
-	const icon = nativeImage.createFromPath(path.resolve('./public/favicon.ico'));
-	tray = new Tray(icon.isEmpty() ? nativeImage.createFromPath(path.resolve('./public/favicon.png')) : icon);
+	tray = new Tray(createTrayIcon());
 	tray.setToolTip('OCS Desktop');
 
 	const menu = Menu.buildFromTemplate([

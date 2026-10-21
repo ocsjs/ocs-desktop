@@ -17,6 +17,7 @@
 		"public/favicon.png",
 		"public/favicon.icns",
 		"public/favicon.ico",
+		"public/icons/**/*",
 		"package.json",
 		"node_modules/**/*",
 		"!**/*.map",
