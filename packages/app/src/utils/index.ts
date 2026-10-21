@@ -7,6 +7,7 @@ import { finished, pipeline } from 'stream/promises';
 import { Logger } from '../logger';
 import xlsx from 'xlsx';
 import unzipper from 'unzipper';
+import fs from 'fs';
 
 const taskLogger = Logger('task');
 const logger = Logger('utils');
@@ -125,4 +126,32 @@ export function sleep(ms: number) {
 			resolve(true);
 		}, ms);
 	});
+}
+
+/**
+ * Linux 沙箱是否不可用（需要 no-sandbox）。
+ *
+ * 背景：no-sandbox 会导致 Linux 下 DevTools 渲染进程崩溃（SIGTRAP, exitCode 5，
+ * 已用最小对照实验确认），因此仅在沙箱确实无法初始化时才追加：
+ * - Ubuntu 23.10+ 通过 AppArmor 禁止非特权 user namespace（kernel.apparmor_restrict_unprivileged_userns=1）
+ * - Debian 系默认关闭非特权 userns（kernel.unprivileged_userns_clone=0）
+ * 其余环境（如 Ubuntu 20.04）内核支持 userns，沙箱可正常工作，保持开启。
+ */
+export function isLinuxSandboxUnavailable(): boolean {
+	if (process.platform !== 'linux') return false;
+	try {
+		if (fs.readFileSync('/proc/sys/kernel/apparmor_restrict_unprivileged_userns', 'utf8').trim() === '1') {
+			return true;
+		}
+	} catch {
+		// 该 sysctl 不存在（< Ubuntu 23.10），表示无 AppArmor 限制
+	}
+	try {
+		if (fs.readFileSync('/proc/sys/kernel/unprivileged_userns_clone', 'utf8').trim() === '0') {
+			return true;
+		}
+	} catch {
+		// 非 Debian 系无此 sysctl
+	}
+	return false;
 }

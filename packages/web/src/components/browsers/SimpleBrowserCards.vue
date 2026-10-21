@@ -7,25 +7,25 @@
 				:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
 			>
 				<div class="layout-switch mb-2 mt-1">
-				<a-select
-					v-model="store.render.setting.simpleCardColumns"
-					size="mini"
-					style="width: 124px"
-				>
-					<template #prefix>布局</template>
-					<a-option :value="1">1 列</a-option>
-					<a-option :value="2">2 列</a-option>
-					<a-option :value="3">3 列</a-option>
-					<a-option :value="4">4 列</a-option>
-				</a-select>
-				<!-- 样式选择框：卡片 / 紧凑（去卡片样式 2px 间隔） / 平铺（全部浏览器去边距平铺铺满） -->
-				<a-select
-					v-model="store.render.setting.simpleCardStyle"
-					size="mini"
-					class="ms-2"
-					style="width: 96px"
-				>
-					<a-option value="card">卡片</a-option>
+					<a-select
+						v-model="store.render.setting.simpleCardColumns"
+						size="mini"
+						style="width: 124px"
+					>
+						<template #prefix>布局</template>
+						<a-option :value="1">1 列</a-option>
+						<a-option :value="2">2 列</a-option>
+						<a-option :value="3">3 列</a-option>
+						<a-option :value="4">4 列</a-option>
+					</a-select>
+					<!-- 样式选择框：卡片 / 紧凑（去卡片样式 2px 间隔） / 平铺（全部浏览器去边距平铺铺满） -->
+					<a-select
+						v-model="store.render.setting.simpleCardStyle"
+						size="mini"
+						class="ms-2"
+						style="width: 96px"
+					>
+						<a-option value="card">卡片</a-option>
 						<a-option value="compact">紧凑</a-option>
 						<a-option value="tile">
 							<a-tooltip
@@ -49,176 +49,176 @@
 							仅显示运行中
 						</span>
 					</span>
-				<a-button
-					type="outline"
-					size="mini"
-					class="ms-auto"
-					@click="switchToProfessional"
-				>
-					<Icon type="view_sidebar">专业模式</Icon>
-				</a-button>
-					</div>
+					<a-button
+						type="outline"
+						size="mini"
+						class="ms-auto"
+						@click="switchToProfessional"
+					>
+						<Icon type="view_sidebar">专业模式</Icon>
+					</a-button>
 				</div>
-				</div>
+			</div>
+		</div>
 
-				<!-- 内容滚动区 -->
-				<div class="cards-scroll">
-				<div
-					:class="isTile ? 'tile-container' : 'container-md'"
-					:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
-				>
-					<!-- 环境检测提示（平铺模式下隐藏，铺满整个区域） -->
-					<EnvironmentAlert
-						v-if="!isTile"
-						class="mb-3"
-					/>
+		<!-- 内容滚动区 -->
+		<div class="cards-scroll">
+			<div
+				:class="isTile ? 'tile-container' : 'container-md'"
+				:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
+			>
+				<!-- 环境检测提示（平铺模式下隐藏，铺满整个区域） -->
+				<EnvironmentAlert
+					v-if="!isTile"
+					class="mb-3"
+				/>
 
-					<BeginnerGuide
-						v-if="!isTile"
-						class="mb-2"
-					/>
+				<BeginnerGuide
+					v-if="!isTile"
+					class="mb-2"
+				/>
 
-					<div class="cards-area entities">
+				<div class="cards-area entities">
 					<!-- 无任何浏览器：新建引导卡片 -->
 					<template v-if="allBrowsers.length === 0">
-					<a-card class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
-						<EmptyBrowserCard />
-					</a-card>
+						<a-card class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
+							<EmptyBrowserCard />
+						</a-card>
 					</template>
 					<!-- 有浏览器但「仅显示运行中」筛选后为空 -->
 					<template v-else-if="gridBrowsers.length === 0">
-					<a-empty
-						class="p-5"
-						description="暂无正在运行的浏览器"
-					/>
+						<a-empty
+							class="p-5"
+							description="暂无正在运行的浏览器"
+						/>
 					</template>
 					<template v-else>
-					<div
-						class="cards-grid"
-						:class="{ compact: isCompact, tile: isTile }"
-						:style="gridStyle"
-					>
-						<!-- 浏览器卡片 -->
-						<template
-							v-for="browser in gridBrowsers"
-							:key="browser.uid"
+						<div
+							class="cards-grid"
+							:class="{ compact: isCompact, tile: isTile }"
+							:style="gridStyle"
 						>
-							<a-card
-								:data-uid="browser.uid"
-								class="browser-card entity"
-								:class="cardClass(browser)"
-								@click="selectBrowser(browser)"
+							<!-- 浏览器卡片 -->
+							<template
+								v-for="browser in gridBrowsers"
+								:key="browser.uid"
 							>
-								<!-- 截图封面区域（运行中推流 或 浏览器关闭后保留预览图时独占整个卡片），复用组件 -->
-								<BrowserPreview
-									v-if="showCover(browser.uid)"
-									:browser="browser"
-									:dismissed="dismissedClosedPreviews"
-									show-overlay
-									@dismiss="dismissClosedPreview"
-									@resync-screencast="syncAllScreencast"
-								/>
+								<a-card
+									:data-uid="browser.uid"
+									class="browser-card entity"
+									:class="cardClass(browser)"
+									@click="selectBrowser(browser)"
+								>
+									<!-- 截图封面区域（运行中推流 或 浏览器关闭后保留预览图时独占整个卡片），复用组件 -->
+									<BrowserPreview
+										v-if="showCover(browser.uid)"
+										:browser="browser"
+										:dismissed="dismissedClosedPreviews"
+										show-overlay
+										@dismiss="dismissClosedPreview"
+										@resync-screencast="syncAllScreencast"
+									/>
 
-								<template #extra>
-									<div
-										v-if="!showCover(browser.uid)"
-										class="d-flex align-items-end"
-									>
-										<BrowserOperators
-											:browser="browser"
-											icon-class="fs-5"
-										/>
-									</div>
-								</template>
-
-								<template #title>
-									<div
-										v-if="!showCover(browser.uid)"
-										class="card-name-text"
-									>
-										<Icon type="web">
-											<!-- 重命名状态 -->
-											<template v-if="getBrowserInstance(browser.uid)?.renaming">
-												<a-input
-													v-model="renameValue"
-													size="mini"
-													@click.stop
-													@blur="handleRenameFinish(browser)"
-													@keyup.enter="handleRenameFinish(browser)"
-												/>
-											</template>
-											<template v-else>
-												{{ browser.name }}
-											</template>
-										</Icon>
-									</div>
-								</template>
-
-								<a-card-meta v-if="!showCover(browser.uid)">
-									<template #description>
-										<!-- 备注/描述：为空时回退为自动化程序信息（敏感信息掩码） -->
+									<template #extra>
 										<div
-											v-if="getDisplayNotes(browser).text"
-											class="card-notes"
-											:title="getDisplayNotes(browser).text"
+											v-if="!showCover(browser.uid)"
+											class="d-flex align-items-end"
 										>
-											<span
-												v-if="getDisplayNotes(browser).isAuto"
-												class="card-notes-autoflag"
-											>
-												自动
-											</span>
-											{{ getDisplayNotes(browser).text }}
-										</div>
-										<div
-											v-else
-											style="font-size: 12px"
-											class="text-center text-secondary"
-										>
-											<IconInfoCircleFill /> 点击 启动 运行浏览器。<br />
-											单击 设置浏览器
-										</div>
-									</template>
-
-									<template #avatar>
-										<!-- 标签 -->
-										<div
-											v-if="browser.tags.length"
-											class="card-tags"
-										>
-											<Tags
-												:tags="browser.tags"
-												:read-only="true"
-												size="small"
+											<BrowserOperators
+												:browser="browser"
+												icon-class="fs-5"
 											/>
 										</div>
 									</template>
-								</a-card-meta>
-							</a-card>
-						</template>
 
-						<!-- 新增浏览器卡片（仅显示运行中时隐藏） -->
-						<div
-							v-if="!store.render.setting.simpleRunningOnly"
-							class="browser-card add-card"
-							@click="handleAddBrowser"
-						>
-							<Icon
-								type="add_circle_outline"
-								class="add-icon"
-							/>
-							<span class="add-text">新建浏览器</span>
-							<span
-								class="text-secondary"
-								style="font-size: 11px"
+									<template #title>
+										<div
+											v-if="!showCover(browser.uid)"
+											class="card-name-text"
+										>
+											<Icon type="web">
+												<!-- 重命名状态 -->
+												<template v-if="getBrowserInstance(browser.uid)?.renaming">
+													<a-input
+														v-model="renameValue"
+														size="mini"
+														@click.stop
+														@blur="handleRenameFinish(browser)"
+														@keyup.enter="handleRenameFinish(browser)"
+													/>
+												</template>
+												<template v-else>
+													{{ browser.name }}
+												</template>
+											</Icon>
+										</div>
+									</template>
+
+									<a-card-meta v-if="!showCover(browser.uid)">
+										<template #description>
+											<!-- 备注/描述：为空时回退为自动化程序信息（敏感信息掩码） -->
+											<div
+												v-if="getDisplayNotes(browser).text"
+												class="card-notes"
+												:title="getDisplayNotes(browser).text"
+											>
+												<span
+													v-if="getDisplayNotes(browser).isAuto"
+													class="card-notes-autoflag"
+												>
+													自动
+												</span>
+												{{ getDisplayNotes(browser).text }}
+											</div>
+											<div
+												v-else
+												style="font-size: 12px"
+												class="text-center text-secondary"
+											>
+												<IconInfoCircleFill /> 点击 启动 运行浏览器。<br />
+												单击 设置浏览器
+											</div>
+										</template>
+
+										<template #avatar>
+											<!-- 标签 -->
+											<div
+												v-if="browser.tags.length"
+												class="card-tags"
+											>
+												<Tags
+													:tags="browser.tags"
+													:read-only="true"
+													size="small"
+												/>
+											</div>
+										</template>
+									</a-card-meta>
+								</a-card>
+							</template>
+
+							<!-- 新增浏览器卡片（仅显示运行中时隐藏） -->
+							<div
+								v-if="!store.render.setting.simpleRunningOnly"
+								class="browser-card add-card"
+								@click="handleAddBrowser"
 							>
-								<a-tag>数据隔离</a-tag>
-								<a-tag>账号多开</a-tag>
-							</span>
+								<Icon
+									type="add_circle_outline"
+									class="add-icon"
+								/>
+								<span class="add-text">新建浏览器</span>
+								<span
+									class="text-secondary"
+									style="font-size: 11px"
+								>
+									<a-tag>数据隔离</a-tag>
+									<a-tag>账号多开</a-tag>
+								</span>
+							</div>
 						</div>
-					</div>
-				</template>
-			</div>
+					</template>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -426,6 +426,7 @@ onActivated(() => {
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
+	padding: 2px 0px;
 }
 
 /* 顶部工具行：左侧卡片列数选择 + 紧凑开关，右侧布局切换按钮（与卡片网格同容器，边缘自然对齐） */
