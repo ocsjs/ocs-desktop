@@ -67,8 +67,6 @@
 			</template>
 		</a-dropdown>
 
-		<StatusBar />
-
 		<!-- 窗口置顶按钮：绝对定位避让系统 traffic light 控制区域（mac 在左侧，其余在右上角） -->
 		<PinButton />
 	</div>
@@ -89,7 +87,6 @@ import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
 import Icon from './Icon.vue';
-import StatusBar from './StatusBar.vue';
 import PinButton from './PinButton.vue';
 
 const { shell } = electron;

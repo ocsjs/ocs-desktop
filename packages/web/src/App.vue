@@ -110,6 +110,12 @@
 					}
 				"
 			></Setup>
+
+			<!-- 全局状态栏：固定右下角显示，避免顶部栏跨平台渲染位置不一致
+			     （mac 下状态信息在右侧，文本过长会把按钮顶到左侧） -->
+			<div class="status-bar-container">
+				<StatusBar />
+			</div>
 		</div>
 	</a-config-provider>
 </template>
@@ -137,6 +143,7 @@ import { Modal, Message } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import debounce from 'lodash/debounce';
 import Title from './components/Title.vue';
+import StatusBar from './components/StatusBar.vue';
 import BrowserPanel from './components/browsers/BrowserPanel.vue';
 import BrowserPanelOperators from './components/BrowserPanelOperators.vue';
 import Setup from './components/Setup.vue';
@@ -383,6 +390,16 @@ body.platform-linux[arco-theme='dark'] #app {
 html.window-maximized body.platform-linux #app {
 	border-radius: 0;
 	box-shadow: none;
+}
+
+/* 全局状态栏：固定右下角，宽度自适应内容，向左扩展不遮挡右侧边缘 */
+.status-bar-container {
+	position: fixed;
+	right: 12px;
+	bottom: 12px;
+	z-index: 3000;
+	display: flex;
+	justify-content: flex-end;
 }
 
 .main-container {
