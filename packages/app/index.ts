@@ -1,4 +1,5 @@
 import { app } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { remoteRegister } from './src/tasks/remote.register';
 import { initStore } from './src/tasks/init.store';
@@ -6,7 +7,7 @@ import { autoLaunch } from './src/tasks/auto.launch';
 import { createWindow } from './src/window';
 import { createTray, isAppQuitting } from './src/tray';
 import { globalListenerRegister } from './src/tasks/global.listener';
-import { task } from './src/utils';
+import { isLinuxSandboxUnavailable, task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
@@ -20,13 +21,16 @@ app.setName('OCS Desktop');
 app.setAppUserModelId(app.isPackaged ? 'ocs.enncy.cn' : 'OCS Desktop');
 
 // 防止软件崩溃以及兼容
-app.commandLine.appendSwitch('no-sandbox');
+// Windows/macOS 维持原有 no-sandbox 行为不变；Linux 仅在沙箱不可用时才追加（见上）
+if (process.platform !== 'linux' || isLinuxSandboxUnavailable()) {
+	app.commandLine.appendSwitch('no-sandbox');
+	app.commandLine.appendSwitch('--no-sandbox');
+}
 app.commandLine.appendSwitch('disable-gpu');
 app.commandLine.appendSwitch('disable-software-rasterizer');
 app.commandLine.appendSwitch('disable-gpu-compositing');
 app.commandLine.appendSwitch('disable-gpu-rasterization');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
-app.commandLine.appendSwitch('--no-sandbox');
 app.disableHardwareAcceleration();
 
 /** 获取单进程锁 */
