@@ -315,9 +315,15 @@ export async function changeTheme() {
 	const platform = await remote.methods.call('getPlatform');
 	document.body.classList.add('platform-' + platform);
 	if (platform !== 'darwin') {
+		// height 与窗口创建时的 titleBarOverlay.height 保持一致（32 = --title-height），
+		// 否则主题切换后覆盖层高度被重置，Linux 下控制按钮渲染位置会太靠上
+		// Linux 圆角窗口覆盖层背景始终为透明，避免右上角渲染出不透明直角色块
+		const isLinux = platform === 'linux';
 		remote.win.call(
 			'setTitleBarOverlay',
-			themeState.dark ? { color: '#2C2C2C', symbolColor: 'white' } : { color: '#fff', symbolColor: 'black' }
+			themeState.dark
+				? { color: isLinux ? '#00000000' : '#2C2C2C', symbolColor: 'white', height: 32 }
+				: { color: isLinux ? '#00000000' : '#fff', symbolColor: 'black', height: 32 }
 		);
 	}
 }

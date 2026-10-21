@@ -187,6 +187,11 @@ onMounted(async () => {
 	changeTheme().catch(console.error);
 	initThemeSystemListener();
 
+	/** Linux 透明圆角窗口：最大化时去除圆角（直角铺满屏幕） */
+	ipcRenderer.on('window-maximize-change', (_e, maximized: boolean) => {
+		document.documentElement.classList.toggle('window-maximized', maximized);
+	});
+
 	/** 监听屏幕变化 */
 	onResize();
 	window.addEventListener('resize', onResize);
@@ -353,6 +358,32 @@ function onResize() {
 <style lang="less">
 @import '@/assets/css/bootstrap.min.css';
 @import '@/assets/css/common.css';
+
+/* Linux 无边框透明窗口：系统不提供原生圆角（Win11/macOS 由系统绘制），用 CSS 圆角 + 细描边模拟。
+   注意两个 CSS 传播陷阱，圆角必须设在 #app 而非 body/html：
+   1. body/html 的背景会传播到整个画布（含圆角之外的区域），四角被画布背景填满；
+   2. html 的 overflow 为 visible 时，body 的 overflow 同样会传播到视口，body 自身不建立裁剪，
+      border-radius 形同虚设。#app 是普通元素，无传播规则，圆角裁剪可靠生效 */
+body.platform-linux {
+	/* 覆盖 bootstrap 与 theme.less 中 body 的背景色，防止传播到画布 */
+	background-color: transparent !important;
+}
+body.platform-linux #app {
+	border-radius: 12px;
+	overflow: hidden;
+	background-color: #ffffff;
+	/* 用内阴影模拟描边：border 会占用布局空间导致内容与窗口边缘错位 */
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+body.platform-linux[arco-theme='dark'] #app {
+	background-color: #2c2c2c;
+	box-shadow: inset 0 0 0 1px #4b4848;
+}
+/* 最大化时去除圆角与描边，直角铺满屏幕 */
+html.window-maximized body.platform-linux #app {
+	border-radius: 0;
+	box-shadow: none;
+}
 
 .main-container {
 	display: grid;

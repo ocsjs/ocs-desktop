@@ -33,6 +33,12 @@ app.commandLine.appendSwitch('disable-gpu-rasterization');
 app.commandLine.appendSwitch('disable-gpu-sandbox');
 app.disableHardwareAcceleration();
 
+if (process.platform === 'linux') {
+	// Linux 透明窗口（无边框 CSS 圆角）需要显式启用 RGBA visuals，
+	// 否则透明区域按不透明渲染，窗口四角仍是实心直角（Electron 官方要求与 disable-gpu 配合使用）
+	app.commandLine.appendSwitch('enable-transparent-visuals');
+}
+
 /** 获取单进程锁 */
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
