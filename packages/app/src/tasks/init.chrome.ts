@@ -189,6 +189,16 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 				setInitStatus({ status: 'loading', message: p.message });
 			});
 
+			// 开发模式（electron-vite dev）下不能 relaunch + quit：
+			// quit 会让 electron-vite 判定应用退出并杀死整个 dev 进程（dev server 随之停止），
+			// 而 relaunch 拉起的新实例脱离其进程管理，仍加载已失效的 dev server 地址，
+			// 表现为白屏僵尸窗口（渲染进程未加载，close 事件无人响应，只能任务管理器强杀）。
+			// 浏览器二进制已就绪，直接继续正常启动流程即可，无需重启。
+			if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+				setInitStatus({ status: 'done', message: '内置浏览器初始化完成' });
+				return true;
+			}
+
 			setInitStatus({ status: 'restart', message: '内置浏览器初始化完成，即将重启...' });
 			await sleep(1000);
 			if (process.platform === 'linux' && process.env.APPIMAGE) {

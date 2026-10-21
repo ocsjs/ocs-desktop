@@ -1,5 +1,4 @@
 import { app } from 'electron';
-import fs from 'fs';
 import path from 'path';
 import { remoteRegister } from './src/tasks/remote.register';
 import { initStore } from './src/tasks/init.store';
@@ -71,7 +70,19 @@ function bootstrap() {
 					window.webContents.send(isAppQuitting() ? 'quit' : 'close');
 				});
 
+				// 渲染层是否已成功加载（close 消息由渲染层响应）
+				let rendererReady = false;
+				window.webContents.on('did-finish-load', () => {
+					rendererReady = true;
+				});
+
 				window.on('close', (e) => {
+					// 渲染层尚未成功加载（如 dev server 未就绪/加载失败）时没有人响应 'close' 消息，
+					// 直接销毁窗口，避免出现白屏且无法关闭的僵尸窗口
+					if (!rendererReady || window.webContents.isCrashed()) {
+						window.destroy();
+						return;
+					}
 					e.preventDefault();
 					// 程序化退出（quitApp / before-quit 标记）-> 'quit'：走完整退出流程（关浏览器 + 存数据）
 					// 用户点击关闭按钮 -> 'close'：交由渲染层按「后台运行」开关决定隐藏到托盘或退出
