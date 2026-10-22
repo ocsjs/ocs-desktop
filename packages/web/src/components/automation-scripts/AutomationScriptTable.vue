@@ -1,8 +1,8 @@
 <template>
+	<!-- 底部操作区已转移至弹窗 footer 插槽（FileOperators.vue），本组件只保留表格滚动区 -->
 	<div
 		ref="tableRef"
 		class="ps-table"
-		:style="{ height: store.render.state.height - 160 + 'px', overflow: 'overlay' }"
 	>
 		<div class="ps-3 pe-3">
 			<a-table
@@ -11,7 +11,8 @@
 				:columns="columns"
 				:data="data"
 				:scroll="{
-					y: store.render.state.height - 280
+					// 表格滚动区最大高度 600px（按钮已移至弹窗 footer，无需预留底部空间）
+					y: Math.min(store.render.state.height - 280, 600)
 				}"
 				@page-change="(page) => (state.pagination.current = page)"
 				@page-size-change="(size) => (state.pagination.pageSize = size)"
@@ -66,56 +67,6 @@
 				</template>
 			</a-table>
 		</div>
-
-		<div class="mt-3">
-			<div class="float-end">
-				<a-space>
-					<span> 浏览器名生成规则： </span>
-					<a-select
-						v-model="state.browserNameFields"
-						size="mini"
-						multiple
-						style="width: 200px; overflow-x: auto; white-space: nowrap"
-					>
-						<template
-							v-for="config of arrayLikeConfigs"
-							:key="config.key"
-						>
-							<a-option
-								:label="config.label"
-								:value="config.key"
-							></a-option>
-						</template>
-					</a-select>
-
-					<a-tooltip content="导出固定格式的批量创建模板表格，编辑好模板表格后可以导入。">
-						<a-button
-							size="mini"
-							@click="exportTemplateExcel"
-						>
-							<a-space> <icon-file /> 导出表格模板 </a-space>
-						</a-button>
-					</a-tooltip>
-
-					<a-tooltip content="导入与上面格式相同的表格数据">
-						<a-button
-							size="mini"
-							@click="importTemplateExcelConfirm"
-						>
-							<a-space> <icon-file /> 导入表格 </a-space>
-						</a-button>
-					</a-tooltip>
-
-					<a-button
-						size="mini"
-						type="outline"
-						@click="onConfirm"
-					>
-						<Icon type="web"> 批量创建 </Icon>
-					</a-button>
-				</a-space>
-			</div>
-		</div>
 	</div>
 </template>
 
@@ -125,7 +76,6 @@ import { RawAutomationScript } from '.';
 import { Modal, Message, TableColumnData } from '@arco-design/web-vue';
 import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
-import Icon from '../Icon.vue';
 import type { Config } from '@ocs-desktop/common/web';
 import { normalizeUrl } from '@ocs-desktop/common/web';
 import { remote } from '../../utils/remote';
@@ -411,6 +361,9 @@ function importTemplateExcelConfirm() {
 		importTemplateExcel();
 	}
 }
+
+// 底部操作区经弹窗 footer 插槽渲染（FileOperators.vue），相关状态与动作在此暴露
+defineExpose({ state, arrayLikeConfigs, exportTemplateExcel, importTemplateExcelConfirm, onConfirm });
 
 function importTemplateExcel() {
 	remote.dialog
