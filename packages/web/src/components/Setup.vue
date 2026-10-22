@@ -153,7 +153,6 @@
 			</div>
 			<AutomationScriptSelector
 				:automation-scripts="[]"
-				style="max-height: 60vh; overflow: overlay"
 				@confirm="onSelectorConfirm"
 			>
 				<template #actions>

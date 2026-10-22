@@ -1003,7 +1003,7 @@ export async function launchBrowser({
 				executablePath,
 				ignoreHTTPSErrors: true,
 				acceptDownloads: true,
-				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation', '--no-sandbox'],
+				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
 				args: [
 					'--window-position=0,0',
 					'--no-first-run',
@@ -1012,8 +1012,9 @@ export async function launchBrowser({
 					// Linux：ignoreDefaultArgs 移除了 Playwright 默认的 --no-sandbox（沙箱启用），
 					// 而解压分发的 chrome-sandbox 无法满足 setuid root 要求，
 					// 且 Ubuntu 23.10+ AppArmor 限制非受限程序创建 user namespace（兜底方案同样被封堵），
-					// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）
-					...(process.platform === 'linux' ? ['--no-sandbox'] : []),
+					// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）；
+					// --disable-setuid-sandbox 一并关闭 setuid 沙箱助手（2.x AppImage 修复移植）
+					...(process.platform === 'linux' ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
 					// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
 					...formatBrowserEnhancementArgs(config),
 					...args

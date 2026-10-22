@@ -62,12 +62,18 @@ function bootstrap() {
 			task('启动渲染进程', async () => {
 				await app.whenReady();
 				const window = createWindow();
-				await task('初始化谷歌浏览器', () => initChrome(window));
+				const relaunched = await task('初始化谷歌浏览器', () => initChrome(window));
+				if (relaunched) {
+					return;
+				}
 
 				app.on('quit', (e) => {
 					e.preventDefault();
 					// 交给渲染层去关闭浏览器；程序化退出走 'quit' 以绕过「隐藏到托盘」
-					window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+					// 销毁保护（2.x 4634090 移植）：AppImage 重启链路等场景下窗口可能已销毁
+					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+						window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+					}
 				});
 
 				// 渲染层是否已成功加载（close 消息由渲染层响应）
@@ -86,7 +92,10 @@ function bootstrap() {
 					e.preventDefault();
 					// 程序化退出（quitApp / before-quit 标记）-> 'quit'：走完整退出流程（关浏览器 + 存数据）
 					// 用户点击关闭按钮 -> 'close'：交由渲染层按「后台运行」开关决定隐藏到托盘或退出
-					window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+					// 销毁保护（2.x 4634090 移植）
+					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
+						window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+					}
 				});
 
 				window.webContents.once('did-finish-load', () => {

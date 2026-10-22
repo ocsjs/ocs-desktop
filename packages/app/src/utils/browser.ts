@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import child_process from 'child_process';
 /**
  * 获取浏览器主版本号
  * @param executablePath 浏览器可执行文件路径
@@ -43,6 +44,19 @@ export function getBrowserMajorVersion(executablePath: string) {
 	}
 	if (manifest && manifest.split('.').length > 1) {
 		return parseInt(manifest.split('.')[0]);
+	}
+
+	if (process.platform === 'linux') {
+		try {
+			const versionOutput = child_process.execFileSync(executablePath, ['--version'], {
+				encoding: 'utf-8'
+			});
+			const match = versionOutput.match(/(\d+)\./);
+			if (!match) return;
+			const major = parseInt(match[1]);
+			if (isNaN(major)) return;
+			return major;
+		} catch {}
 	}
 }
 

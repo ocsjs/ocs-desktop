@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ValidBrowser } from '../interface';
 import os from 'os';
-import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRuntimePath } from './chrome.path';
+import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRuntimePath, getBuiltinChromeRoot } from './chrome.path';
 
 /**
  * 惰性读取 electron 的 process.resourcesPath。
@@ -43,6 +43,14 @@ export function getValidBrowsers(): ValidBrowser[] {
 				}
 			].filter((b) => b.path) as ValidBrowser[];
 		}
+		case 'linux': {
+			return [
+				{
+					name: '软件内置浏览器-谷歌(Chrome)',
+					path: resolveBrowserPath('bin/chrome/chrome/chrome')
+				}
+			].filter((b) => b.path) as ValidBrowser[];
+		}
 		default: {
 			// darwin / linux：仅提供内置浏览器
 			return builtin;
@@ -54,13 +62,23 @@ export function getValidBrowsers(): ValidBrowser[] {
  * 解析内置 Chrome 运行时路径。
  *
  * 优先探测 init.chrome.ts 解压到 userData 的可执行文件（打包后 resourcesPath 只读，
- * 实际运行时副本位于 userData）；回退到历史 resourcesPath 布局以兼容旧版本解压位置。
+ * 实际运行时副本位于 userData）；回退到历史 resourcesPath 布局以兼容旧版本解压位置；
+ * 开发模式追加项目根 bin/chrome/<platform>-<arch> 探测（2.x 4634090 移植：本地手动
+ * 放置解压目录时直接可用，无需启动下载流程）。
  */
 function resolveBuiltinBrowserPath() {
 	const resourcesPath = getResourcesPath();
+	let devRootCandidate: string | undefined;
+	try {
+		// getBuiltinChromeRoot 内部引用 electron app，非 Electron 环境（worker）回退跳过
+		devRootCandidate = join(getBuiltinChromeRoot(), 'chrome', BUILTIN_CHROME_FILENAME);
+	} catch {
+		devRootCandidate = undefined;
+	}
 	return [
 		getBuiltinChromeRuntimePath(),
-		...(resourcesPath ? [join(resourcesPath, 'bin', 'chrome', 'chrome', BUILTIN_CHROME_FILENAME)] : [])
+		...(resourcesPath ? [join(resourcesPath, 'bin', 'chrome', 'chrome', BUILTIN_CHROME_FILENAME)] : []),
+		...(devRootCandidate ? [devRootCandidate] : [])
 	].find((p) => existsSync(p));
 }
 

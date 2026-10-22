@@ -78,11 +78,18 @@ function registerRemoteEvent(name: string, target: any) {
 					]
 				) => {
 					// logger.info({ event: name + '-call', args });
+					const safeReply = (payload: { data?: any; error?: any }) => {
+						try {
+							if (!event.sender.isDestroyed()) {
+								event.sender.send(respondChannel, payload);
+							}
+						} catch {}
+					};
 					try {
 						const result = await target[property](...args);
-						event.reply(respondChannel, { data: result });
+						safeReply({ data: result });
 					} catch (e) {
-						event.reply(respondChannel, { error: serializeError(e) });
+						safeReply({ error: serializeError(e) });
 					}
 				}
 			)
