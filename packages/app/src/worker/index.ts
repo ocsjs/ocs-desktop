@@ -250,7 +250,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 				extensionPaths: this.extensionPaths,
 				// 起始页：自定义导航页（localhost）或浏览器默认新标签页
 				startPage: this.bookmarkPageEnabled
-					? `http://localhost:${this.store?.server.port || DEFAULT_SERVER_PORT}/index.html#/bookmarks?uid=${encodeURIComponent(this.uid)}`
+					? `http://localhost:${
+							this.store?.server.port || DEFAULT_SERVER_PORT
+					  }/index.html#/bookmarks?uid=${encodeURIComponent(this.uid)}`
 					: 'chrome://newtab',
 				serverPort: this.store?.server.port || DEFAULT_SERVER_PORT,
 				closeableExtensionHomepages: [
@@ -1377,8 +1379,68 @@ async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; cl
 	});
 }
 
+/**
+ * 页面 URL 匹配（F-3）：origin + pathname 精确相等，多匹配时优先完整 URL 全等。
+ * 原实现 url().includes() 子串匹配可被相似 URL 误命中（如 ?next=xxx 包含目标串）。
+ */
+function findPageByUrl(browser: BrowserContext, targetPageUrl: string): Page | undefined {
+	let target: URL;
+	try {
+		target = new URL(targetPageUrl);
+	} catch {
+		return undefined;
+	}
+	const sameOriginPath = (pageUrl: string) => {
+		try {
+			const u = new URL(pageUrl);
+			return u.origin === target.origin && u.pathname === target.pathname;
+		} catch {
+			return false;
+		}
+	};
+	const candidates = browser.pages().filter((p) => sameOriginPath(p.url()));
+	// 多个同路径页面时优先完整 URL 全等（query 一致），否则取第一个
+	return candidates.find((p) => p.url() === targetPageUrl) ?? candidates[0];
+}
+
+/**
+ * 动作白名单（W-1）：与 ocsjs `packages/core/src/utils/playwright.ts` 的 ListOfActions 严格对齐。
+ * 白名单之外的 property 一律 400 拒绝，杜绝 `_get(page, property)` 任意方法路径调用
+ * （如 evaluate/context 等远超"页面操作"的能力）。
+ * ⚠️ ocsjs 未来新增动作时，需同步更新此清单（两仓库注释互相指引）。
+ */
+const ALLOWED_ACTIONS = new Set([
+	'click',
+	'check',
+	'dblclick',
+	'bringToFront',
+	'dragAndDrop',
+	'fill',
+	'focus',
+	'hover',
+	'screenshot',
+	'selectOption',
+	'setInputFiles',
+	'tap',
+	'press',
+	'reload',
+	'waitForRequest',
+	'waitForResponse',
+	'waitForSelector',
+	'keyboard.type',
+	'keyboard.press',
+	'mouse.wheel',
+	'mouse.click',
+	'mouse.dblclick',
+	'mouse.down',
+	'mouse.up',
+	'mouse.move'
+]);
+
 function browserNetworkRoute(authToken: string, browser: BrowserContext) {
-	browser.route(/ocs-environment/, async (route) => {
+	// F-2：锚定路径结尾（后仅允许 ?、# 或结束），原子串匹配会把 URL 参数含
+	// "ocs-environment" 的网课页面请求误拦并返回假环境
+	browser.route(/\/ocs-environment(\?|#|$)/, async (route) => {
 		await route.fulfill({
 			status: 200,
 			body: JSON.stringify({
@@ -1386,27 +1448,38 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 			})
 		});
 	});
-	browser.route(/ocs-script-actions/, async (route) => {
+	browser.route(/\/ocs-script-actions(\?|#|$)/, async (route) => {
 		const req = route.request();
+		// F-1：所有失败分支必须 abort/fulfill，仅 return 会让页面 fetch 永远挂起
 		if (req.method().toLocaleUpperCase() !== 'POST') {
+			await route.abort();
 			return;
 		}
 		const headerValue = await req.headerValue('auth-token');
 
 		if (headerValue !== authToken) {
+			await route.abort();
 			return;
 		}
 
 		const { page: targetPageUrl, property, args }: { page: string; property: string; args: any[] } = req.postDataJSON();
 
 		try {
-			const page = browser?.pages().find((p) => p.url().includes(targetPageUrl));
+			const page = browser ? findPageByUrl(browser, targetPageUrl) : undefined;
 			if (!page) {
+				await route.fulfill({ status: 404, body: JSON.stringify({ error: '目标页面不存在' }) });
+				return;
+			}
+
+			// W-1：白名单校验优先于方法取值，任意路径调用在此收口
+			if (!ALLOWED_ACTIONS.has(property)) {
+				await route.fulfill({ status: 400, body: JSON.stringify({ error: `不支持的动作: ${property}` }) });
 				return;
 			}
 
 			const targetFunction: Function = _get(page, property);
 			if (typeof targetFunction !== 'function') {
+				await route.fulfill({ status: 400, body: JSON.stringify({ error: `不支持的动作: ${property}` }) });
 				return;
 			}
 
@@ -1455,7 +1528,12 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 				await route.fulfill({ status: 200, body: res ?? 'OK' });
 			}
 		} catch (err) {
-			await route.continue();
+			// 原实现 route.continue() 会把请求放行到网课平台服务器（返回无关 404），
+			// 改为 500 + 错误信息，ocsjs 侧 [RP-ERROR] 日志据此可定位
+			await route.fulfill({
+				status: 500,
+				body: JSON.stringify({ error: err instanceof Error ? err.message : String(err) })
+			});
 			console.error(
 				'脚本软件辅助失败：',
 				ScriptWorker.getTransformedErrorMessage(err instanceof Error ? err.message : String(err), {
