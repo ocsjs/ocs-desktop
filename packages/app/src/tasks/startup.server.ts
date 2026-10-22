@@ -9,9 +9,11 @@ import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 import { getDecryptedRenderData } from '../crypto';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
 import { canOCR, det, ocr } from '../utils/ocr';
-import { randomUUID, createHash } from 'crypto';
+import { createHash } from 'crypto';
 import { getInitStatus } from './init.status';
 import { probeNetwork } from './net.status';
+import { getServerToken } from './server.auth';
+import { isAllowedUserscriptPath } from '../utils/server.security';
 const logger = Logger('server');
 
 /** 图标内存缓存（进程内一级缓存） */
@@ -196,14 +198,16 @@ async function fetchIcon(iconUrl: string): Promise<{ data: Buffer; contentType: 
 export async function startupServer() {
 	const app = express();
 
+	// authToken 改内存态持有（不落盘），store 中字段废弃置空；分发见 server.auth.ts
 	store.set('server', {
 		port: DEFAULT_SERVER_PORT,
-		authToken: randomUUID().replace(/-/g, '')
+		authToken: ''
 	});
+	// 启动即生成内存令牌
+	getServerToken();
 
 	app.use((req, res, next) => {
 		res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'unknown');
-		res.setHeader('Access-Control-Allow-Credentials', 'true');
 		res.setHeader('Access-Control-Allow-Headers', 'Content-Type, request-id, if-none-match');
 		res.setHeader('Access-Control-Allow-Methods', '*');
 		if (req.method === 'OPTIONS') {
@@ -228,20 +232,30 @@ export async function startupServer() {
 		res.json(getInitStatus());
 	});
 
-	app.get('/ocs-global-setting', (req, res) => {
-		const render = getDecryptedRenderData(store);
-		res.json(render.setting.ocs);
-	});
+	/**
+	 * 数据接口鉴权中间件（M-1，当前为宽限模式）
+	 *
+	 * 宽限期：无/错 token 仅记日志放行，兼容未携带 token 的旧版 ocsjs 脚本；
+	 * 待 ocsjs 带头版本铺开一个版本周期后，转严格模式：
+	 * 删除 warn 放行行，取消下方 401 行的注释。
+	 */
+	const requireToken: express.RequestHandler = (req, res, next) => {
+		if (req.headers['auth-token'] !== getServerToken()) {
+			// TODO(M-1 宽限期结束后转严格): res.status(401).json({ error: 'unauthorized' }); return;
+			logger.warn(`数据接口缺少有效 auth-token（宽限期放行）：${req.path}`);
+		}
+		next();
+	};
 
 	/** 获取 browser 数据 */
-	app.get('/browser', (req, res) => {
+	app.get('/browser', requireToken, (req, res) => {
 		const render = getDecryptedRenderData(store);
 		// 如果开启了同步配置，就返回，否则返回空对象
 		const data = render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {};
 		res.json(data);
 	});
 
-	app.get('/is-browser-config-sync', (req, res) => {
+	app.get('/is-browser-config-sync', requireToken, (req, res) => {
 		const render = getDecryptedRenderData(store);
 		res.end(String(render.setting.ocs.openSync));
 	});
@@ -251,8 +265,9 @@ export async function startupServer() {
 		res.json({ allow: true });
 	});
 
+	// ⚠️ 阶段 B 将废弃此接口：token 改经 /ocs-environment 拦截响应与 IPC 注入分发
 	app.get('/get-actions-key', (req, res) => {
-		res.send(store.store.server.authToken);
+		res.send(getServerToken());
 	});
 
 	/** 获取浏览器信息（供导航页主动获取） */
@@ -358,29 +373,16 @@ export async function startupServer() {
 		sendIcon(result);
 	});
 
-	/** 请求转发 */
-	app.post('/proxy', async (req, res) => {
-		const { method, url, data, headers } = req.body || {};
-		axios
-			.request({
-				method,
-				url,
-				data,
-				headers
-			})
-			.then(({ data }) => {
-				res.send(data);
-			})
-			.catch((err) => {
-				res.send(err);
-			});
-	});
+	// /proxy（请求转发）已移除：ocsjs 与内置自动化脚本均无消费方，且存在开放代理/SSRF 风险。
+	// 若未来恢复，必须同步恢复 isPrivateTarget 私网拦截（见 git 历史与 utils/server.security.ts）。
 
 	app.get(/\/ocs-action_.+/, (req, res) => {
 		res.send('正在执行脚本 : ' + req.path + ' 请勿操作。');
 	});
 
 	// ocr 验证码破解
+	// 消费方：内置自动化脚本（scripts/automation/wk 等）经 worker 以 ocrApiUrl 调用
+	// （worker 为 electron-free 纯 Node 进程，无法直接 import utils/ocr，故走 HTTP）
 	app.post('/ocr', async (req, res) => {
 		const base64 = req.body.image?.toString();
 		const det_target = req.body.det_target?.toString();
@@ -412,14 +414,19 @@ export async function startupServer() {
 	});
 
 	// 提供本地用户脚本（扩展只能拦截 http/https 请求安装脚本）
+	// ⚠️ 安全：路径白名单——仅放行预下载目录与用户显式注册的本地脚本，
+	// 防任意文件读取（如 ?path=C:/Users/x/.ssh/id_rsa）
 	app.get('/api/local-userscript', (req, res) => {
-		const filePath = req.query.path as string;
-		if (filePath && fs.existsSync(filePath)) {
-			res.setHeader('Content-Type', 'application/javascript');
-			res.sendFile(path.resolve(filePath));
-		} else {
-			res.status(404).send('File not found');
+		const filePath = String(req.query.path || '');
+		const predownloadDir = path.resolve(electronApp.getPath('temp'), './ocs-userscripts');
+		// 用户通过「添加本地脚本」显式注册的路径（render.scripts 中 isLocalScript 条目）
+		const scripts = getDecryptedRenderData(store)?.scripts ?? [];
+		if (!isAllowedUserscriptPath(filePath, predownloadDir, scripts) || !fs.existsSync(path.resolve(filePath))) {
+			res.status(403).send('Forbidden');
+			return;
 		}
+		res.setHeader('Content-Type', 'application/javascript');
+		res.sendFile(path.resolve(filePath));
 	});
 
 	// 静态资源：
@@ -473,7 +480,9 @@ export async function startupServer() {
 	}
 
 	return new Promise<void>((resolve, reject) => {
-		const server = app.listen(store.store.server.port, () => {
+		// ⚠️ 安全：仅绑定回环地址，所有消费方（导航页/渲染端/受管浏览器内脚本）都在本机，
+		// 绑 0.0.0.0 会把全部接口暴露给局域网
+		const server = app.listen(store.store.server.port, '127.0.0.1', () => {
 			const address = server.address();
 			if (address && typeof address === 'object') {
 				// 存储本次服务的端口

@@ -25,6 +25,7 @@ import {
 	isPasswordEncrypted
 } from '../crypto';
 import { hideToTray, quitApp, cancelQuit, destroyTray } from '../tray';
+import { getServerToken } from './server.auth';
 
 /**
  * 将错误序列化为可跨 IPC 传输的普通对象。
@@ -163,6 +164,8 @@ const methods: RemoteMethods = {
 	isEncryptionAvailable: () => {
 		return isCryptoReady();
 	},
+	/** 获取本地服务访问令牌（内存态，不落盘；供渲染端注入 worker/导航页） */
+	getServerToken: () => getServerToken(),
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,

@@ -39,6 +39,7 @@ export const OriginalAppStore: AppStore = {
 	/** 本地服务器数据 */
 	server: {
 		port: 15319,
+		/** @deprecated 安全加固后令牌改内存态持有（见 tasks/server.auth.ts），此字段恒为空，仅为兼容旧配置保留 */
 		authToken: ''
 	},
 	/** 更新设置（测试/调试用途，正式用户留空即为线上默认） */

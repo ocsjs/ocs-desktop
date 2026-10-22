@@ -129,6 +129,8 @@ export interface RemoteMethods {
 	destroyTray: () => void;
 	resetApp: () => void;
 	isEncryptionAvailable: () => boolean;
+	/** 获取本地服务访问令牌（内存态，不落盘） */
+	getServerToken: () => string;
 	isDirectory: (path: string) => boolean;
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;

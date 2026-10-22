@@ -238,19 +238,24 @@ export class Process extends EventEmitter {
 			/** 网页下载完成（worker 监听下载目录实时回传） */
 			'file-downloaded': (_uid: string, file: { filename: string; path: string }) => {
 				if (!file?.path) return;
-				notify('文件下载完成', `文件 ${file.filename} 已下载到"文件下载"目录：\n${file.path}`, 'file-downloaded-' + file.path, {
-					duration: 30 * 1000,
-					type: 'success',
-					btn: h(
-						Button,
-						{
-							type: 'primary',
-							size: 'small',
-							onClick: () => electron.shell.showItemInFolder(file.path)
-						},
-						'打开所在文件夹'
-					)
-				});
+				notify(
+					'文件下载完成',
+					`文件 ${file.filename} 已下载到"文件下载"目录：\n${file.path}`,
+					'file-downloaded-' + file.path,
+					{
+						duration: 30 * 1000,
+						type: 'success',
+						btn: h(
+							Button,
+							{
+								type: 'primary',
+								size: 'small',
+								onClick: () => electron.shell.showItemInFolder(file.path)
+							},
+							'打开所在文件夹'
+						)
+					}
+				);
 			},
 			/**
 			 * 浏览器关闭
@@ -290,8 +295,11 @@ export class Process extends EventEmitter {
 		});
 
 		// 初始化进程数据
+		// authToken 为内存态（不落盘）：从主进程经 IPC 获取后注入 store 副本传给 worker，
+		// 不写入持久化 store（避免再次落盘 config.json）
+		const authToken = remote.methods.callSync('getServerToken');
 		this.worker('init', {
-			store,
+			store: { ...store, server: { ...store.server, authToken } },
 			cachePath: this.browser.cachePath,
 			uid: this.uid,
 			automationScripts: this.browser.automationScripts,
