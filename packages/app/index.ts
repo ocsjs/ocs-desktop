@@ -20,7 +20,7 @@ app.setName('OCS Desktop');
 // 表现为窗口永不显示、终端无输出、error.log 以数十 MB/s 的速度膨胀直至写满磁盘。
 // 为流挂上 error 监听后 EPIPE 不再升级为 uncaughtException（写不出去的日志直接丢弃）。
 for (const stream of [process.stdout, process.stderr]) {
-	stream?.on?.('error', (err: NodeJS.ErrnoException) => {
+	stream?.on?.('error', (err: Error & { code?: string }) => {
 		if (err.code !== 'EPIPE') throw err;
 	});
 }
