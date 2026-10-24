@@ -1,10 +1,9 @@
 import { app, BrowserWindow, clipboard, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { sleep, unzip } from '../utils';
+import { sleep, unzip, moveDirWithRetry } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
-import child_process from 'child_process';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
 import { store } from '../store';
 import { createLoadingWindow } from '../window';
@@ -43,11 +42,8 @@ async function extractAndConfigureBuiltinChrome(
 
 	onProgress?.({ phase: 'extract', message: '正在解压内置浏览器...' });
 	fs.rmSync(chromeTempPath, { recursive: true, force: true });
-	if (process.platform === 'darwin') {
-		child_process.execSync('unzip -o "' + chromeZipPath + '" -d "' + chromeTempPath + '"');
-	} else {
-		await unzip(chromeZipPath, chromeTempPath);
-	}
+	// 统一解压管线：暂存解压（恢复软链/执行位）→ 原子换入，失败不污染旧目录
+	await unzip(chromeZipPath, chromeTempPath);
 
 	onProgress?.({ phase: 'extract', message: '正在查找浏览器可执行文件...' });
 	// darwin 下需匹配 .app 目录（而非可执行文件本身），其余平台匹配可执行文件名
@@ -66,7 +62,9 @@ async function extractAndConfigureBuiltinChrome(
 	onProgress?.({ phase: 'extract', message: '正在移动浏览器文件...' });
 	// 已存在旧目录时先移除，避免 rename 冲突
 	fs.rmSync(path.join(chromeRuntimePath, 'chrome'), { recursive: true, force: true });
-	fs.renameSync(path.dirname(chrome_file[0]), path.join(chromeRuntimePath, 'chrome'));
+	// Windows 下杀毒软件实时扫描刚解压的目录会瞬时拒绝 rename（EPERM），
+	// 普通用户因此初始化失败、管理员权限却能成功；重试 + 复制兜底规避提权要求
+	await moveDirWithRetry(path.dirname(chrome_file[0]), path.join(chromeRuntimePath, 'chrome'));
 
 	fs.rmSync(chromeTempPath, { recursive: true, force: true });
 	// 解压完成后删除 userData 下的压缩包副本以释放磁盘（resources 下的只读压缩包不受影响）
