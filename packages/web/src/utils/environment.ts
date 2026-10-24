@@ -104,6 +104,10 @@ export const Environment = {
 				if (!remote.fs.callSync('existsSync', manifestPath)) {
 					continue;
 				}
+				// manifest.json 可能是目录（残留污染/异常压缩包产生），readFileSync 目录会抛 EISDIR 弹错
+				if (remote.methods.callSync('isDirectory', manifestPath)) {
+					continue;
+				}
 				manifest = JSON.parse(String(await remote.fs.call('readFileSync', manifestPath, 'utf-8')));
 			} catch {
 				// manifest.json 不存在或解析失败（如 OCR 等非扩展文件夹），跳过该候选
@@ -127,6 +131,8 @@ export const Environment = {
 				const manifestPath = await remote.path.call('join', extensionPath, 'manifest.json');
 				const exists = await remote.fs.call('existsSync', manifestPath);
 				if (!exists) continue;
+				// 同上：manifest.json 为目录时跳过，避免 readFileSync 抛 EISDIR 弹错
+				if (remote.methods.callSync('isDirectory', manifestPath)) continue;
 
 				const manifest = JSON.parse(String(await remote.fs.call('readFileSync', manifestPath, 'utf-8')));
 				if (_get(manifest, 'manifest_version', 2) >= 3) {
