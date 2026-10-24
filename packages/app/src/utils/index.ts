@@ -141,6 +141,16 @@ export function getProjectPath() {
 }
 
 /**
+ * 是否 electron-vite dev 开发模式（pnpm dev）。
+ * dev 下不能 relaunch + quit：quit 会让 electron-vite 判定应用退出并杀死整个 dev 进程
+ * （dev server 随之停止），relaunch 拉起的新实例加载已失效的 dev server 地址，
+ * 表现为白屏僵尸窗口（见 init.chrome.ts 的同型处理）。
+ */
+export function isDevMode() {
+	return !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL;
+}
+
+/**
  * 导出excel
  */
 export function exportExcel(excel: { sheetName: string; list: any[] }[], filename: string) {

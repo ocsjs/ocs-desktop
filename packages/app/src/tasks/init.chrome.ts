@@ -1,7 +1,7 @@
 import { app, BrowserWindow, clipboard, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { sleep, unzip, moveDirWithRetry } from '../utils';
+import { sleep, unzip, moveDirWithRetry, isDevMode } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
@@ -192,7 +192,7 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 			// 而 relaunch 拉起的新实例脱离其进程管理，仍加载已失效的 dev server 地址，
 			// 表现为白屏僵尸窗口（渲染进程未加载，close 事件无人响应，只能任务管理器强杀）。
 			// 浏览器二进制已就绪，直接继续正常启动流程即可，无需重启。
-			if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+			if (isDevMode()) {
 				setInitStatus({ status: 'done', message: '内置浏览器初始化完成' });
 				return true;
 			}

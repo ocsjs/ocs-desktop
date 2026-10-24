@@ -136,6 +136,8 @@ export interface RemoteMethods {
 	isDirectory: (path: string) => boolean;
 	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
 	canOCR: () => boolean;
+	/** 是否 electron-vite dev 开发模式（pnpm dev），dev 下软件无法自动重启 */
+	isDevMode: () => boolean;
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;
 	decryptRenderString: (encrypted: string) => string;

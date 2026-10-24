@@ -6,6 +6,7 @@ import { electron } from './node';
 import { resourceLoader } from './resources.loader';
 import { getRemoteInfos } from '.';
 import { notify } from './notify';
+import { restartAppGuarded } from './restart';
 
 const { ipcRenderer } = electron;
 
@@ -100,8 +101,8 @@ export function promptRestartAfterOcrInstall(): void {
 		okText: '立即重启',
 		cancelText: '稍后重启',
 		onOk: () => {
-			// 重启发应用（relaunch + 程序化退出）
-			remote.methods.call('resetApp');
+			// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
+			restartAppGuarded('OCR 识别模块安装完成。');
 		}
 	});
 }

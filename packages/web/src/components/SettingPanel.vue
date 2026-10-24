@@ -369,6 +369,7 @@ import { forceClearBrowserCache } from '../utils/browser';
 import { Message } from '@arco-design/web-vue';
 import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
+import { restartAppGuarded } from '../utils/restart';
 
 /** 主题颜色选项（value 对应 theme.less 中 body[theme-color='xxx'] 预设，color 用于选择器色点展示） */
 const themeColors = [
@@ -404,7 +405,8 @@ async function reset() {
 	const shouldEncrypt =
 		store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
 	remote.methods.callSync('saveStore', JSON.stringify(store), shouldEncrypt);
-	remote.methods.call('resetApp');
+	// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
+	restartAppGuarded('设置已重置，需重启软件后生效。');
 }
 async function onUserDataDirsFolderChange(previous: string, current: string) {
 	// 更改全部浏览器缓存路径
