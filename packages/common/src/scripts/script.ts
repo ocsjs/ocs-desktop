@@ -8,6 +8,11 @@ export interface ScriptOptions<Run extends RunFunction = RunFunction> {
 	run: Run;
 	/** 图标 URL（网站地址或图片地址，经本地服务 /icon 代理解析） */
 	icon?: string;
+	/**
+	 * 是否依赖 OCR 识别模块（破解登录验证码）。
+	 * 声明后启动浏览器前会先做环境检测：未安装 OCR 模块则终止启动并引导用户下载。
+	 */
+	needOCR?: boolean;
 }
 
 export abstract class Script<Run extends RunFunction = RunFunction, E extends EventsRecord = EventsRecord>
@@ -17,12 +22,14 @@ export abstract class Script<Run extends RunFunction = RunFunction, E extends Ev
 	name: string;
 	run: Run;
 	icon?: string;
+	needOCR?: boolean;
 
 	constructor(opts: ScriptOptions<Run>) {
 		super();
 		this.name = opts.name;
 		this.run = opts.run;
 		this.icon = opts.icon;
+		this.needOCR = opts.needOCR;
 	}
 }
 

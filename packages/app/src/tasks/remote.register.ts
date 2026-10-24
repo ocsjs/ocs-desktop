@@ -26,6 +26,7 @@ import {
 } from '../crypto';
 import { hideToTray, quitApp, cancelQuit, destroyTray } from '../tray';
 import { getServerToken } from './server.auth';
+import { canOCR } from '../utils/ocr';
 
 /**
  * 将错误序列化为可跨 IPC 传输的普通对象。
@@ -179,6 +180,8 @@ const methods: RemoteMethods = {
 	 */
 	getStorageBackend: () => (process.platform === 'linux' ? safeStorage.getSelectedStorageBackend() : undefined),
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
+	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
+	canOCR: () => canOCR(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,
 	decryptRenderString,

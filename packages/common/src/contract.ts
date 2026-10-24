@@ -87,7 +87,7 @@ export interface UserScripts {
 }
 
 /** 自动化脚本的纯数据形态（跨进程传输时丢失方法/事件，仅保留数据字段） */
-export type RawAutomationScript = Pick<AutomationScript, 'configs' | 'name' | 'icon'>;
+export type RawAutomationScript = Pick<AutomationScript, 'configs' | 'name' | 'icon' | 'needOCR'>;
 
 /** 批量预下载用户脚本的单项结果 */
 export interface DownloadUserscriptResult {
@@ -134,6 +134,8 @@ export interface RemoteMethods {
 	/** 获取 Linux 密钥环后端（basic_text = 无密钥环）；非 Linux 返回 undefined */
 	getStorageBackend: () => string | undefined;
 	isDirectory: (path: string) => boolean;
+	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
+	canOCR: () => boolean;
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;
 	decryptRenderString: (encrypted: string) => string;

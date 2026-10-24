@@ -269,6 +269,7 @@ import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../utils/node';
 import { remote } from '../utils/remote';
 import { useResources } from '../composables/useResources';
+import { promptRestartAfterOcrInstall } from '../utils/ocr';
 
 const { ipcRenderer } = electron;
 
@@ -429,6 +430,11 @@ async function download(group_name: string, file: ResourceFile) {
 			}
 
 			fileStatus[file.url].exists = true;
+
+			// OCR 识别模块安装完成：提示重启（部分系统中 ocr 执行文件可能无法及时被访问）
+			if (group_name === 'apps' && file.id === 'ocr') {
+				promptRestartAfterOcrInstall();
+			}
 		} catch (err) {
 			// @ts-ignore
 			Message.error('下载错误 ' + err.message);

@@ -79,6 +79,8 @@ export const ICourseLoginScript = new AutomationScript(
 	{
 		name: '中国大学MOOC-自动账号登录',
 		icon: 'https://www.icourse163.org/',
+		// 登录流程含验证码破解（breakVerifyCode/breakSliderVerify），依赖 OCR 识别模块
+		needOCR: true,
 		async run(page, configs, options?: OCROptions) {
 			try {
 				// 登录页为固定宽度桌面布局，窄视口下关键元素会被裁出可视区，先确保窗口足够宽

@@ -12,6 +12,7 @@ import { child_process, electron } from './node';
 import { notify } from './notify';
 import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
+import { notifyOcrMissingAfterLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
 
 /** 用户脚本安装结果（由 worker 回传） */
@@ -449,6 +450,9 @@ export class Process extends EventEmitter {
 				.then((result) => {
 					if (result) {
 						this.once('launched', () => {
+							// OCR 依赖提示（非阻塞）：needOCR 脚本且未安装 OCR 模块时，
+							// 弹常驻通知提供安装入口，不阻止浏览器使用
+							notifyOcrMissingAfterLaunch(this.browser.automationScripts);
 							resolve();
 						});
 						// 启动失败：worker 统一走 close() 发回 browser-closed 并退出进程，

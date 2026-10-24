@@ -59,6 +59,8 @@ export const ICVELoginScript = new AutomationScript(
 	{
 		name: '智慧职教-自动账号密码登录',
 		icon: 'https://www.icve.com.cn/',
+		// 登录流程含验证码破解（breakVerifyCode/breakSliderVerify），依赖 OCR 识别模块
+		needOCR: true,
 		async run(page, configs, options?: OCROptions) {
 			try {
 				// 登录页为固定宽度桌面布局，窄视口下关键元素会被裁出可视区，先确保窗口足够宽
