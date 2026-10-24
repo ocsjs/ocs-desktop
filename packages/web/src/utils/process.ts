@@ -190,9 +190,13 @@ export class Process extends EventEmitter {
 		// electron-vite 的 renderer 构建按浏览器环境编译，会把裸写的 process.env 整体替换为空对象 {}，
 		// 导致 worker 子进程丢失 DISPLAY/WAYLAND_DISPLAY/HOME 等全部环境变量，
 		// 其启动的浏览器因无显示服务器立即退出（Playwright 报 "Target page, context or browser has been closed"）。
-		// 渲染进程开启 nodeIntegration，globalThis.process 即真实进程对象，经 globalThis 读取可绕开该替换；
+		// 注意：esbuild 的 define 会把 globalThis.process 等同于 process 标识符，一行连写的
+		// globalThis.process?.env 会被整体替换为 {}。必须先取出局部变量再访问 env 才能绕开词法匹配
+		// （已实测：拆行写法在构建产物中保留 globalThis.process，一行写法被替换为空对象）。
+		// 渲染进程开启 nodeIntegration，globalThis.process 即真实进程对象；
 		// 纯浏览器环境（导航页）下 globalThis.process 不存在，回退空对象（该环境不会执行 fork）。
-		const workerEnv = (globalThis as any).process?.env ?? process.env;
+		const realProcess = (globalThis as any).process;
+		const workerEnv = realProcess?.env ?? process.env;
 		this.shell = child_process.fork(
 			await remote.path.call('join', await remote.app.call('getAppPath'), './out/main/script.js'),
 			{
