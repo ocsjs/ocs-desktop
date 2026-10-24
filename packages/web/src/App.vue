@@ -151,10 +151,15 @@ import Setup from './components/Setup.vue';
 
 const { ipcRenderer } = electron;
 
+/** 是否启用加密存储：开发者设置「数据加密」开关 + 主密钥就绪（两者同时成立才加密） */
+function isEncryptionEnabled() {
+	return store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
+}
+
 /** 异步保存，用于实时持久化（单次 IPC 调用，加密+写入在主进程完成） */
 async function saveStoreToLocal(_store: typeof store) {
 	try {
-		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		const shouldEncrypt = isEncryptionEnabled();
 		await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
@@ -164,7 +169,7 @@ async function saveStoreToLocal(_store: typeof store) {
 /** 同步版本保存，用于关闭时确保数据写入磁盘（单次 IPC 调用） */
 function saveStoreToLocalSync(_store: typeof store) {
 	try {
-		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		const shouldEncrypt = isEncryptionEnabled();
 		remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);

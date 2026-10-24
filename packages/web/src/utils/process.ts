@@ -311,7 +311,10 @@ export class Process extends EventEmitter {
 			config: {
 				enable_dialog: store.render.setting.browser.enableDialog,
 				screenshot_preview: store.render.setting.browser.screenshotPreview,
-				browser_enhancement: store.render.setting.browser.browserEnhancement
+				browser_enhancement: store.render.setting.browser.browserEnhancement,
+				// 开发者设置开关（默认开启）：软件辅助（脚本联动路由监听）与文件下载优化
+				script_assistance: store.render.setting.dev?.scriptAssistance !== false,
+				download_optimization: store.render.setting.dev?.downloadOptimization !== false
 			},
 			langs: store.render.langs as any
 		});

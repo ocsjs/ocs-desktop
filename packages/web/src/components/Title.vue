@@ -317,11 +317,8 @@ function openDevTools() {
 		store
 	};
 
-	// 开启开发者设置卡片（会话级，重启后自动隐藏）
-	if (!devSession.enabled) {
-		devSession.enabled = true;
-		Message.info('已开启开发者设置，可在「设置」页查看（重启软件后自动隐藏）');
-	}
+	// 开启开发者设置子界面（会话级，重启后自动隐藏；静默开启，不弹提示）
+	devSession.enabled = true;
 
 	remote.webContents.call('openDevTools');
 }
