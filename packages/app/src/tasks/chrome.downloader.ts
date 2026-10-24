@@ -2,7 +2,6 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-import { pipeline } from 'stream/promises';
 import {
 	BUILTIN_CHROME_SHA256,
 	ChromeDownloadSource,
@@ -11,14 +10,9 @@ import {
 } from '@ocs-desktop/common';
 import { Logger } from '../logger';
 import { store } from '../store';
+import { downloadFile } from '../utils/download';
 
 const logger = Logger('chrome-downloader');
-
-/** 单源下载空闲超时：60 秒无任何数据传输判定为失败，切换下一源 */
-const DOWNLOAD_IDLE_TIMEOUT = 60 * 1000;
-
-/** 进度回调节流间隔，避免日志/状态刷屏 */
-const PROGRESS_THROTTLE = 500;
 
 export interface ChromeDownloadProgress {
 	/** 当前下载源展示名 */
@@ -91,7 +85,7 @@ export async function downloadBuiltinChromeZip(
 }
 
 /**
- * 下载单个源并流式校验 SHA256。
+ * 下载单个源并校验 SHA256（统一下载器：分块并发 + 断点续传，慢网速下显著提速）。
  * 下载完成但校验不通过同样抛错（交给上层切换下一源）。
  */
 async function downloadAndVerify(
@@ -100,34 +94,13 @@ async function downloadAndVerify(
 	tempZipPath: string,
 	onRate: (rate: number, totalLength: number, chunkLength: number) => void
 ): Promise<void> {
-	const { data, headers } = await axios.get(source.url, {
-		responseType: 'stream',
-		// 自建源文件可能不存在，404 等错误状态直接抛错切换下一源
-		validateStatus: (status) => status >= 200 && status < 300,
-		timeout: DOWNLOAD_IDLE_TIMEOUT
-	});
+	await downloadFile(source.url, tempZipPath, { onProgress: onRate });
 
-	const totalLength = parseInt(headers['content-length']) || 0;
+	// 下载完成后整体校验（分块并发下无法边下边算；150MB 读盘哈希约 1s，可忽略）
 	const hash = crypto.createHash('sha256');
-	let chunkLength = 0;
-	let lastReportTime = 0;
-
-	data.on('data', (chunk: Buffer) => {
-		hash.update(chunk);
-		chunkLength += chunk.length;
-		const now = Date.now();
-		if (totalLength > 0 && now - lastReportTime >= PROGRESS_THROTTLE) {
-			lastReportTime = now;
-			const rate = Math.min(100, (chunkLength / totalLength) * 100);
-			onRate(parseFloat(rate.toFixed(2)), totalLength, chunkLength);
-		}
-	});
-
-	// pipeline 会传播 data/writer 任一侧的错误（如连接中断、磁盘写入失败），避免 pipe 静默挂起
-	await pipeline(data, fs.createWriteStream(tempZipPath));
-
-	onRate(100, totalLength, chunkLength);
-
+	for await (const chunk of fs.createReadStream(tempZipPath)) {
+		hash.update(chunk as Buffer);
+	}
 	const actualSha256 = hash.digest('hex');
 	if (actualSha256 !== expectedSha256) {
 		throw new Error(`文件校验失败（SHA256 不匹配），期望 ${expectedSha256}，实际 ${actualSha256}`);

@@ -87,7 +87,7 @@ export interface UserScripts {
 }
 
 /** 自动化脚本的纯数据形态（跨进程传输时丢失方法/事件，仅保留数据字段） */
-export type RawAutomationScript = Pick<AutomationScript, 'configs' | 'name' | 'icon'>;
+export type RawAutomationScript = Pick<AutomationScript, 'configs' | 'name' | 'icon' | 'needOCR'>;
 
 /** 批量预下载用户脚本的单项结果 */
 export interface DownloadUserscriptResult {
@@ -131,7 +131,13 @@ export interface RemoteMethods {
 	isEncryptionAvailable: () => boolean;
 	/** 获取本地服务访问令牌（内存态，不落盘） */
 	getServerToken: () => string;
+	/** 获取 Linux 密钥环后端（basic_text = 无密钥环）；非 Linux 返回 undefined */
+	getStorageBackend: () => string | undefined;
 	isDirectory: (path: string) => boolean;
+	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
+	canOCR: () => boolean;
+	/** 是否 electron-vite dev 开发模式（pnpm dev），dev 下软件无法自动重启 */
+	isDevMode: () => boolean;
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;
 	decryptRenderString: (encrypted: string) => string;
@@ -161,6 +167,16 @@ export interface ScriptWorkerBrowserConfig {
 	screenshot_preview?: boolean;
 	/** 浏览器增强（防休眠/防冻结）：附加防节流启动参数 + 注入静音音频豁免脚本 */
 	browser_enhancement?: boolean;
+	/**
+	 * 软件辅助：监听浏览器路由（ocs-environment / ocs-script-actions）与用户脚本联动。
+	 * 默认 true；关闭后脚本不再识别为软件环境（自动化增强不可用），用于卡顿排查。
+	 */
+	script_assistance?: boolean;
+	/**
+	 * 文件下载优化：恢复浏览器原生下载行为（真实文件名 + 原生落盘）。
+	 * 默认 true；关闭后回退为 Playwright 托管下载，可能无法下载文件。
+	 */
+	download_optimization?: boolean;
 }
 
 export interface ScriptWorkerLangs {

@@ -94,6 +94,17 @@ export function det(det_target_base64: string, det_bg_base64: string) {
 export function canOCR() {
 	const ocrPath = path.join(getOcrFolder(), getOCRFileName());
 	if (!existsSync(ocrPath)) {
+		// 清理错装的异平台包（如 Linux 回退下载了 win32 版：只有 ocr.exe 没有 ocr）。
+		// 该包在当前系统必然不可运行，残留会让资源中心误显示「已安装」
+		const wrongPkgExe = path.join(getOcrFolder(), 'ocr.exe');
+		if (process.platform !== 'win32' && existsSync(wrongPkgExe)) {
+			try {
+				rmSync(getOcrFolder(), { recursive: true, force: true });
+				logger.warn('检测到错装的其他平台 OCR 包（当前系统不可运行），已自动清理');
+			} catch (e) {
+				logger.error('清理错装 OCR 包失败', { error: String(e) });
+			}
+		}
 		return false;
 	}
 	// 资源中心下载解压可能丢失 unix 执行位（与 init.chrome 对浏览器可执行文件的处理同理），

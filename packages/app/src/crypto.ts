@@ -53,7 +53,13 @@ function toBytes(buf: Buffer): Uint8Array {
  */
 export function initCrypto(): Promise<void> {
 	if (!initPromise) {
-		initPromise = resolveMasterKey().catch((e) => {
+		initPromise = (async () => {
+			// ⚠️ safeStorage 异步加密器在 app ready 后首次调用时才初始化，
+			// ready 前 isAsyncEncryptionAvailable() 恒为 false 会误判降级为明文密钥存储。
+			// bootstrap 在模块顶层（ready 之前）即启动，此处必须等待。
+			await app.whenReady();
+			await resolveMasterKey();
+		})().catch((e) => {
 			// 任何分支失败都不上抛：最差退化为内存态密钥（重启后旧数据不可读，
 			// 由 decryptRenderString 兜底 '{}'）
 			logger.error('主密钥初始化失败', e);
@@ -81,7 +87,14 @@ async function resolveMasterKey(): Promise<void> {
 		}
 		if (content.startsWith(KEY_PREFIX_PLAIN)) {
 			masterKey = Buffer.from(content.slice(KEY_PREFIX_PLAIN.length), 'hex');
-			logger.warn('safeStorage 不可用，主密钥为明文存储（混淆级防护）');
+			// 安全升级：历史版本因 ready 前误判 safeStorage 不可用而写入了明文密钥，
+			// 此处可用时立即重新包裹为 v1:ssa:（数据无需变动，密钥不变）
+			if (await safeStorage.isAsyncEncryptionAvailable()) {
+				await wrapAndStoreKey(keyFile);
+				logger.info('检测到明文存储的主密钥，已升级为 safeStorage 包裹存储');
+			} else {
+				logger.warn('safeStorage 不可用，主密钥为明文存储（混淆级防护）');
+			}
 			return;
 		}
 		logger.error('ocs.key 格式无法识别，按无密钥处理（旧 AES 数据将不可读，由解密兜底处理）');

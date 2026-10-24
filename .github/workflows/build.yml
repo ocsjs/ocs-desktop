@@ -162,7 +162,7 @@ jobs:
           ### macOS
           - [M系列芯片(ARM64)](${DL}ocs-${VER}-setup-mac-arm64.dmg) | [Intel芯片(x64)](${DL}ocs-${VER}-setup-mac-x64.dmg)
           ### Linux
-          - [AppImage](${DL}ocs-${VER}-setup-linux-x64.AppImage)
+          - [AppImage](${DL}ocs-${VER}-setup-linux-x64.AppImage) | [Debian/Ubuntu (deb)](${DL}ocs-${VER}-setup-linux-x64.deb)
           ### 🔗 快捷访问
           - [官网](https://docs.ocsjs.com/)
           - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)

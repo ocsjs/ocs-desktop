@@ -1,0 +1,110 @@
+name: build-ocr-module
+
+# OCR 识别模块三平台打包（ddddocr + PyInstaller onedir）→ GitHub Release
+#
+# 产物契约（客户端 packages/app/src/utils/ocr.ts / resources.loader.ts）：
+# - zip 根目录平铺：ocr（win32 为 ocr.exe）+ _internal/
+# - unix 平台必须用 zip -y 保留符号链接（_internal 内大量 .so/.dylib 软链，
+#   丢失后解压出来是文本占位文件，模块无法运行）
+# - 发布后在 ocs-app-infos.json 的 ocr 资源补 platforms 映射，客户端自动开放安装：
+#     { "platform": "darwin", "url": "<.../ocr-darwin.zip>" },
+#     { "platform": "linux",  "url": "<.../ocr-linux.zip>" }
+#   （win32 为默认包：把 infos 中 ocr 的默认 url 更新为 ocr-win32.zip 的地址即可）
+#
+# 触发：手动 workflow_dispatch（输入 Release 标签，默认滚动标签 ocr-latest）
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发布到的 Release 标签（重复执行同一标签会覆盖其附件）'
+        default: 'ocr-latest'
+        required: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # win32：无软链问题，用 7z 打包（Git Bash 无 zip 命令）
+          - os: windows-latest
+            platform: win32
+            exe: ocr.exe
+          # darwin：macos-13 为 Intel x64（与线上 ocr-darwin.zip 一致，M 系芯片经 Rosetta 运行）
+          - os: macos-13
+            platform: darwin
+            exe: ocr
+          # linux：⚠️ 固定 ubuntu-22.04（glibc 2.35），不要用 latest/24.04，
+          # 否则新 glibc 打的包在老发行版上无法运行
+          - os: ubuntu-22.04
+            platform: linux
+            exe: ocr
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # ddddocr 官方支持上限 3.12；3.10 与线上 darwin 包内 Python 3.10 对齐，最稳
+          python-version: '3.10'
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install ddddocr pyinstaller pillow
+
+      - name: 生成冒烟测试验证码图
+        run: python packages/ocr-cli/scripts/make_test_captcha.py
+
+      - name: PyInstaller onedir 打包
+        run: >
+          pyinstaller --onedir --name ocr --noconfirm
+          --collect-all ddddocr --collect-all onnxruntime
+          --collect-all cv2 --collect-all numpy --collect-all PIL
+          packages/ocr-cli/ocr_cli.py
+
+      - name: 冒烟测试（OCR 识别跑通即可，不校验准确率）
+        shell: bash
+        run: ./dist/ocr/${{ matrix.exe }} --ocr ./captcha_test.png
+
+      - name: 打包 zip（unix 必须 zip -y 保留符号链接）
+        shell: bash
+        working-directory: dist/ocr
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            7z a -tzip ../../ocr-win32.zip ${{ matrix.exe }} _internal
+          else
+            zip -y -r ../../ocr-${{ matrix.platform }}.zip ${{ matrix.exe }} _internal
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocr-${{ matrix.platform }}
+          path: ocr-${{ matrix.platform }}.zip
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ocr-*
+          merge-multiple: true
+
+      - name: 生成 SHA256 校验清单
+        run: sha256sum ocr-*.zip | tee SHA256SUMS.txt
+
+      # 与 build.yml 相同惯例：gh CLI 上传，滚动标签重复执行覆盖同名附件（--clobber），
+      # infos.json 可长期指向固定 Release 地址
+      - name: 上传到 GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.tag }}"
+          gh release create "$TAG" --title "OCR 识别模块 $TAG" --generate-notes || true
+          for file in ocr-*.zip SHA256SUMS.txt; do
+            gh release upload "$TAG" "$file" --clobber
+          done

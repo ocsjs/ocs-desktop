@@ -79,6 +79,7 @@ import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal, InputPassword } from '@arco-design/web-vue';
 import { store, devSession } from '../store/index';
+import { restartAppGuarded } from '../utils/restart';
 import { OCS_WEBSITE, OCS_DOWNLOAD_PAGE } from '@ocs-desktop/common/web';
 import { electron } from '../utils/node';
 import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities } from '../fs/index';
@@ -97,10 +98,9 @@ function openSetup() {
 	store.render.state.setup = true;
 }
 
-// 重启
+// 重启（dev 感知：pnpm dev 下提示手动重启终端，见 utils/restart.ts）
 function relaunch() {
-	remote.app.call('relaunch');
-	remote.app.call('quit');
+	restartAppGuarded();
 }
 
 // 打开日志目录
@@ -222,8 +222,7 @@ function importData() {
 						hideCancel: false,
 						simple: false,
 						onOk() {
-							remote.app.call('relaunch');
-							remote.methods.call('quitApp', 0);
+							restartAppGuarded('数据已导入，需重启软件后生效。');
 						}
 					});
 				} catch (err) {
@@ -317,11 +316,8 @@ function openDevTools() {
 		store
 	};
 
-	// 开启开发者设置卡片（会话级，重启后自动隐藏）
-	if (!devSession.enabled) {
-		devSession.enabled = true;
-		Message.info('已开启开发者设置，可在「设置」页查看（重启软件后自动隐藏）');
-	}
+	// 开启开发者设置子界面（会话级，重启后自动隐藏；静默开启，不弹提示）
+	devSession.enabled = true;
 
 	remote.webContents.call('openDevTools');
 }

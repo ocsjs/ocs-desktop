@@ -138,6 +138,7 @@ import {
 } from './utils';
 import { activeIpcRenderListener } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
+import { notify } from './utils/notify';
 import { currentBrowser } from './fs';
 import { Modal, Message } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
@@ -150,10 +151,15 @@ import Setup from './components/Setup.vue';
 
 const { ipcRenderer } = electron;
 
+/** 是否启用加密存储：开发者设置「数据加密」开关 + 主密钥就绪（两者同时成立才加密） */
+function isEncryptionEnabled() {
+	return store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
+}
+
 /** 异步保存，用于实时持久化（单次 IPC 调用，加密+写入在主进程完成） */
 async function saveStoreToLocal(_store: typeof store) {
 	try {
-		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		const shouldEncrypt = isEncryptionEnabled();
 		await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
@@ -163,7 +169,7 @@ async function saveStoreToLocal(_store: typeof store) {
 /** 同步版本保存，用于关闭时确保数据写入磁盘（单次 IPC 调用） */
 function saveStoreToLocalSync(_store: typeof store) {
 	try {
-		const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+		const shouldEncrypt = isEncryptionEnabled();
 		remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
@@ -216,6 +222,21 @@ onMounted(async () => {
 	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
 			showClearBrowserCachesModal(totalSize);
+		}
+	});
+
+	/** Linux 密钥环检测：basic_text 表示无可用密钥环（gnome-keyring/kwallet），
+	 *  信封加密的密钥包裹将退化为明文存储，引导用户安装 */
+	remote.os.call('platform').then(async (platform) => {
+		if (platform !== 'linux') return;
+		const backend = await remote.methods.call('getStorageBackend');
+		if (backend === 'basic_text') {
+			notify(
+				'系统未检测到密钥环',
+				'数据加密保护将降级为基础模式。建议安装密钥环：GNOME/Debian 系执行 sudo apt install gnome-keyring，KDE 安装 kwallet，安装后重启软件生效。',
+				'keyring-missing',
+				{ type: 'warning', duration: 10 * 1000, copy: false }
+			);
 		}
 	});
 

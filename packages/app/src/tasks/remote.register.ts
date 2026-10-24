@@ -1,8 +1,8 @@
-import { ipcMain, app, dialog, BrowserWindow, nativeTheme, net } from 'electron';
+import { ipcMain, app, dialog, BrowserWindow, safeStorage, nativeTheme, net } from 'electron';
 import { Logger } from '../logger';
 import { autoLaunch } from './auto.launch';
 import axios, { AxiosRequestConfig } from 'axios';
-import { downloadFile, unzip } from '../utils';
+import { downloadFile, unzip, isDevMode } from '../utils';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -26,6 +26,7 @@ import {
 } from '../crypto';
 import { hideToTray, quitApp, cancelQuit, destroyTray } from '../tray';
 import { getServerToken } from './server.auth';
+import { canOCR } from '../utils/ocr';
 
 /**
  * 将错误序列化为可跨 IPC 传输的普通对象。
@@ -154,11 +155,22 @@ const methods: RemoteMethods = {
 	cancelQuit: cancelQuit,
 	/** 销毁托盘图标 */
 	destroyTray: destroyTray,
+	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
+	canOCR: () => canOCR(),
+	/** 是否 electron-vite dev 开发模式（pnpm dev），dev 下软件无法自动重启 */
+	isDevMode: () => isDevMode(),
 	/**
 	 * 重置设置并重启：渲染层已同步保存重置后的 store（render.setting + window 等），
 	 * 此处仅负责重启。通过 quitApp 程序化退出，绕过「隐藏到托盘」逻辑。
+	 * dev 模式（pnpm dev）下跳过 relaunch 仅退出：electron-vite 会在 quit 后杀死 dev
+	 * 进程，relaunch 的新实例加载已失效的 dev server 地址会变白屏僵尸窗口；
+	 * 渲染层负责在此之前提示用户手动重跑 pnpm dev（见 web utils/restart.ts）。
 	 */
 	resetApp: () => {
+		if (isDevMode()) {
+			quitApp(0);
+			return;
+		}
 		app.relaunch();
 		quitApp(0);
 	},
@@ -173,6 +185,11 @@ const methods: RemoteMethods = {
 	},
 	/** 获取本地服务访问令牌（内存态，不落盘；供渲染端注入 worker/导航页） */
 	getServerToken: () => getServerToken(),
+	/**
+	 * 获取 Linux 密钥环后端（'basic_text' 表示无可用密钥环，如 gnome-keyring/kwallet）。
+	 * 非 Linux 平台返回 undefined（该 API 仅 Linux 有意义）。
+	 */
+	getStorageBackend: () => (process.platform === 'linux' ? safeStorage.getSelectedStorageBackend() : undefined),
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,

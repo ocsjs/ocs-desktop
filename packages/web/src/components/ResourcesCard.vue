@@ -48,10 +48,6 @@
 		<div
 			ref="contentRef"
 			class="resources-content"
-			:style="{
-				opacity: resState.refreshing ? 0.6 : 1,
-				transition: 'opacity 0.2s'
-			}"
 		>
 			<!-- 使用提示 -->
 			<UsageAlertCollapse
@@ -236,31 +232,36 @@
 									>
 										解压中...
 									</span>
-									<a-button
+									<a-tooltip
 										v-else
-										type="primary"
-										@click="download(group.name, file)"
+										:content="isFileSupported(file) ? '' : '该资源暂不支持当前系统'"
 									>
-										安装
-									</a-button>
+										<a-button
+											type="primary"
+											:disabled="!isFileSupported(file)"
+											@click="download(group.name, file)"
+										>
+											安装
+										</a-button>
+									</a-tooltip>
 								</template>
 							</div>
 						</div>
 					</template>
-					</template>
-					</template>
+				</template>
+			</template>
 
-					<!-- 全局安装/卸载遮罩：任何资源安装/卸载/解压进行中时锁定整卡，禁止点击与其他操作 -->
-					<div
-					v-if="anyBusy"
-					class="resources-overlay"
-					>
-					<a-spin />
-					<span class="ms-2">{{ busyText }}</span>
-					</div>
-					</div>
-					</a-card>
-					</template>
+			<!-- 统一遮罩层：安装/卸载/解压进行中 或 资源状态刷新中（如首次进入触发环境检测后的状态回刷）时锁定整卡 -->
+			<div
+				v-if="overlayVisible"
+				class="resources-overlay"
+			>
+				<a-spin />
+				<span class="ms-2">{{ overlayText }}</span>
+			</div>
+		</div>
+	</a-card>
+</template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue';
@@ -273,6 +274,7 @@ import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../utils/node';
 import { remote } from '../utils/remote';
 import { useResources } from '../composables/useResources';
+import { promptRestartAfterOcrInstall } from '../utils/ocr';
 
 const { ipcRenderer } = electron;
 
@@ -306,8 +308,18 @@ const anyBusy = computed(
 		Object.values(fileStatus).some((s) => s.downloading || s.unzipping)
 );
 
-/** 遮罩提示文案 */
-const busyText = computed(() => (Object.values(fileStatus).some((s) => s.unzipping) ? '正在解压...' : '正在安装/卸载...'));
+/**
+ * 统一遮罩层显隐：安装/卸载/解压进行中，或资源状态刷新中
+ * （原「刷新时内容置灰 0.6」的浅灰遮罩已合并至此，全卡只保留这一个遮罩实现）
+ */
+const overlayVisible = computed(() => anyBusy.value || resState.refreshing);
+
+/** 统一遮罩层提示文案：按当前进行中的动作选取 */
+const overlayText = computed(() => {
+	if (Object.values(fileStatus).some((s) => s.unzipping)) return '正在解压...';
+	if (anyBusy.value) return '正在安装/卸载...';
+	return '正在刷新资源状态...';
+});
 
 /** 当前选中的脚本管理器 */
 const selectedExtension = computed(() => {
@@ -334,7 +346,23 @@ watch(
 
 let intersectionObserver: IntersectionObserver | null = null;
 
+/** 当前系统平台（用于平台专属资源的安装可用性判断） */
+const currentPlatform = ref('');
+
+/**
+ * 资源是否支持当前系统：
+ * 无 platforms 声明 → 平台无关资源，可用；
+ * win32 → 默认包即 win32 版，可用；
+ * 其余平台 → 需 platforms 显式提供对应包（如 OCR 的 darwin 包），否则禁用安装
+ * （避免下载到 win32 二进制导致「安装后仍检测不到」的假安装）
+ */
+function isFileSupported(file: ResourceFile): boolean {
+	if (!file.platforms) return true;
+	return currentPlatform.value === 'win32' || file.platforms.some((p) => p.platform === currentPlatform.value);
+}
+
 onMounted(() => {
+	remote.methods.call('getPlatform').then((p) => (currentPlatform.value = p));
 	if (!resState.initialized) {
 		loadResources();
 	} else {
@@ -423,6 +451,11 @@ async function download(group_name: string, file: ResourceFile) {
 			}
 
 			fileStatus[file.url].exists = true;
+
+			// OCR 识别模块安装完成：提示重启（部分系统中 ocr 执行文件可能无法及时被访问）
+			if (group_name === 'apps' && file.id === 'ocr') {
+				promptRestartAfterOcrInstall();
+			}
 		} catch (err) {
 			// @ts-ignore
 			Message.error('下载错误 ' + err.message);

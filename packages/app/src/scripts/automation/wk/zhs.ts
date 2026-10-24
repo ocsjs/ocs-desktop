@@ -58,6 +58,8 @@ export const ZHSLoginScript = new AutomationScript(
 	{
 		name: '智慧树-自动登录',
 		icon: 'https://www.zhihuishu.com/',
+		// 登录流程含验证码破解（breakVerifyCode/breakSliderVerify），依赖 OCR 识别模块
+		needOCR: true,
 		async run(
 			page,
 			configs,

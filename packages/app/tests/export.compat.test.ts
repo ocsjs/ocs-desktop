@@ -22,7 +22,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('electron', () => ({
-	app: { getPath: () => mocks.userDataDir },
+	app: {
+		getPath: () => mocks.userDataDir,
+		// initCrypto 必须等待 ready（safeStorage 异步加密器 ready 后才初始化）
+		whenReady: async () => undefined
+	},
 	safeStorage: {
 		isAsyncEncryptionAvailable: async () => mocks.ssAvailable,
 		encryptStringAsync: async (hex: string) => Buffer.from('SS:' + hex),

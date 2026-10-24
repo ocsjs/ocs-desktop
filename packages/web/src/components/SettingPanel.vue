@@ -166,7 +166,10 @@
 						<a-popover>
 							<template #content>
 								<div>控制预览画质（分辨率与压缩率），越高越清晰但占用更多资源，实时生效。</div>
-							<div>超清为视口原生分辨率（上限 2K），帧尺寸按卡片显示大小自适应（窗口越大画面越清晰），配合背压自动降速，多浏览器同时运行也不会卡死。</div>
+								<div>
+									超清为视口原生分辨率（上限
+									2K），帧尺寸按卡片显示大小自适应（窗口越大画面越清晰），配合背压自动降速，多浏览器同时运行也不会卡死。
+								</div>
 							</template>
 							<Icon
 								class="label-help-icon"
@@ -339,175 +342,6 @@
 			/>
 		</a-card>
 
-		<!-- 开发者设置：左上角「工具 → 开发者工具」点击后显示（devSession 非持久化，重启自动隐藏） -->
-		<a-card v-if="devSession.enabled">
-			<template #title>
-				<span class="card-title-icon">🛠️</span>
-				开发者设置
-				<a-tag
-					size="small"
-					style="margin-left: 8px"
-				>
-					重启后自动隐藏
-				</a-tag>
-			</template>
-
-			<a-divider
-				orientation="left"
-				style="margin: 4px 0 12px"
-			>
-				更新调试
-			</a-divider>
-
-			<Description label="当前版本">
-				<span>{{ store.version }}</span>
-			</Description>
-
-			<Description>
-				<template #label>
-					自定义更新源
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：指定 latest.yml 所在的目录 URL，切换更新环境（如测试 CDN 目录）。</div>
-								<div>留空则使用默认线上源。</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.updater.feedUrl"
-					:placeholder="'默认：' + OCS_UPDATER.feedUrl"
-					allow-clear
-				/>
-			</Description>
-
-			<Description label="允许降级安装">
-				<a-tooltip content="测试用途：允许安装低于或等于当前版本的更新包，便于重复测试更新流程">
-					<a-switch v-model="store.updater.allowDowngrade" />
-				</a-tooltip>
-			</Description>
-
-			<Description label="手动检查更新">
-				<a-button
-					type="primary"
-					size="small"
-					:loading="checkingUpdate"
-					@click="onCheckUpdate"
-				>
-					检查更新
-				</a-button>
-			</Description>
-
-			<a-divider orientation="left"> 接口调试 </a-divider>
-
-			<Description>
-				<template #label>
-					自定义信息接口
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：覆盖软件信息接口（ocs-app-infos.json），影响资源组/通知/书签等数据的来源。</div>
-								<div>留空则使用默认线上接口。</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.updater.infosUrl"
-					:placeholder="'默认：' + OCS_API.infos"
-					allow-clear
-				/>
-			</Description>
-
-			<a-divider orientation="left"> 脚本调试 </a-divider>
-
-			<Description>
-				<template #label>
-					OCS index 脚本
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：覆盖 OCS index 脚本的加载地址（如本地开发构建产物）。</div>
-								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.scriptResources.index"
-					:placeholder="'默认：' + OCS_SCRIPT_RESOURCES.index"
-					allow-clear
-				/>
-			</Description>
-
-			<Description>
-				<template #label>
-					EasyUs 脚本
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：覆盖 EasyUs 脚本的加载地址（如本地开发构建产物）。</div>
-								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
-							</div>
-						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.scriptResources.easyUs"
-					:placeholder="'默认：' + OCS_SCRIPT_RESOURCES.easyUs"
-					allow-clear
-				/>
-			</Description>
-
-			<a-divider orientation="left"> 服务调试 </a-divider>
-
-			<Description label="本地服务器端口">
-				<a-tooltip content="本地 HTTP 服务（图标代理/浏览器通信等）的监听端口，修改后需重启软件生效">
-					<a-input-number
-						v-model="store.server.port"
-						:min="1024"
-						:max="65535"
-						style="width: 200px"
-					/>
-				</a-tooltip>
-			</Description>
-
-			<a-divider orientation="left"> 浏览器调试 </a-divider>
-
-			<Description label="浏览器下载源">
-				<a-tooltip
-					content="强制指定内置浏览器的下载源用于测试下载链路；默认按优先级自动降级（国内镜像 → 谷歌官方 → OCS 自建）"
-				>
-					<a-select
-						v-model="store.updater.chromeSource"
-						style="width: 200px"
-					>
-						<a-option value="">默认（按优先级）</a-option>
-						<a-option value="npmmirror">国内镜像源</a-option>
-						<a-option value="official">谷歌官方源</a-option>
-						<a-option value="ocs-cdn">OCS 自建源</a-option>
-					</a-select>
-				</a-tooltip>
-			</Description>
-		</a-card>
-
 		<div class="mt-4 mb-5">
 			<a-popconfirm
 				content="确认重置您的设置，并重新启动软件吗？"
@@ -525,8 +359,7 @@
 import { computed, reactive, ref } from 'vue';
 import Description from './Description.vue';
 import Path from './Path.vue';
-import { store, DEFAULT_RENDER, devSession } from '../store';
-import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
+import { store, DEFAULT_RENDER } from '../store';
 import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
 import BrowserPath from './setting/BrowserPath.vue';
@@ -536,6 +369,7 @@ import { forceClearBrowserCache } from '../utils/browser';
 import { Message } from '@arco-design/web-vue';
 import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
+import { restartAppGuarded } from '../utils/restart';
 
 /** 主题颜色选项（value 对应 theme.less 中 body[theme-color='xxx'] 预设，color 用于选择器色点展示） */
 const themeColors = [
@@ -567,9 +401,12 @@ async function reset() {
 	store.render.setting = cloneDeep(DEFAULT_RENDER.setting);
 	store.window = { alwaysOnTop: false, autoLaunch: false, hideToTrayOnClose: false };
 	// 同步保存，确保重置落盘后再重启（不依赖关闭流程的保存时序，避免强制退出时丢失）
-	const shouldEncrypt = remote.methods.callSync('isEncryptionAvailable');
+	// 加密受开发者设置「数据加密」开关控制（重置会恢复默认开启）
+	const shouldEncrypt =
+		store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
 	remote.methods.callSync('saveStore', JSON.stringify(store), shouldEncrypt);
-	remote.methods.call('resetApp');
+	// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
+	restartAppGuarded('设置已重置，需重启软件后生效。');
 }
 async function onUserDataDirsFolderChange(previous: string, current: string) {
 	// 更改全部浏览器缓存路径
@@ -581,27 +418,6 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 	}
 
 	await forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
-}
-
-/** 手动检查更新（配合自定义更新源可做更新流程测试） */
-const checkingUpdate = ref(false);
-async function onCheckUpdate() {
-	checkingUpdate.value = true;
-	try {
-		// 直接携带最新配置（防抖持久化可能尚未落盘；reactive 代理无法跨 IPC 结构化克隆，需转为纯对象）
-		const result = await remote.methods.call('checkUpdate', JSON.parse(JSON.stringify(store.updater)));
-		if (!result) {
-			Message.error('检查更新失败，请查看日志或稍后重试');
-		} else if (result.hasUpdate) {
-			Message.success(`检测到新版本 ${result.latest}，请按更新弹窗提示操作`);
-		} else {
-			Message.info(result.message || `当前已是最新版本（${result.current}）`);
-		}
-	} catch (e) {
-		Message.error('检查更新失败：' + e);
-	} finally {
-		checkingUpdate.value = false;
-	}
 }
 
 /** 自定义导航页网站管理 */
