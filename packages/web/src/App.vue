@@ -138,6 +138,7 @@ import {
 } from './utils';
 import { activeIpcRenderListener } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
+import { notify } from './utils/notify';
 import { currentBrowser } from './fs';
 import { Modal, Message } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
@@ -216,6 +217,21 @@ onMounted(async () => {
 	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
 			showClearBrowserCachesModal(totalSize);
+		}
+	});
+
+	/** Linux 密钥环检测：basic_text 表示无可用密钥环（gnome-keyring/kwallet），
+	 *  信封加密的密钥包裹将退化为明文存储，引导用户安装 */
+	remote.os.call('platform').then(async (platform) => {
+		if (platform !== 'linux') return;
+		const backend = await remote.methods.call('getStorageBackend');
+		if (backend === 'basic_text') {
+			notify(
+				'系统未检测到密钥环',
+				'数据加密保护将降级为基础模式。建议安装密钥环：GNOME/Debian 系执行 sudo apt install gnome-keyring，KDE 安装 kwallet，安装后重启软件生效。',
+				'keyring-missing',
+				{ type: 'warning', duration: 10 * 1000, copy: false }
+			);
 		}
 	});
 

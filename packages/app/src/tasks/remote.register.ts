@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog, BrowserWindow, nativeTheme, net } from 'electron';
+import { ipcMain, app, dialog, BrowserWindow, safeStorage, nativeTheme, net } from 'electron';
 import { Logger } from '../logger';
 import { autoLaunch } from './auto.launch';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -173,6 +173,11 @@ const methods: RemoteMethods = {
 	},
 	/** 获取本地服务访问令牌（内存态，不落盘；供渲染端注入 worker/导航页） */
 	getServerToken: () => getServerToken(),
+	/**
+	 * 获取 Linux 密钥环后端（'basic_text' 表示无可用密钥环，如 gnome-keyring/kwallet）。
+	 * 非 Linux 平台返回 undefined（该 API 仅 Linux 有意义）。
+	 */
+	getStorageBackend: () => (process.platform === 'linux' ? safeStorage.getSelectedStorageBackend() : undefined),
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,

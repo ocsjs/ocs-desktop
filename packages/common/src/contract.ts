@@ -131,6 +131,8 @@ export interface RemoteMethods {
 	isEncryptionAvailable: () => boolean;
 	/** 获取本地服务访问令牌（内存态，不落盘） */
 	getServerToken: () => string;
+	/** 获取 Linux 密钥环后端（basic_text = 无密钥环）；非 Linux 返回 undefined */
+	getStorageBackend: () => string | undefined;
 	isDirectory: (path: string) => boolean;
 	getRawScripts: () => RawAutomationScript[];
 	encryptRenderString: (plaintext: string) => string;

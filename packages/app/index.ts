@@ -12,6 +12,7 @@ import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
 import { initCrypto } from './src/crypto';
+import { integrateAppImageDesktop } from './src/tasks/appimage.desktop';
 
 app.setName('OCS Desktop');
 
@@ -59,6 +60,8 @@ function bootstrap() {
 				})
 			),
 			task('初始化自动启动', () => autoLaunch()),
+			// AppImage 桌面集成（菜单入口/图标自注册），幂等，仅 Linux AppImage 生效
+			task('AppImage桌面集成', () => integrateAppImageDesktop()),
 			task('启动渲染进程', async () => {
 				await app.whenReady();
 				const window = createWindow();
