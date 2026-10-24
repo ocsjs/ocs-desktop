@@ -247,20 +247,20 @@
 							</div>
 						</div>
 					</template>
-					</template>
-					</template>
+				</template>
+			</template>
 
-					<!-- 全局安装/卸载遮罩：任何资源安装/卸载/解压进行中时锁定整卡，禁止点击与其他操作 -->
-					<div
-					v-if="anyBusy"
-					class="resources-overlay"
-					>
-					<a-spin />
-					<span class="ms-2">{{ busyText }}</span>
-					</div>
-					</div>
-					</a-card>
-					</template>
+			<!-- 全局安装/卸载遮罩：任何资源安装/卸载/解压进行中时锁定整卡，禁止点击与其他操作 -->
+			<div
+				v-if="anyBusy"
+				class="resources-overlay"
+			>
+				<a-spin />
+				<span class="ms-2">{{ busyText }}</span>
+			</div>
+		</div>
+	</a-card>
+</template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue';
@@ -307,7 +307,9 @@ const anyBusy = computed(
 );
 
 /** 遮罩提示文案 */
-const busyText = computed(() => (Object.values(fileStatus).some((s) => s.unzipping) ? '正在解压...' : '正在安装/卸载...'));
+const busyText = computed(() =>
+	Object.values(fileStatus).some((s) => s.unzipping) ? '正在解压...' : '正在安装/卸载...'
+);
 
 /** 当前选中的脚本管理器 */
 const selectedExtension = computed(() => {

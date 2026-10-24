@@ -79,7 +79,9 @@ export class Browser extends Entity implements BrowserOptions {
 		// 起始页：启用自定义导航页时直接以导航页 URL 启动，否则为空白页。
 		const startPage =
 			store.render.setting.browser.bookmarkPage.enable !== false
-				? `http://localhost:${store.server.port || DEFAULT_SERVER_PORT}/index.html#/bookmarks?uid=${encodeURIComponent(this.uid)}`
+				? `http://localhost:${store.server.port || DEFAULT_SERVER_PORT}/index.html#/bookmarks?uid=${encodeURIComponent(
+						this.uid
+				  )}`
 				: 'about:blank';
 		const cmd = ` "${store.render.setting.launchOptions.executablePath}" ${[
 			'--window-position=0,0',

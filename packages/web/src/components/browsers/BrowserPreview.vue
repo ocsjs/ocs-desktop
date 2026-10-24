@@ -112,16 +112,16 @@
 			alt="浏览器预览"
 			class="screenshot-preview-img"
 		/>
-		</a-modal>
+	</a-modal>
 
-		<!-- 切换页面弹窗：显示当前浏览器全部可推流页面，点击切换推流目标 -->
-		<a-modal
+	<!-- 切换页面弹窗：显示当前浏览器全部可推流页面，点击切换推流目标 -->
+	<a-modal
 		v-model:visible="pageSwitchVisible"
 		title="切换页面"
 		:footer="false"
 		width="520px"
 		unmount-on-close
-		>
+	>
 		<div class="page-list">
 			<div
 				v-for="page of pageList"
@@ -151,8 +151,8 @@
 				description="暂无可切换的页面"
 			/>
 		</div>
-		</a-modal>
-		</template>
+	</a-modal>
+</template>
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
@@ -191,7 +191,8 @@ watch(previewVisible, (visible) => {
 	const p = process.value;
 	if (!p) return;
 	if (visible) {
-		const nth = FRAMERATE_TO_NTH_FRAME[store.render.setting.browser.screenshotFramerate] ?? FRAMERATE_TO_NTH_FRAME.medium;
+		const nth =
+			FRAMERATE_TO_NTH_FRAME[store.render.setting.browser.screenshotFramerate] ?? FRAMERATE_TO_NTH_FRAME.medium;
 		p.setScreencastActive(true, { everyNthFrame: nth, ...QUALITY_TO_PARAMS.ultra });
 	} else {
 		emit('resync-screencast');
