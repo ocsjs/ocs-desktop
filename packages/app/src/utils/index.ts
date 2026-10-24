@@ -1,10 +1,9 @@
 import { BrowserWindow, app, dialog } from 'electron';
 import path from 'path';
 import AdmZip from 'adm-zip';
-import axios from 'axios';
 import fs, { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
-import { finished } from 'stream/promises';
 import { Logger } from '../logger';
+import { downloadFile as smartDownloadFile } from './download';
 import xlsx from 'xlsx';
 import unzipper from 'unzipper';
 
@@ -19,37 +18,10 @@ export async function task(name: string, func: any) {
 }
 
 /**
- * 下载文件
+ * 下载文件（统一下载器：分块并发 + 断点续传，实现见 utils/download.ts）
  */
 export async function downloadFile(fileURL: string, outputURL: string, rateHandler: any) {
-	logger.info('downloadFile', fileURL, outputURL);
-
-	const { data, headers } = await axios.get(fileURL, {
-		responseType: 'stream'
-	});
-	const totalLength = parseInt(headers['content-length']) || 0;
-
-	let chunkLength = 0;
-	data.on('data', (chunk: any) => {
-		chunkLength += chunk.length;
-		if (totalLength > 0) {
-			// clamp 到 0-100，防止 content-length 与实际数据不匹配（如 gzip 解压、分块传输等）
-			const rate = Math.min(100, (chunkLength / totalLength) * 100);
-			rateHandler(parseFloat(rate.toFixed(2)), totalLength, chunkLength);
-		}
-	});
-
-	// 创建文件夹
-	if (existsSync(path.dirname(outputURL)) === false) {
-		mkdirSync(path.dirname(outputURL), { recursive: true });
-	}
-
-	const writer = createWriteStream(outputURL);
-	data.pipe(writer);
-	await finished(writer);
-	rateHandler(100, totalLength, chunkLength);
-
-	return outputURL;
+	return smartDownloadFile(fileURL, outputURL, { onProgress: rateHandler });
 }
 
 /**

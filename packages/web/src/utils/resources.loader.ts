@@ -58,10 +58,8 @@ export class ResourceLoader {
 			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);
 
-		// 判断文件是否存在，如果存在则删除
-		if (await remote.fs.call('existsSync', downloadPath)) {
-			await remote.fs.call('unlinkSync', downloadPath);
-		}
+		// 不预删已存在的文件：统一下载器会依据旁车元数据（url+size+etag）自动断点续传，
+		// 资源内容变化时元数据校验失败会自动全量重下
 		const platform = await remote.methods.call('getPlatform');
 		const url =
 			platform === 'win32'
@@ -93,8 +91,9 @@ export class ResourceLoader {
 			});
 		}
 		await remote.methods.call('unzip', targetPath, to);
-		// 删除压缩包
+		// 删除压缩包与断点续传旁车元数据
 		await remote.fs.call('unlinkSync', targetPath);
+		await remote.fs.call('rmSync', targetPath + '.ocsdl.json', { force: true });
 		return to;
 	}
 
@@ -106,6 +105,10 @@ export class ResourceLoader {
 			await remote.fs.call('rmSync', path, {
 				recursive: true
 			});
+			// 清理可能残留的压缩包与断点续传旁车元数据（下载中断场景）
+			const zipPath = await remote.path.call('join', this.resourceRootPath, group_name, file.id + '.zip');
+			await remote.fs.call('rmSync', zipPath, { force: true });
+			await remote.fs.call('rmSync', zipPath + '.ocsdl.json', { force: true });
 		} else {
 			const path = await this.getPath(group_name, file);
 			await remote.fs.call('unlinkSync', path);
