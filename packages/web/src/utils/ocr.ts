@@ -10,6 +10,25 @@ import { restartAppGuarded } from './restart';
 
 const { ipcRenderer } = electron;
 
+/** 查询 OCR 识别模块的资源定义 */
+async function getOcrResourceFile() {
+	const infos = await getRemoteInfos();
+	return infos?.resourceGroups.find((g) => g.name === 'apps')?.files.find((f) => f.id === 'ocr');
+}
+
+/**
+ * 当前系统是否支持 OCR 识别模块。
+ * 判定依据远程资源定义：win32 使用默认包，其余平台需 platforms 显式提供对应包
+ * （如 darwin → ocr-darwin.zip）；未提供（如 linux）则表示不支持，
+ * 避免下载到 win32 二进制导致「安装后仍检测不到」的假安装。
+ */
+export async function isOcrSupported(): Promise<boolean> {
+	const platform = await remote.methods.call('getPlatform');
+	if (platform === 'win32') return true;
+	const ocrFile = await getOcrResourceFile();
+	return !!ocrFile?.platforms?.some((p) => p.platform === platform);
+}
+
 /**
  * 浏览器启动后的 OCR 依赖提示（非阻塞，不阻止浏览器使用）。
  *
@@ -20,6 +39,18 @@ const { ipcRenderer } = electron;
 export async function notifyOcrMissingAfterLaunch(scripts?: RawAutomationScript[]): Promise<void> {
 	if (!scripts?.some((s) => s.needOCR)) return;
 	if (await remote.methods.call('canOCR')) return;
+
+	// 平台不支持（如 Linux 无对应包）：不提供安装入口，只提示手动输入验证码，
+	// 避免引导用户安装一个在当前系统必然不可用的 win32 二进制
+	if (!(await isOcrSupported())) {
+		notify(
+			'OCR 识别模块暂不支持当前系统',
+			'当前浏览器的自动化程序需要破解登录验证码；OCR 识别模块暂不支持当前系统（仅支持 Windows/macOS），出现验证码时请手动输入。',
+			'ocr-unsupported',
+			{ type: 'warning', duration: 10 * 1000 }
+		);
+		return;
+	}
 
 	notify(
 		'缺少 OCR 识别模块',
@@ -50,10 +81,14 @@ export async function notifyOcrMissingAfterLaunch(scripts?: RawAutomationScript[
  * 供「启动后通知的安装按钮」与「应用中心手动安装」复用。
  */
 export async function installOcrWithProgress(): Promise<boolean> {
-	const infos = await getRemoteInfos();
-	const ocrFile = infos?.resourceGroups.find((g) => g.name === 'apps')?.files.find((f) => f.id === 'ocr');
+	const ocrFile = await getOcrResourceFile();
 	if (!ocrFile) {
 		Message.error('未找到 OCR 识别模块资源，请前往「设置 → 应用中心」手动安装');
+		return false;
+	}
+	// 平台兜底：notify 入口已做门控，此处防止其他调用方在不支持的平台触发安装
+	if (!(await isOcrSupported())) {
+		Message.warning('OCR 识别模块暂不支持当前系统');
 		return false;
 	}
 

@@ -232,13 +232,18 @@
 									>
 										解压中...
 									</span>
-									<a-button
+									<a-tooltip
 										v-else
-										type="primary"
-										@click="download(group.name, file)"
+										:content="isFileSupported(file) ? '' : '该资源暂不支持当前系统'"
 									>
-										安装
-									</a-button>
+										<a-button
+											type="primary"
+											:disabled="!isFileSupported(file)"
+											@click="download(group.name, file)"
+										>
+											安装
+										</a-button>
+									</a-tooltip>
 								</template>
 							</div>
 						</div>
@@ -341,7 +346,23 @@ watch(
 
 let intersectionObserver: IntersectionObserver | null = null;
 
+/** 当前系统平台（用于平台专属资源的安装可用性判断） */
+const currentPlatform = ref('');
+
+/**
+ * 资源是否支持当前系统：
+ * 无 platforms 声明 → 平台无关资源，可用；
+ * win32 → 默认包即 win32 版，可用；
+ * 其余平台 → 需 platforms 显式提供对应包（如 OCR 的 darwin 包），否则禁用安装
+ * （避免下载到 win32 二进制导致「安装后仍检测不到」的假安装）
+ */
+function isFileSupported(file: ResourceFile): boolean {
+	if (!file.platforms) return true;
+	return currentPlatform.value === 'win32' || file.platforms.some((p) => p.platform === currentPlatform.value);
+}
+
 onMounted(() => {
+	remote.methods.call('getPlatform').then((p) => (currentPlatform.value = p));
 	if (!resState.initialized) {
 		loadResources();
 	} else {

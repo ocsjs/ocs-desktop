@@ -61,13 +61,17 @@ export class ResourceLoader {
 		// 不预删已存在的文件：统一下载器会依据旁车元数据（url+size+etag）自动断点续传，
 		// 资源内容变化时元数据校验失败会自动全量重下
 		const platform = await remote.methods.call('getPlatform');
-		const url =
-			platform === 'win32'
-				? file.url
-				: // 优先安装对应平台的资源。如果没有对应平台的资源，则使用默认资源
-				  file.platforms?.find((p) => p.platform === platform)?.url || file.url;
-		if (!url) {
-			throw new Error('资源下载失败，路径为空');
+		let url: string | undefined;
+		if (platform === 'win32' || !file.platforms) {
+			// win32 使用默认包；无 platforms 声明的为平台无关资源
+			url = file.url;
+		} else {
+			// 声明了 platforms 的为平台专属二进制：无匹配平台时不可回退默认包（win32 二进制）
+			// 否则会下载到当前系统不可运行的文件，造成「安装后仍检测不到」的假安装
+			url = file.platforms.find((p) => p.platform === platform)?.url;
+			if (!url) {
+				throw new Error(`「${file.name}」暂不支持当前系统（${platform}），无法下载安装`);
+			}
 		}
 		// 下载
 		await remote.methods.call('download', 'download-file-' + file.id, url, downloadPath);
