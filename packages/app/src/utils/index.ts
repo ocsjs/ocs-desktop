@@ -1,11 +1,11 @@
 import { BrowserWindow, app, dialog } from 'electron';
 import path from 'path';
 import AdmZip from 'adm-zip';
-import fs, { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
+import fs, { existsSync, mkdirSync } from 'fs';
+import extractZip from 'extract-zip';
 import { Logger } from '../logger';
 import { downloadFile as smartDownloadFile } from './download';
 import xlsx from 'xlsx';
-import unzipper from 'unzipper';
 
 const taskLogger = Logger('task');
 const logger = Logger('utils');
@@ -89,105 +89,18 @@ export async function moveDirWithRetry(src: string, dest: string): Promise<void>
 	}
 }
 
-/** zip 条目 unix 文件类型位（externalFileAttributes 高 16 位） */
-const S_IFMT = 0o170000;
-const S_IFLNK = 0o120000;
-
-/**
- * 读取 zip 中央目录，返回「条目路径 → unix mode」映射。
- *
- * 流式 Parse 只解析本地文件头（无 externalFileAttributes 字段），
- * unix 属性仅存于中央目录；Open.file 按需 range 读取元数据，不整包入内存。
- */
-async function readArchiveEntryModes(input: string): Promise<Map<string, number>> {
-	const modes = new Map<string, number>();
-	try {
-		const dir = await unzipper.Open.file(input);
-		for (const f of dir.files) {
-			const mode = (f.externalFileAttributes >>> 16) & 0xffff;
-			if (mode) modes.set(f.path.replace(/\\/g, '/'), mode);
-		}
-	} catch (e) {
-		logger.warn('读取 zip 中央目录失败，跳过 unix 属性还原', { input, error: String(e) });
-	}
-	return modes;
-}
-
-/**
- * 流式解压 zip 到目录：单趟解析、逐条落盘、背压受控、内存恒定。
- *
- * 不使用 unzipper.Extract：其 duplexer2 管道在背压下会丢条目（实测 50 个文件仅落盘 19 个），
- * 且 pipeline() 会在写盘完成前提前 resolve（竞态）。此处基于 unzipper.Parse 逐条处理：
- * - zip-slip 防护：越界条目直接丢弃；
- * - __MACOSX 资源叉垃圾目录跳过；
- * - 符号链接条目（S_IFLNK，内容即目标路径）重建为真实软链，
- *   创建失败（如 Windows 无提权/开发者模式）回退写文本占位（历史兼容行为）；
- * - 非 win32 按原始 mode 还原执行位（unzipper 不恢复 unix 权限）。
- * 全平台统一此实现（含 darwin，替代原系统 unzip 分支）。
- */
-async function extractZipStreaming(input: string, dest: string): Promise<void> {
-	const destResolved = path.resolve(dest);
-	const modes = await readArchiveEntryModes(input);
-	const parser = createReadStream(input).pipe(unzipper.Parse({ forceStream: true }));
-	for await (const entry of parser) {
-		const relPath = String(entry.path).replace(/\\/g, '/');
-		const target = path.resolve(dest, relPath);
-		// zip-slip 防护：目标必须落在 dest 内
-		if (target !== destResolved && !target.startsWith(destResolved + path.sep)) {
-			entry.autodrain();
-			continue;
-		}
-		// macOS 压缩产生的资源叉垃圾
-		if (relPath === '__MACOSX' || relPath.startsWith('__MACOSX/')) {
-			entry.autodrain();
-			continue;
-		}
-		if (entry.type === 'Directory') {
-			mkdirSync(target, { recursive: true });
-			entry.autodrain();
-			continue;
-		}
-
-		// 本地头无 unix 属性，查中央目录映射
-		const mode = modes.get(relPath) || 0;
-		// 符号链接：条目内容即链接目标路径（通常几十字节）
-		if ((mode & S_IFMT) === S_IFLNK) {
-			mkdirSync(path.dirname(target), { recursive: true });
-			const linkTarget = (await entry.buffer()).toString('utf-8');
-			fs.rmSync(target, { force: true });
-			try {
-				fs.symlinkSync(linkTarget, target);
-			} catch (e) {
-				logger.warn('创建符号链接失败，写入文本占位', { path: target, error: String(e) });
-				fs.writeFileSync(target, linkTarget);
-			}
-			continue;
-		}
-
-		mkdirSync(path.dirname(target), { recursive: true });
-		await new Promise<void>((resolve, reject) => {
-			const writer = createWriteStream(target);
-			entry.on('error', reject);
-			writer.on('error', reject);
-			writer.on('finish', resolve);
-			entry.pipe(writer);
-		});
-		// 还原执行位（如 ocr 可执行文件）
-		if (process.platform !== 'win32' && mode & 0o111) {
-			try {
-				fs.chmodSync(target, mode & 0o777);
-			} catch {}
-		}
-	}
-}
-
 /**
  * 解压文件（统一管线，参考主流桌面软件做法：Chrome/electron-updater/VS Code 均为
  * 「暂存解压 → 原子换入 → 失败清理」，不在目标位置就地解压）：
  * 1. 预检：压缩包必须存在且为 zip（PK 魔数）；
  * 2. 暂存：解压到 output 同卷的暂存目录，失败/中断不污染 output（旧版本保持可用）；
- * 3. 平台语义保真：extractZipStreaming 恢复符号链接/执行位、剥离 __MACOSX、防 zip-slip；
- * 4. 原子换入：rename（带 Windows 文件锁退避重试/复制兜底），失败清理暂存目录。
+ * 3. 解压：extract-zip（yauzl 内核，npm 周下载千万级、puppeteer 依赖）——
+ *    恢复符号链接与 unix 执行位、内置 zip-slip 路径校验；
+ * 4. 清理 __MACOSX 资源叉垃圾目录；
+ * 5. 原子换入：rename（带 Windows 文件锁退避重试/复制兜底），失败清理暂存目录。
+ *
+ * 已知边界：Windows 创建符号链接需提权/开发者模式，含软链的 zip 在 win32 上会失败——
+ * 目前仅 darwin 版资源（OCR 模块）含软链，win/linux 分发包均无软链，不会触发。
  */
 export async function unzip(input: string, output: string) {
 	if (!existsSync(input)) {
@@ -210,7 +123,9 @@ export async function unzip(input: string, output: string) {
 	mkdirSync(staging, { recursive: true });
 
 	try {
-		await extractZipStreaming(input, staging);
+		await extractZip(input, { dir: path.resolve(staging) });
+		// 剥离 macOS 压缩产生的资源叉垃圾目录
+		fs.rmSync(path.join(staging, '__MACOSX'), { recursive: true, force: true });
 		// 原子换入：先移除旧目录，再 rename（Windows 文件锁重试/复制兜底）
 		fs.rmSync(output, { recursive: true, force: true });
 		await moveDirWithRetry(staging, output);
