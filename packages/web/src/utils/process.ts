@@ -187,11 +187,18 @@ export class Process extends EventEmitter {
 	 * 使用 child_process 运行 ocs 命令
 	 */
 	async init(onConsole?: (data: any) => void) {
+		// electron-vite 的 renderer 构建按浏览器环境编译，会把裸写的 process.env 整体替换为空对象 {}，
+		// 导致 worker 子进程丢失 DISPLAY/WAYLAND_DISPLAY/HOME 等全部环境变量，
+		// 其启动的浏览器因无显示服务器立即退出（Playwright 报 "Target page, context or browser has been closed"）。
+		// 渲染进程开启 nodeIntegration，globalThis.process 即真实进程对象，经 globalThis 读取可绕开该替换；
+		// 纯浏览器环境（导航页）下 globalThis.process 不存在，回退空对象（该环境不会执行 fork）。
+		const realProcess = (globalThis as { process?: NodeJS.Process }).process;
+		const workerEnv = realProcess?.env ?? process.env;
 		this.shell = child_process.fork(
 			await remote.path.call('join', await remote.app.call('getAppPath'), './out/main/script.js'),
 			{
 				stdio: ['ipc'],
-				env: process.env
+				env: workerEnv
 			}
 		);
 		this.worker = createRemoteScriptWorker(this.shell);
