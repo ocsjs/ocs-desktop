@@ -48,16 +48,12 @@ const barStyle = computed(() => {
 	text-overflow: ellipsis;
 	/* 浮层卡片化：细描边取状态色的 30% 透明度（color-mix 基于 currentColor），投影提供层级感 */
 	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-	box-shadow:
-		0 2px 8px rgba(0, 0, 0, 0.12),
-		0 1px 2px rgba(0, 0, 0, 0.08);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
 
 	body[arco-theme='dark'] & {
 		color: v-bind('getTypeColors(statusBarState.type).darkColor');
 		background-color: v-bind('getTypeColors(statusBarState.type).darkBgColor');
-		box-shadow:
-			0 2px 8px rgba(0, 0, 0, 0.4),
-			0 1px 2px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
 	}
 }
 
@@ -69,20 +65,14 @@ const barStyle = computed(() => {
 
 /* 入场：宽度展开 + 淡入上浮 */
 .status-bar-enter-active {
-	transition:
-		opacity 0.35s ease,
-		max-width 0.35s ease,
-		padding 0.35s ease,
-		transform 0.35s ease;
+	transition: opacity 0.35s ease, max-width 0.35s ease, padding 0.35s ease, transform 0.35s ease;
 }
 
 /* 退场：只做 opacity + transform（合成器加速，无 reflow），
    不做宽度收缩——max-width/padding 过渡会持续触发重排，
    内容被逐帧裁剪是"不丝滑"的主因；快速淡出即足够干净 */
 .status-bar-leave-active {
-	transition:
-		opacity 0.22s ease-in,
-		transform 0.22s ease-in;
+	transition: opacity 0.22s ease-in, transform 0.22s ease-in;
 }
 
 .status-bar-enter-from {

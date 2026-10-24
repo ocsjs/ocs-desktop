@@ -2,12 +2,11 @@ import { BrowserWindow, app, dialog } from 'electron';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import axios from 'axios';
-import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
+import fs, { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
 import { finished, pipeline } from 'stream/promises';
 import { Logger } from '../logger';
 import xlsx from 'xlsx';
 import unzipper from 'unzipper';
-import fs from 'fs';
 
 const taskLogger = Logger('task');
 const logger = Logger('utils');

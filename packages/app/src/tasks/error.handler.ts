@@ -7,6 +7,19 @@ import { Logger } from '../logger';
 export function handleError() {
 	const logger = Logger('error');
 
+	// 重入保护：若错误源自日志通道自身（如 stdout 管道断裂时 console.log 抛 EPIPE），
+	// 错误处理器记日志会再次触发同一错误，形成无限递归（曾导致 error.log 半小时膨胀 34GB、事件循环被占死）。
+	let logging = false;
+	const safeLog = (event: string, e: unknown) => {
+		if (logging) return;
+		logging = true;
+		try {
+			logger.error(event, e);
+		} finally {
+			logging = false;
+		}
+	};
+
 	app.on('render-process-gone', (e, contents, details) => {
 		const url = contents.getURL?.() ?? '';
 		logger.error('render-process-gone', details, `type=${contents.getType()}`, `url=${url}`);
@@ -26,10 +39,10 @@ export function handleError() {
 	});
 
 	process.on('uncaughtException', (e) => {
-		logger.error('rejectionHandled', e);
+		safeLog('uncaughtException', e);
 	});
 	process.on('unhandledRejection', (e) => {
-		logger.error('unhandledRejection', e);
+		safeLog('unhandledRejection', e);
 	});
 }
 

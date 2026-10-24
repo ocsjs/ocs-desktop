@@ -18,7 +18,10 @@ export const FRAMERATE_TO_NTH_FRAME: Record<'high' | 'medium' | 'low', number> =
  * 分辨率越高、jpeg 质量越高，画面越清晰但每帧数据量越大。
  * 注意 maxWidth/maxHeight 为帧尺寸上限（只降采样不放大），实际分辨率 = min(浏览器视口, 上限)。
  */
-export const QUALITY_TO_PARAMS: Record<'ultra' | 'high' | 'medium' | 'low', { maxWidth: number; maxHeight: number; quality: number }> = {
+export const QUALITY_TO_PARAMS: Record<
+	'ultra' | 'high' | 'medium' | 'low',
+	{ maxWidth: number; maxHeight: number; quality: number }
+> = {
 	ultra: { maxWidth: 2560, maxHeight: 1440, quality: 85 }, // 超清：上限 2K
 	high: { maxWidth: 1280, maxHeight: 720, quality: 70 },
 	medium: { maxWidth: 640, maxHeight: 360, quality: 50 }, // 默认

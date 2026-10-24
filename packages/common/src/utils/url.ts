@@ -23,7 +23,11 @@ export function normalizeUrl(input: unknown): string {
 		return 'https:' + value;
 	}
 	// 域名 / localhost / IPv4，可后接端口与路径、查询、锚点
-	if (/^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-z0-9]([\w-]*[a-z0-9])?(\.[a-z0-9]([\w-]*[a-z0-9])?)+)(:\d+)?([/?#].*)?$/i.test(value)) {
+	// （正则字面量 prettier/max-len 均无法再折行，豁免行宽限制）
+	// eslint-disable-next-line max-len
+	const hostLikePattern =
+		/^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-z0-9]([\w-]*[a-z0-9])?(\.[a-z0-9]([\w-]*[a-z0-9])?)+)(:\d+)?([/?#].*)?$/i;
+	if (hostLikePattern.test(value)) {
 		return 'https://' + value;
 	}
 	return value;

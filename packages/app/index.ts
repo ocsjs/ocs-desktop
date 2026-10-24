@@ -15,6 +15,16 @@ import { initCrypto } from './src/crypto';
 
 app.setName('OCS Desktop');
 
+// 部分启动方式（GearLever/flatpak 等桌面启动器）会把 stdout/stderr 接到已关闭的管道：
+// 任一 console.log 都会触发 EPIPE 异步异常 → 全局错误处理器记日志时再次 console.log → 无限递归，
+// 表现为窗口永不显示、终端无输出、error.log 以数十 MB/s 的速度膨胀直至写满磁盘。
+// 为流挂上 error 监听后 EPIPE 不再升级为 uncaughtException（写不出去的日志直接丢弃）。
+for (const stream of [process.stdout, process.stderr]) {
+	stream?.on?.('error', (err: Error & { code?: string }) => {
+		if (err.code !== 'EPIPE') throw err;
+	});
+}
+
 // 设置应用用户模型 ID，使 Windows 通知（托盘气泡等）显示应用名 "OCS Desktop" 而非进程名 "Electron"。
 // 打包后与 electron-builder 的 appId（快捷方式 AUMID）保持一致，以正确关联应用图标与名称。
 app.setAppUserModelId(app.isPackaged ? 'ocs.enncy.cn' : 'OCS Desktop');
