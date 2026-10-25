@@ -1,13 +1,3 @@
-## [2.9.33](https://github.com/ocsjs/ocs-desktop/compare/2.9.31...2.9.33) (2026-05-10)
-
-
-### Bug Fixes
-
-* **web:** 使用实时easy-us库，同步最新版本 ([2d122a8](https://github.com/ocsjs/ocs-desktop/commit/2d122a8c4193f2ba8259678d622edd88e7f75976))
-* **web:** 移除初始化浏览器启动测试 ([da36a8d](https://github.com/ocsjs/ocs-desktop/commit/da36a8d3cee8f1904d207802ca2946b714998582))
-
-
-
 ## [3.2.0](https://github.com/ocsjs/ocs-desktop/compare/v3.1.0...v3.2.0) (2026-10-25)
 
 
@@ -293,10 +283,6 @@
 * **ci:** 分离 Release PR 创建和 Release 发布流程 ([c78fc6b](https://github.com/ocsjs/ocs-desktop/commit/c78fc6b3cb93574c8c35326f0bdb6626b2b8b82b))
 * 重构项目架构 ([0db2ae6](https://github.com/ocsjs/ocs-desktop/commit/0db2ae6481f362fa6c799fa08c2767e7aa9ae7f1))
 
-## [2.9.31](https://github.com/ocsjs/ocs-desktop/compare/2.9.30...2.9.31) (2025-11-18)
-
-
-
 ## [2.10.0](https://github.com/ShyButHandsome/ocs-desktop/compare/v2.9.31...v2.10.0) (2026-03-02)
 
 
@@ -324,6 +310,20 @@
 
 * **ci:** 分离 Release PR 创建和 Release 发布流程 ([c78fc6b](https://github.com/ShyButHandsome/ocs-desktop/commit/c78fc6b3cb93574c8c35326f0bdb6626b2b8b82b))
 * 重构项目架构 ([0db2ae6](https://github.com/ShyButHandsome/ocs-desktop/commit/0db2ae6481f362fa6c799fa08c2767e7aa9ae7f1))
+
+## [2.9.33](https://github.com/ocsjs/ocs-desktop/compare/2.9.31...2.9.33) (2026-05-10)
+
+
+### Bug Fixes
+
+* **web:** 使用实时easy-us库，同步最新版本 ([2d122a8](https://github.com/ocsjs/ocs-desktop/commit/2d122a8c4193f2ba8259678d622edd88e7f75976))
+* **web:** 移除初始化浏览器启动测试 ([da36a8d](https://github.com/ocsjs/ocs-desktop/commit/da36a8d3cee8f1904d207802ca2946b714998582))
+
+
+
+## [2.9.31](https://github.com/ocsjs/ocs-desktop/compare/2.9.30...2.9.31) (2025-11-18)
+
+
 
 ## [2.9.30](https://github.com/ocsjs/ocs-desktop/compare/2.9.28...2.9.30) (2025-11-16)
 
