@@ -1,6 +1,6 @@
 {
 	"name": "@ocs-desktop/app",
-	"version": "3.3.0",
+	"version": "3.4.0",
 	"description": "desktop for userscript",
 	"main": "./out/main/index.js",
 	"scripts": {
