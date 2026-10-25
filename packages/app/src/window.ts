@@ -11,9 +11,7 @@ import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
  * Windows 使用 .ico；macOS 窗口图标由系统 Dock/包内 icns 负责。
  */
 function windowIconPath() {
-	return process.platform === 'linux'
-		? path.resolve('./public/icons/256.png')
-		: path.resolve('./public/favicon.ico');
+	return process.platform === 'linux' ? path.resolve('./public/icons/256.png') : path.resolve('./public/favicon.ico');
 }
 
 export function createWindow() {

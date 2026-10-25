@@ -138,7 +138,6 @@
 			</a-col>
 		</a-row>
 
-
 		<!-- 自动化程序选择弹窗 -->
 		<a-modal
 			v-model:visible="setupState.showScriptSelector"
