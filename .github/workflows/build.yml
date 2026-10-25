@@ -372,7 +372,8 @@ jobs:
           set -e
           TAG_NAME=${GITHUB_REF#refs/tags/}
           mkdir -p updater-meta && cd updater-meta
-          gh release download "$TAG_NAME" --pattern 'latest*.yml' --clobber
+          # 未 checkout 仓库，gh 无法从 git 上下文推断目标仓库，必须显式 --repo
+          gh release download "$TAG_NAME" --pattern 'latest*.yml' --clobber --repo ${{ github.repository }}
           echo '已下载的更新元数据文件：'
           ls -la
           # 一个都没有说明构建附件未上传完整，直接失败
@@ -431,4 +432,4 @@ jobs:
         if: steps.check-secrets.outputs.available == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${GITHUB_REF#refs/tags/}" --draft=false
+        run: gh release edit "${GITHUB_REF#refs/tags/}" --draft=false --repo ${{ github.repository }}
