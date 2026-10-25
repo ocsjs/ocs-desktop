@@ -1,0 +1,4 @@
+# git push 前自动运行完整 lint（与 CI 同款命令：prettier 全仓格式检查 + eslint），
+# 避免问题在 GitHub workflow 上才暴露、来回返工。
+# 紧急跳过：git push --no-verify
+pnpm lint
