@@ -26,6 +26,18 @@
 
 * 解压主体换用 extract-zip，移除 unzipper ([6b7a71b](https://github.com/ocsjs/ocs-desktop/commit/6b7a71be75b1653cace8d22fbf44ca01009796b2))
 
+## [3.4.0](https://github.com/ocsjs/ocs-desktop/compare/v3.3.0...v3.4.0) (2026-10-25)
+
+
+### ✨ Features
+
+* 发布闸门嵌回 build.yml 内嵌审批，独立工作流降为补发通道 ([4f3734f](https://github.com/ocsjs/ocs-desktop/commit/4f3734f50d1ea06ed55bac3c91b294eea3d085fa))
+
+
+### 🐛 Bug Fixes
+
+* 发布闸门 gh 调用补 --repo 参数 ([a310e12](https://github.com/ocsjs/ocs-desktop/commit/a310e1200772e9bc4f75d9d4b920b0dc3b9eff06))
+
 ## [3.3.0](https://github.com/ocsjs/ocs-desktop/compare/v3.2.0...v3.3.0) (2026-10-25)
 
 
