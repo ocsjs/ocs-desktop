@@ -1,19 +1,13 @@
 name: Publish Update
 
-# 发布闸门（人工最终确认后手动触发）：
-# 只把 latest*.yml（win=latest.yml / mac=latest-mac.yml / linux=latest-linux.yml）上传到
-# COS 更新目录。latest.yml 是客户端 electron-updater 发现更新的唯一入口——
-# 构建期（build.yml）只上传安装包/blockmap 到 COS 与 draft Release（预发布），
-# 在本工作流运行前没有任何客户端会检测到更新。
+# 补发/重发通道（备用）：正常发版走 build.yml 末尾的 publish-update 内嵌审批 job
+# （environment 人工 Approve，零输入）；本工作流用于：
+# - 内嵌审批被误 Reject 后的补救；
+# - 对历史任意 tag 补传/重传 latest*.yml（如回滚后重发、COS 数据异常修复）。
 #
-# 使用流程：
-# 1. 合并 release-please PR → 自动建 tag + draft Release + 触发 build.yml 构建；
-# 2. 构建完成后下载安装包人工验证；
-# 3. 确认无误 → Actions → "Publish Update" → Run workflow → 输入 tag → 运行；
-# 4. latest*.yml 从该 tag 的 Release 附件下载并上传 COS，客户端开始接收更新。
-#
-# 数据源是 GitHub Release 附件（构建时已随 draft Release 上传），
-# 不受 CI artifacts 3 天保留期限制，可随时补发/重发。
+# 原理：latest.yml 是客户端 electron-updater 发现更新的唯一入口，
+# 本工作流把它从指定 tag 的 Release 附件下载并上传到 COS 更新目录。
+# 数据源是 GitHub Release 附件，不受 CI artifacts 3 天保留期限制，可随时补发/重发。
 
 on:
   workflow_dispatch:

@@ -347,4 +347,88 @@ jobs:
               fi
               sleep $((attempt * 15))
             done
-          done
+          done
+
+  # 发布闸门（内嵌人工审批）：只上传 latest*.yml（win=latest.yml / mac=latest-mac.yml /
+  # linux=latest-linux.yml）到 COS 更新目录，latest.yml 是客户端发现更新的唯一入口。
+  # 绑定 publish-update environment（需仓库 Settings → Environments 配置 Required reviewers）：
+  # 运行到此 job 会停在「Review deployments」，Approve 后客户端才能检测更新，Reject 则不发布；
+  # 等待审批期间 job 处于 waiting 状态，不占 runner、不计算分钟数（run 寿命上限 35 天）。
+  # 数据源为该 tag 的 Release 附件（upload-release 已上传），不受 CI artifacts 3 天保留期限制。
+  # 补发/重发历史版本请用独立的 publish-update.yml（手动触发，可指定任意 tag）。
+  publish-update:
+    needs: upload-electron-updater
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    environment: publish-update
+    # fork 仓库无 COS 密钥时跳过不报错
+    continue-on-error: true
+
+    steps:
+      - name: 下载该 tag Release 附件中的 latest*.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          mkdir -p updater-meta && cd updater-meta
+          gh release download "$TAG_NAME" --pattern 'latest*.yml' --clobber
+          echo '已下载的更新元数据文件：'
+          ls -la
+          # 一个都没有说明构建附件未上传完整，直接失败
+          ls latest*.yml >/dev/null
+
+      - name: Check COS secrets availability
+        id: check-secrets
+        run: |
+          if [ -n "$COS_SECRET_ID" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "Skipping publish-update: TENCENT_SECRET_ID not configured"
+          fi
+        env:
+          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+
+      - name: Install Tencent Cloud CLI
+        if: steps.check-secrets.outputs.available == 'true'
+        run: pip install coscmd
+
+      - name: Configure Tencent Cloud COS
+        if: steps.check-secrets.outputs.available == 'true'
+        run: |
+          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
+
+      # 逐文件上传 + 调用级重试（分片断点续传，重试续传不重传）
+      - name: 上传 latest*.yml 到 COS 更新目录
+        if: steps.check-secrets.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -e
+          shopt -s nullglob
+          for file in updater-meta/latest*.yml; do
+            [ -f "$file" ] || continue
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading $file (attempt $attempt/5)"
+              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
+                break
+              fi
+              if [ "$attempt" = 5 ]; then
+                echo "::error::Upload failed after 5 attempts: $file"
+                exit 1
+              fi
+              sleep $((attempt * 15))
+            done
+          done
+
+      # 审批通过即最终确认：同步把 draft Release 转为正式发布（下载链接对外可用）
+      - name: 将 Release 转为正式发布
+        if: steps.check-secrets.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${GITHUB_REF#refs/tags/}" --draft=false
