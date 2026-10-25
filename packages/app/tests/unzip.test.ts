@@ -23,7 +23,7 @@ function freshWorkDir() {
 	return workDir;
 }
 
-/** 用 adm-zip 构建测试 zip（attr 为 unix mode << 16，用于软链/执行位用例） */
+/** 用 adm-zip 构建测试 zip（attr 为 unix 权限位，如 0o755） */
 function buildZip(entries: { name: string; content: string | Buffer; attr?: number }[], zipPath: string) {
 	const zip = new AdmZip();
 	for (const e of entries) {
@@ -31,6 +31,42 @@ function buildZip(entries: { name: string; content: string | Buffer; attr?: numb
 	}
 	zip.writeZip(zipPath);
 	return zipPath;
+}
+
+/**
+ * 补丁 zip 中央目录中指定条目的 unix mode（externalFileAttributes 高 16 位）。
+ *
+ * adm-zip 的 attr 参数只接受权限位（0xfff 掩码），文件类型被强制为 S_IFREG，
+ * 无法构造符号链接条目；extract-zip 依据中央目录的 mode 判定软链（S_IFLNK），
+ * 因此测试在 zip 构建后直接补丁中央目录属性字段。
+ */
+function patchCentralDirectoryMode(zipPath: string, entryName: string, mode: number) {
+	const buf = fs.readFileSync(zipPath);
+	// 从尾部定位 EOCD（签名 0x06054b50）
+	let eocd = -1;
+	for (let i = buf.length - 22; i >= 0; i--) {
+		if (buf.readUInt32LE(i) === 0x06054b50) {
+			eocd = i;
+			break;
+		}
+	}
+	if (eocd < 0) throw new Error('非法 zip：未找到 EOCD');
+	let offset = buf.readUInt32LE(eocd + 16); // 中央目录起始偏移
+	const count = buf.readUInt16LE(eocd + 10);
+	for (let i = 0; i < count; i++) {
+		if (buf.readUInt32LE(offset) !== 0x02014b50) break; // 中央目录条目签名
+		const nameLen = buf.readUInt16LE(offset + 28);
+		const extraLen = buf.readUInt16LE(offset + 30);
+		const commentLen = buf.readUInt16LE(offset + 32);
+		const name = buf.toString('utf8', offset + 46, offset + 46 + nameLen);
+		if (name === entryName) {
+			buf.writeUInt32LE((mode << 16) >>> 0, offset + 38); // CENATX external attributes
+			fs.writeFileSync(zipPath, buf);
+			return;
+		}
+		offset += 46 + nameLen + extraLen + commentLen;
+	}
+	throw new Error('条目不存在：' + entryName);
 }
 
 beforeEach(() => freshWorkDir());
@@ -91,18 +127,20 @@ describe('unzip 统一解压管线', () => {
 		expect(fs.readFileSync(path.join(out, 'new.txt'), 'utf-8')).toBe('new');
 	});
 
-	// Windows 创建符号链接需提权/开发者模式（代码保留文本文件兜底），仅在类 unix 下验证还原
+	// Windows 创建符号链接需提权/开发者模式（extract-zip 会抛错），仅在类 unix 下验证还原
 	it.skipIf(process.platform === 'win32')('还原 zip 内的符号链接与执行位', async () => {
 		const zipPath = buildZip(
 			[
 				{ name: 'target.txt', content: 'real content' },
-				// 符号链接条目：内容为链接目标路径，unix 类型位 S_IFLNK
-				{ name: 'link.txt', content: 'target.txt', attr: (0o120777 << 16) >>> 0 },
-				// 可执行文件：0755
-				{ name: 'run.sh', content: '#!/bin/sh\necho hi\n', attr: (0o100755 << 16) >>> 0 }
+				// 符号链接条目：内容为链接目标路径（adm-zip 无法造软链类型，下方补丁中央目录标记 S_IFLNK）
+				{ name: 'link.txt', content: 'target.txt' },
+				// 可执行文件：权限位 0755（adm-zip attr 接受权限位）
+				{ name: 'run.sh', content: '#!/bin/sh\necho hi\n', attr: 0o755 }
 			],
 			path.join(workDir, 'attr.zip')
 		);
+		// 把 link.txt 标记为符号链接（S_IFLNK | 0777）
+		patchCentralDirectoryMode(zipPath, 'link.txt', 0o120777);
 		const out = path.join(workDir, 'out');
 		await unzip(zipPath, out);
 
