@@ -1,0 +1,109 @@
+name: Publish Update
+
+# 发布闸门（人工最终确认后手动触发）：
+# 只把 latest*.yml（win=latest.yml / mac=latest-mac.yml / linux=latest-linux.yml）上传到
+# COS 更新目录。latest.yml 是客户端 electron-updater 发现更新的唯一入口——
+# 构建期（build.yml）只上传安装包/blockmap 到 COS 与 draft Release（预发布），
+# 在本工作流运行前没有任何客户端会检测到更新。
+#
+# 使用流程：
+# 1. 合并 release-please PR → 自动建 tag + draft Release + 触发 build.yml 构建；
+# 2. 构建完成后下载安装包人工验证；
+# 3. 确认无误 → Actions → "Publish Update" → Run workflow → 输入 tag → 运行；
+# 4. latest*.yml 从该 tag 的 Release 附件下载并上传 COS，客户端开始接收更新。
+#
+# 数据源是 GitHub Release 附件（构建时已随 draft Release 上传），
+# 不受 CI artifacts 3 天保留期限制，可随时补发/重发。
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的版本 tag（如 v3.2.0）'
+        required: true
+      publish_release:
+        description: '同时将 GitHub Release 从草稿转为正式发布'
+        type: boolean
+        default: true
+
+env:
+  # 腾讯云 COS（非机密；机密仅需 secrets.TENCENT_SECRET_ID / TENCENT_SECRET_KEY）
+  COS_BUCKET: ocs-1301696006
+  COS_REGION: ap-guangzhou
+  COS_ENDPOINT: cos.accelerate.myqcloud.com
+  # COS 更新目录（与 packages/common/src/constants.ts 的 OCS_UPDATER.feedUrl 保持同步）
+  COS_UPDATER_DIR: /app/electron-updater/
+  # coscmd 调优参数（与 build.yml 一致）
+  COS_THREAD_NUM: "3"
+  COS_PART_SIZE: "4"
+  COS_RETRY: "10"
+  COS_TIMEOUT: "120"
+
+jobs:
+  publish-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载该 tag Release 附件中的 latest*.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          mkdir -p updater-meta
+          cd updater-meta
+          gh release download "${{ inputs.tag }}" --pattern 'latest*.yml' --clobber
+          echo "已下载的更新元数据文件："
+          ls -la
+          # 防御：一个 latest*.yml 都没有说明 tag 不存在或构建未完成，直接失败
+          ls latest*.yml >/dev/null
+
+      - name: Check COS secrets availability
+        id: check-secrets
+        run: |
+          if [ -n "$COS_SECRET_ID" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::error::TENCENT_SECRET_ID 未配置，无法上传 latest.yml"
+            exit 1
+          fi
+        env:
+          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
+
+      - name: Install Tencent Cloud CLI
+        run: pip install coscmd
+
+      - name: Configure Tencent Cloud COS
+        run: |
+          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
+            -s ${{ secrets.TENCENT_SECRET_KEY }} \
+            -b "$COS_BUCKET" \
+            -e "$COS_ENDPOINT" \
+            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
+            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
+
+      # 逐文件上传 + 调用级重试（与 build.yml 相同策略：分片断点续传，重试续传不重传）
+      - name: 上传 latest*.yml 到 COS 更新目录
+        shell: bash
+        run: |
+          set -e
+          shopt -s nullglob
+          for file in updater-meta/latest*.yml; do
+            [ -f "$file" ] || continue
+            for attempt in 1 2 3 4 5; do
+              echo "Uploading $file (attempt $attempt/5)"
+              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
+                break
+              fi
+              if [ "$attempt" = 5 ]; then
+                echo "::error::Upload failed after 5 attempts: $file"
+                exit 1
+              fi
+              sleep $((attempt * 15))
+            done
+          done
+
+      - name: 将 Release 转为正式发布
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ inputs.tag }}" --draft=false

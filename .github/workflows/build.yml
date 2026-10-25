@@ -286,7 +286,8 @@ jobs:
         run: coscmd upload -y CHANGELOG.md "$COS_UPDATER_DIR"
 
   # electron-updater 安装包与 blockmap 上传到固定更新目录（不含 latest*.yml）。
-  # latest.yml 是客户端发现更新的唯一入口，单独由 publish-update job 经人工审批后上传，
+  # latest.yml 是客户端发现更新的唯一入口，由独立的 publish-update.yml 工作流在
+  # 人工最终确认后手动触发上传（从 Release 附件取，不受 artifacts 3 天保留期限制），
   # 因此安装包提前上传无害——在 latest.yml 生效前没有任何客户端会下载它们。
   upload-electron-updater:
     needs: upload-changelog
@@ -346,69 +347,4 @@ jobs:
               fi
               sleep $((attempt * 15))
             done
-          done
-
-  # 发布闸门：只上传 latest*.yml（win=latest.yml / mac=latest-mac.yml / linux=latest-linux.yml）。
-  # 该 job 绑定 publish-update environment（需在仓库 Settings → Environments 配置 Required reviewers），
-  # 每次发版会停在 Review deployments，Approve 后客户端才能检测到更新，Reject 则不发布。
-  # 注意：CI artifacts 保留 3 天，审批需在构建后 3 天内完成。
-  publish-update:
-    needs: upload-electron-updater
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    environment: publish-update
-    continue-on-error: true
-
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Check COS secrets availability
-        id: check-secrets
-        run: |
-          if [ -n "$COS_SECRET_ID" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-            echo "Skipping publish-update: TENCENT_SECRET_ID not configured"
-          fi
-        env:
-          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-
-      - name: Install Tencent Cloud CLI
-        if: steps.check-secrets.outputs.available == 'true'
-        run: pip install coscmd
-
-      - name: Configure Tencent Cloud COS
-        if: steps.check-secrets.outputs.available == 'true'
-        run: |
-          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
-            -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b "$COS_BUCKET" \
-            -e "$COS_ENDPOINT" \
-            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
-            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
-
-      - name: Upload latest yml to COS
-        if: steps.check-secrets.outputs.available == 'true'
-        shell: bash
-        run: |
-          set -e
-          shopt -s nullglob
-          for file in artifacts/latest*.yml; do
-            [ -f "$file" ] || continue
-            for attempt in 1 2 3 4 5; do
-              echo "Uploading $file (attempt $attempt/5)"
-              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
-                break
-              fi
-              if [ "$attempt" = 5 ]; then
-                echo "::error::Upload failed after 5 attempts: $file"
-                exit 1
-              fi
-              sleep $((attempt * 15))
-            done
-          done
+          done
