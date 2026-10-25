@@ -8,6 +8,11 @@
  * - 域名形态（www.example.com、example.com/path、localhost:3000、127.0.0.1 等）自动补全 https:// 前缀
  * - 无法识别为链接时原样返回，交由上层校验
  */
+// 域名形态正则：原子模式不可折行拼接（会破坏可读性），超长属预期，豁免 max-len
+const DOMAIN_LIKE_RE =
+	// eslint-disable-next-line max-len
+	/^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-z0-9]([\w-]*[a-z0-9])?(\.[a-z0-9]([\w-]*[a-z0-9])?)+)(:\d+)?([/?#].*)?$/i;
+
 export function normalizeUrl(input: unknown): string {
 	let value = String(input ?? '').trim();
 	// 去除粘贴时意外携带的首尾引号 / 尖括号（链接首尾不可能出现这些字符）
@@ -23,11 +28,7 @@ export function normalizeUrl(input: unknown): string {
 		return 'https:' + value;
 	}
 	// 域名 / localhost / IPv4，可后接端口与路径、查询、锚点
-	if (
-		/^(localhost|(\d{1,3}\.){3}\d{1,3}|[a-z0-9]([\w-]*[a-z0-9])?(\.[a-z0-9]([\w-]*[a-z0-9])?)+)(:\d+)?([/?#].*)?$/i.test(
-			value
-		)
-	) {
+	if (DOMAIN_LIKE_RE.test(value)) {
 		return 'https://' + value;
 	}
 	return value;
