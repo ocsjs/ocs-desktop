@@ -26,6 +26,18 @@
 
 * 解压主体换用 extract-zip，移除 unzipper ([6b7a71b](https://github.com/ocsjs/ocs-desktop/commit/6b7a71be75b1653cace8d22fbf44ca01009796b2))
 
+## [3.3.0](https://github.com/ocsjs/ocs-desktop/compare/v3.2.0...v3.3.0) (2026-10-25)
+
+
+### ✨ Features
+
+* 发布闸门改为独立手动触发工作流 publish-update.yml ([c7304f1](https://github.com/ocsjs/ocs-desktop/commit/c7304f1bf76bd6e85875f4f2b145c4c28702b261))
+
+
+### 🐛 Bug Fixes
+
+* 修正 CHANGELOG 版本段落顺序 ([c9ffde9](https://github.com/ocsjs/ocs-desktop/commit/c9ffde9a672209bc2fccbce78e98a3e9cbe2c928))
+
 ## [3.1.0](https://github.com/ocsjs/ocs-desktop/compare/v3.0.1...v3.1.0) (2026-10-22)
 
 
