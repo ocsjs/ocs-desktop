@@ -94,6 +94,8 @@ function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 
 <style lang="less">
 .sider {
+	/* 为内部绝对定位元素（.version 等）提供定位上下文；win/mac 视觉无变化 */
+	position: relative;
 	-webkit-app-region: no-drag;
 	user-select: none;
 	padding: 4px 24px 4px 0px;

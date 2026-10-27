@@ -321,11 +321,6 @@ export function remoteRegister(_win: BrowserWindow) {
 	nativeTheme.on('updated', () => {
 		win?.webContents?.send('system-theme-change', nativeTheme.shouldUseDarkColors);
 	});
-
-	// 通知渲染层窗口最大化状态（Linux 透明圆角窗口在最大化时需去除圆角，直角铺满屏幕）
-	const sendMaximizeState = () => win?.webContents?.send('window-maximize-change', win?.isMaximized() ?? false);
-	_win.on('maximize', sendMaximizeState);
-	_win.on('unmaximize', sendMaximizeState);
 }
 
 const _registerRemoteEvent = registerRemoteEvent;

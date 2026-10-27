@@ -18,6 +18,9 @@ catalogs:
     playwright-core:
       specifier: ^1.52.0
       version: 1.60.0
+    typescript:
+      specifier: ^4.5.5
+      version: 4.9.5
     vitest:
       specifier: ^3.0.0
       version: 3.2.7
@@ -181,8 +184,8 @@ importers:
         specifier: ^4.2.3
         version: 4.6.2(vite@5.4.21(@types/node@24.13.3)(less@4.6.4)(terser@5.48.0))(vue@3.5.34(typescript@4.9.5))
       electron:
-        specifier: 42.11.3
-        version: 42.11.3
+        specifier: 43.8.0
+        version: 43.8.0
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
@@ -2392,6 +2395,11 @@ packages:
 
   electron@42.11.3:
     resolution: {integrity: sha512-r/rC6BikQ2vEGQLhnHmFwFpvVPlWTc/rnHcYfJe4HDa5MEl00yhx72ffKw7zMf1WvAM2r2hcGJ3ZftuJRo0QaQ==}
+    engines: {node: '>= 22.12.0'}
+    hasBin: true
+
+  electron@43.8.0:
+    resolution: {integrity: sha512-K+sLv65RZ8SgmxItfH0hbGaFVOHqleMOCw7CImFedKBRpVWJ/Qo9PHihBd/GrANvmndZjN66S6ZmAdLaQYhZ4w==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -8240,6 +8248,14 @@ snapshots:
       - supports-color
 
   electron@42.11.3:
+    dependencies:
+      '@electron-internal/extract-zip': 1.0.5
+      '@electron/get': 5.1.0
+      '@types/node': 24.13.3
+    transitivePeerDependencies:
+      - supports-color
+
+  electron@43.8.0:
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0

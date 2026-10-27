@@ -200,11 +200,6 @@ onMounted(async () => {
 	changeTheme().catch(console.error);
 	initThemeSystemListener();
 
-	/** Linux 透明圆角窗口：最大化时去除圆角（直角铺满屏幕） */
-	ipcRenderer.on('window-maximize-change', (_e, maximized: boolean) => {
-		document.documentElement.classList.toggle('window-maximized', maximized);
-	});
-
 	/** 监听屏幕变化 */
 	onResize();
 	window.addEventListener('resize', onResize);
@@ -386,49 +381,6 @@ function onResize() {
 <style lang="less">
 @import '@/assets/css/bootstrap.min.css';
 @import '@/assets/css/common.css';
-
-/* Linux 无边框透明窗口：系统不提供原生圆角与阴影（Win11/macOS 由系统绘制），
-   用「透明边距 + 外阴影 + CSS 圆角 + 细描边」模拟。
-   外阴影必须在边距内绘制：#app 铺满整个窗口时 box-shadow 会被窗口边缘裁掉，
-   因此 body 用 border-box padding 让出 10px 透明环带，阴影绘制在该区域内。
-   注意两个 CSS 传播陷阱，圆角必须设在 #app 而非 body/html：
-   1. body/html 的背景会传播到整个画布（含圆角之外的区域），四角被画布背景填满；
-   2. html 的 overflow 为 visible 时，body 的 overflow 同样会传播到视口，body 自身不建立裁剪，
-      border-radius 形同虚设。#app 是普通元素，无传播规则，圆角裁剪可靠生效 */
-body.platform-linux {
-	/* 覆盖 bootstrap 与 theme.less 中 body 的背景色，防止传播到画布 */
-	background-color: transparent !important;
-	/* 给外阴影留出的透明环带（最大化时归零，见下方 window-maximized 规则） */
-	--linux-window-inset: 10px;
-	padding: var(--linux-window-inset);
-	box-sizing: border-box;
-}
-body.platform-linux #app {
-	border-radius: 12px;
-	overflow: hidden;
-	background-color: #ffffff;
-	/* 外阴影让窗口在白色背景下可分辨；inset 细描边勾勒边缘（border 会占用布局空间导致错位） */
-	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.16), inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-}
-body.platform-linux[arco-theme='dark'] #app {
-	background-color: #2c2c2c;
-	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.32), inset 0 0 0 1px #4b4848;
-}
-/* 主内容行高补偿透明边距，避免底部被 #app 的 overflow:hidden 裁掉 */
-body.platform-linux .main-container {
-	grid-template-rows: calc(100vh - var(--title-height) - var(--linux-window-inset) * 2);
-}
-/* 最大化时去除圆角、阴影与边距，直角铺满屏幕 */
-html.window-maximized body.platform-linux {
-	padding: 0;
-}
-html.window-maximized body.platform-linux #app {
-	border-radius: 0;
-	box-shadow: none;
-}
-html.window-maximized body.platform-linux .main-container {
-	grid-template-rows: calc(100vh - var(--title-height));
-}
 
 /* 全局状态栏：固定右下角，宽度自适应内容，向左扩展不遮挡右侧边缘 */
 .status-bar-container {

@@ -32,19 +32,18 @@ export function createWindow() {
 		autoHideMenuBar: true,
 		titleBarStyle: 'hidden',
 		titleBarOverlay: {
-			// Linux 圆角窗口：覆盖层背景设为透明，避免右上角控制区域的不透明矩形
-			// 在圆角处渲染出直角色块（按钮本身仍由 Chromium 正常绘制）
-			color: process.platform === 'linux' ? '#00000000' : 'white',
+			color: 'white',
 			symbolColor: 'black',
 			// 显式指定覆盖层高度（与渲染端 --title-height 一致），
 			// 否则 Linux 下系统控制按钮（最小化/最大化/关闭）默认高度偏小，渲染位置太靠上
 			height: 32
 		},
 		frame: false,
-		// Linux 无边框窗口系统不提供原生圆角（Win11/macOS 由系统绘制），
-		// 使用透明窗口 + 渲染端 CSS 圆角实现，需配合主进程入口的 enable-transparent-visuals 开关
-		transparent: process.platform === 'linux',
-		backgroundColor: process.platform === 'linux' ? '#00000000' : undefined,
+		// Electron 43 起 roundedCorners 支持 Linux：支持 CSD 的桌面环境（GNOME/mutter）
+		// 下无边框窗口获得原生圆角；阴影与焦点区分由系统合成器绘制，
+		// 取代此前「透明窗口 + CSS 阴影」方案（弹窗溢出/按钮错位/无焦点区分等缺陷）。
+		// 无合成器的 WM（如 i3）下退化为直角无阴影，可接受。
+		roundedCorners: true,
 		show: false,
 		webPreferences: {
 			zoomFactor: 1,

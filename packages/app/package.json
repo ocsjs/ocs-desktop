@@ -20,7 +20,7 @@
 		"@types/node-forge": "^1.0.0",
 		"@types/semver": "^7.3.9",
 		"@vitejs/plugin-vue": "^4.2.3",
-		"electron": "42.11.3",
+		"electron": "43.8.0",
 		"electron-builder": "^26.15.3",
 		"electron-vite": "^2.3.0",
 		"rollup-plugin-visualizer": "^5.6.0",

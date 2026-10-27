@@ -34,8 +34,8 @@ app.commandLine.appendSwitch('disable-gpu-sandbox');
 app.disableHardwareAcceleration();
 
 if (process.platform === 'linux') {
-	// Linux 透明窗口（无边框 CSS 圆角）需要显式启用 RGBA visuals，
-	// 否则透明区域按不透明渲染，窗口四角仍是实心直角（Electron 官方要求与 disable-gpu 配合使用）
+	// enable-transparent-visuals 现仅服务于启动闪屏 loading 窗口（createLoadingWindow 仍是透明窗口），
+	// 主窗口自 Electron 43 起改用无边框不透明窗口 + roundedCorners 原生圆角，勿删此开关
 	app.commandLine.appendSwitch('enable-transparent-visuals');
 }
 
