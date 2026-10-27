@@ -15,42 +15,42 @@
   "changelog-sections": [
     {
       "type": "feat",
-      "section": "✨ Features"
+      "section": "✨ 新功能"
     },
     {
       "type": "fix",
-      "section": "🐛 Bug Fixes"
+      "section": "🐛 问题修复"
     },
     {
       "type": "perf",
-      "section": "⚡ Performance"
-    },
-    {
-      "type": "docs",
-      "section": "📝 Documentation"
+      "section": "⚡ 性能优化"
     },
     {
       "type": "refactor",
-      "section": "♻️ Refactoring"
+      "section": "♻️ 重构"
+    },
+    {
+      "type": "style",
+      "section": "💄 样式更新"
+    },
+    {
+      "type": "docs",
+      "section": "🔧 其他",
+      "hidden": true
     },
     {
       "type": "chore",
-      "section": "🔧 Miscellaneous",
+      "section": "🔧 其他",
       "hidden": true
     },
     {
       "type": "ci",
-      "section": "🔧 Miscellaneous",
+      "section": "🔧 其他",
       "hidden": true
     },
     {
       "type": "test",
-      "section": "🔧 Miscellaneous",
-      "hidden": true
-    },
-    {
-      "type": "style",
-      "section": "🔧 Miscellaneous",
+      "section": "🔧 其他",
       "hidden": true
     }
   ]
