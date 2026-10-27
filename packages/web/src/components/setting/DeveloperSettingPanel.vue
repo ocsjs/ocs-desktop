@@ -284,3 +284,29 @@ async function onCheckUpdate() {
 	}
 }
 </script>
+
+<style scoped lang="less">
+.setting {
+	min-height: 500px;
+	max-width: 720px;
+}
+
+/* 去卡片化：子布局整体已是卡片，此处不再重复卡片样式（覆盖 arco 的全局 !important 规则） */
+.setting > .arco-card {
+	border: none !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}
+
+::deep(.arco-card-header-title) {
+	display: flex;
+	align-items: center;
+}
+
+.card-title-icon {
+	margin-right: 6px;
+	font-size: 22px;
+	display: inline-flex;
+	align-items: center;
+}
+</style>

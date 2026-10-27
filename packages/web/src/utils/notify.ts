@@ -11,6 +11,8 @@ interface NotifyOptions {
 	copy?: boolean;
 	close?: boolean;
 	max_length?: number;
+	/** 自定义内容渲染（提供时替代默认的 innerHTML 文本渲染，用于进度条等组件） */
+	content?: () => VNodeChild;
 }
 
 export function notify(title: string, msg: any, key: string, options?: NotifyOptions) {
@@ -20,10 +22,12 @@ export function notify(title: string, msg: any, key: string, options?: NotifyOpt
 		closable: true,
 		style: { width: '400px' },
 		content: () =>
-			h('div', {
-				title: msg?.stack || msg?.message || msg || '',
-				innerHTML: sanitizeHtml(StringUtils.max(String(msg), options?.max_length ?? 999))
-			}),
+			options?.content
+				? options.content()
+				: h('div', {
+						title: msg?.stack || msg?.message || msg || '',
+						innerHTML: sanitizeHtml(StringUtils.max(String(msg), options?.max_length ?? 999))
+					}),
 		duration: options?.duration ?? (options?.type === 'error' ? 6000 : 3000),
 		footer: () =>
 			options?.btn ||
