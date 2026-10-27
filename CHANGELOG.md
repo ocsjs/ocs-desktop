@@ -26,6 +26,19 @@
 
 * 解压主体换用 extract-zip，移除 unzipper ([6b7a71b](https://github.com/ocsjs/ocs-desktop/commit/6b7a71be75b1653cace8d22fbf44ca01009796b2))
 
+## [3.4.1](https://github.com/ocsjs/ocs-desktop/compare/v3.4.0...v3.4.1) (2026-10-27)
+
+
+### 🐛 问题修复
+
+* **linux:** 窗口增加外阴影与边距，修复白色背景下边缘无法分辨 ([f204fd2](https://github.com/ocsjs/ocs-desktop/commit/f204fd22095e58c6e412cb40bfe4c27089879ee8))
+
+
+### 💄 样式更新
+
+* 优化更新进度条、和更新日志显示样式 ([875ac9c](https://github.com/ocsjs/ocs-desktop/commit/875ac9c0767efcfd3ae8ec46a3520a045d9ebc7e))
+* 归一化 ipc.ts/notify.ts 格式（prettier） ([2037ac3](https://github.com/ocsjs/ocs-desktop/commit/2037ac300b3f643ce4377964d3d065f9d968e960))
+
 ## [3.4.0](https://github.com/ocsjs/ocs-desktop/compare/v3.3.0...v3.4.0) (2026-10-25)
 
 
