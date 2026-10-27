@@ -1018,7 +1018,16 @@ export async function launchBrowser({
 					// 且 Ubuntu 23.10+ AppArmor 限制非受限程序创建 user namespace（兜底方案同样被封堵），
 					// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）；
 					// --disable-setuid-sandbox 一并关闭 setuid 沙箱助手（2.x AppImage 修复移植）
-					...(process.platform === 'linux' ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
+					...(process.platform === 'linux'
+						? [
+								'--no-sandbox',
+								'--disable-setuid-sandbox',
+								// 纯 Wayland 桌面会话无 DISPLAY：主进程（Electron 原生 Wayland）正常，
+								// 但拉起的 Chrome 默认走 X11，报 "Missing X server" 崩溃。
+								// 该参数让 Chrome 优先使用 Wayland（WAYLAND_DISPLAY），无则回退 X11
+								'--ozone-platform-hint=auto'
+						  ]
+						: []),
 					// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
 					...formatBrowserEnhancementArgs(config),
 					...args
