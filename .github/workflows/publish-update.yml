@@ -3,7 +3,11 @@ name: Publish Update
 # 补发/重发通道（备用）：正常发版走 build.yml 末尾的 publish-update 内嵌审批 job
 # （environment 人工 Approve，零输入）；本工作流用于：
 # - 内嵌审批被误 Reject 后的补救；
-# - 对历史任意 tag 补传/重传 latest*.yml（如回滚后重发、COS 数据异常修复）。
+# - 对历史任意 tag 重传 latest*.yml。
+#
+# 注意：安装包与 latest*.yml 统一存放在 /app/electron-updater/ 扁平目录，
+# 旧版本安装包会被 COS 生命周期规则（ocs- 前缀过期删除）清理——
+# 补发旧版本前需确认该版本安装包仍在更新目录中，否则客户端会 404。
 #
 # 原理：latest.yml 是客户端 electron-updater 发现更新的唯一入口，
 # 本工作流把它从指定 tag 的 Release 附件下载并上传到 COS 更新目录。

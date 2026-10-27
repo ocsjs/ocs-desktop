@@ -10,8 +10,11 @@ env:
   # 全球加速 endpoint：GitHub runner（美国）→ 国内跨境链路慢且部分 runner 路由不通，
   # 走加速域名经腾讯骨干网回源（需 COS 控制台开启全球加速；coscmd 的 -r 与 -e 二选一）
   COS_ENDPOINT: cos.accelerate.myqcloud.com
-  # COS 目标目录（COS_UPDATER_DIR 与 packages/common/src/constants.ts 的 OCS_UPDATER.feedUrl 需保持同步）
-  COS_DOWNLOAD_DIR: /app/download/
+  # COS 统一存储目录：安装包、blockmap、latest*.yml、CHANGELOG.md 全部存放于此，
+  # 客户端更新源与官网下载共用同一份文件（与 packages/common/src/constants.ts 的
+  # OCS_UPDATER.feedUrl 保持同步）。安装包文件名自带版本号不会互相覆盖；
+  # 旧版本由 COS 生命周期规则自动清理（控制台配置：前缀 /app/electron-updater/ocs-，
+  # N 天后过期删除；latest*.yml 与 CHANGELOG.md 不以 ocs- 开头，不受影响）
   COS_UPDATER_DIR: /app/electron-updater/
   # coscmd 调优：跨境慢链路下 16MB 分片单片 2-4 分钟会被服务端 UserNetworkTooSlow 踢断，
   # 4MB 分片约 30s 完成；低并发保证单流带宽；120s 快速失败避免坏路由空等 10 分钟
@@ -178,19 +181,11 @@ jobs:
     continue-on-error: true
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v5
-
       - name: Download all build artifacts
         uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
-
-      - name: Set Env
-        run: |
-          VERSION=$(jq -r .version package.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Check COS secrets availability
         id: check-secrets
@@ -218,21 +213,22 @@ jobs:
             -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
             --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
 
-      # 逐文件上传 + 调用级重试：
-      # coscmd upload 默认开启分片断点续传（-f/--force 才是关闭断点），
-      # 因此重试同一文件时会从中断的分片继续，而非整个文件重传；
-      # 逐文件循环保证单个文件失败不影响其他文件，且重试粒度更小
+      # 全部产物（安装包 + blockmap）一次性上传到统一更新目录，不含 latest*.yml
+      # （latest.yml 是客户端发现更新的唯一入口，由 publish-update 闸门人工审批后上传，
+      # 因此安装包提前上传无害——在 latest.yml 生效前没有任何客户端会下载它们）。
+      # 逐文件上传 + 调用级重试：coscmd upload 默认开启分片断点续传（-f/--force 才是
+      # 关闭断点），重试同一文件时从中断的分片继续；逐文件循环保证单文件失败不影响其他
       - name: Upload to Tencent Cloud COS
         if: steps.check-secrets.outputs.available == 'true'
         shell: bash
         run: |
           set -e
           shopt -s nullglob
-          for file in artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage artifacts/*.deb artifacts/*.rpm; do
+          for file in artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage artifacts/*.deb artifacts/*.rpm artifacts/*.blockmap; do
             [ -f "$file" ] || continue
             for attempt in 1 2 3 4 5; do
               echo "Uploading $file (attempt $attempt/5)"
-              if coscmd upload -y "$file" "${COS_DOWNLOAD_DIR}${VERSION}/"; then
+              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
                 break
               fi
               if [ "$attempt" = 5 ]; then
@@ -285,70 +281,6 @@ jobs:
         if: steps.check-secrets.outputs.available == 'true'
         run: coscmd upload -y CHANGELOG.md "$COS_UPDATER_DIR"
 
-  # electron-updater 安装包与 blockmap 上传到固定更新目录（不含 latest*.yml）。
-  # latest.yml 是客户端发现更新的唯一入口，由独立的 publish-update.yml 工作流在
-  # 人工最终确认后手动触发上传（从 Release 附件取，不受 artifacts 3 天保留期限制），
-  # 因此安装包提前上传无害——在 latest.yml 生效前没有任何客户端会下载它们。
-  upload-electron-updater:
-    needs: upload-changelog
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    continue-on-error: true
-
-    steps:
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Check COS secrets availability
-        id: check-secrets
-        run: |
-          if [ -n "$COS_SECRET_ID" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-            echo "Skipping electron-updater upload: TENCENT_SECRET_ID not configured"
-          fi
-        env:
-          COS_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
-
-      - name: Install Tencent Cloud CLI
-        if: steps.check-secrets.outputs.available == 'true'
-        run: pip install coscmd
-
-      - name: Configure Tencent Cloud COS
-        if: steps.check-secrets.outputs.available == 'true'
-        run: |
-          coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
-            -s ${{ secrets.TENCENT_SECRET_KEY }} \
-            -b "$COS_BUCKET" \
-            -e "$COS_ENDPOINT" \
-            -m "$COS_THREAD_NUM" -p "$COS_PART_SIZE" \
-            --retry "$COS_RETRY" --timeout "$COS_TIMEOUT"
-
-      - name: Upload electron-updater files to COS
-        if: steps.check-secrets.outputs.available == 'true'
-        shell: bash
-        run: |
-          set -e
-          shopt -s nullglob
-          for file in artifacts/*.blockmap artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage; do
-            [ -f "$file" ] || continue
-            for attempt in 1 2 3 4 5; do
-              echo "Uploading $file (attempt $attempt/5)"
-              if coscmd upload -y "$file" "$COS_UPDATER_DIR"; then
-                break
-              fi
-              if [ "$attempt" = 5 ]; then
-                echo "::error::Upload failed after 5 attempts: $file"
-                exit 1
-              fi
-              sleep $((attempt * 15))
-            done
-          done
-
   # 发布闸门（内嵌人工审批）：只上传 latest*.yml（win=latest.yml / mac=latest-mac.yml /
   # linux=latest-linux.yml）到 COS 更新目录，latest.yml 是客户端发现更新的唯一入口。
   # 绑定 publish-update environment（需仓库 Settings → Environments 配置 Required reviewers）：
@@ -357,7 +289,7 @@ jobs:
   # 数据源为该 tag 的 Release 附件（upload-release 已上传），不受 CI artifacts 3 天保留期限制。
   # 补发/重发历史版本请用独立的 publish-update.yml（手动触发，可指定任意 tag）。
   publish-update:
-    needs: upload-electron-updater
+    needs: upload-changelog
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     environment: publish-update
