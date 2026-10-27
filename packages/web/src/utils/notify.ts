@@ -27,7 +27,7 @@ export function notify(title: string, msg: any, key: string, options?: NotifyOpt
 				: h('div', {
 						title: msg?.stack || msg?.message || msg || '',
 						innerHTML: sanitizeHtml(StringUtils.max(String(msg), options?.max_length ?? 999))
-					}),
+				  }),
 		duration: options?.duration ?? (options?.type === 'error' ? 6000 : 3000),
 		footer: () =>
 			options?.btn ||

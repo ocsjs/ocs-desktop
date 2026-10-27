@@ -41,10 +41,7 @@ export function activeIpcRenderListener() {
 				// 进度文本下方展示进度条
 				content: () =>
 					h('div', [
-						h(
-							'div',
-							`更新中: ${(chunkLength / 1024 / 1024).toFixed(2)}MB/${(totalLength / 1024 / 1024).toFixed(2)}MB`
-						),
+						h('div', `更新中: ${(chunkLength / 1024 / 1024).toFixed(2)}MB/${(totalLength / 1024 / 1024).toFixed(2)}MB`),
 						h(Progress, {
 							percent,
 							size: 'small',
