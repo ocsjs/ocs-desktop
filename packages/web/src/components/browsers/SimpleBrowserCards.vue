@@ -173,11 +173,16 @@
 											</div>
 											<div
 												v-else
-												style="font-size: 12px"
-												class="text-center text-secondary"
+												class="d-flex justify-content-center align-items-center"
 											>
-												<IconInfoCircleFill /> 点击 启动 运行浏览器。<br />
-												单击 设置浏览器
+												<div
+													style="font-size: 12px"
+													class="text-left text-secondary"
+												>
+													<PlayCircleIcon /> 启动 运行浏览器 <br />
+													<MouseLeftIcon /> 左键 打开浏览器菜单 <br />
+													<MouseRightIcon /> 右键 快捷菜单
+												</div>
 											</div>
 										</template>
 
@@ -240,7 +245,14 @@ import EmptyBrowserCard from '../EmptyBrowserCard.vue';
 import BeginnerGuide from '../BeginnerGuide.vue';
 import BrowserPreview from './BrowserPreview.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
-import { CirclePlusIcon, PanelLeftIcon, GlobeIcon } from 'lucide-vue-next';
+import {
+	CirclePlusIcon,
+	PanelLeftIcon,
+	GlobeIcon,
+	MouseLeftIcon,
+	MouseRightIcon,
+	PlayCircleIcon
+} from 'lucide-vue-next';
 
 /** 获取所有浏览器（递归） */
 const allBrowsers = computed(() => {
