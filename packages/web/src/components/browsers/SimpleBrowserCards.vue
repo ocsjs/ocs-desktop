@@ -49,14 +49,20 @@
 							仅显示运行中
 						</span>
 					</span>
-					<a-button
-						type="outline"
-						size="mini"
-						class="ms-auto"
-						@click="switchToProfessional"
+					<!-- 切换到专业模式：仅图标，文案放入 tooltip；ms-auto 推到行尾 -->
+					<a-tooltip
+						content="专业模式"
+						position="bottom"
 					>
-						<a-space size="mini"><PanelLeftIcon />专业模式</a-space>
-					</a-button>
+						<a-button
+							type="outline"
+							size="mini"
+							class="ms-auto"
+							@click="switchToProfessional"
+						>
+							<template #icon><PanelLeftIcon /></template>
+						</a-button>
+					</a-tooltip>
 				</div>
 			</div>
 		</div>
@@ -423,7 +429,7 @@ onActivated(() => {
 	padding: 2px 0px;
 }
 
-/* 顶部工具行：左侧卡片列数选择 + 紧凑开关，右侧布局切换按钮（与卡片网格同容器，边缘自然对齐） */
+/* 顶部工具行：左侧卡片列数选择 + 紧凑开关，右侧模式切换按钮（与卡片网格同容器，边缘自然对齐） */
 .layout-switch {
 	display: flex;
 	align-items: center;

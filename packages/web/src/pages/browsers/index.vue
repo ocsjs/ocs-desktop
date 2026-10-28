@@ -35,14 +35,20 @@
 							</a-button>
 						</template>
 
-						<!-- 撑开间距，将布局切换按钮推到最右边 -->
+						<!-- 撑开间距，将模式切换按钮推到最右边（保持右侧，避免与文件筛选挤在一起） -->
 						<div class="flex-grow-1"></div>
-						<a-button
-							size="mini"
-							@click="toggleLayoutMode"
+						<!-- 切换到简洁模式：仅图标，文案放入 tooltip -->
+						<a-tooltip
+							content="简洁模式"
+							position="bottom"
 						>
-							<a-space size="mini"><Grid2x2Icon />简洁模式</a-space>
-						</a-button>
+							<a-button
+								size="mini"
+								@click="toggleLayoutMode"
+							>
+								<template #icon><Grid2x2Icon /></template>
+							</a-button>
+						</a-tooltip>
 					</div>
 
 					<!-- 文件操作 -->
