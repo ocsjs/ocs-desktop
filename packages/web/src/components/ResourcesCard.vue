@@ -41,7 +41,7 @@
 		>
 			<div
 				class="text-secondary mb-2"
-				v-html="t('notice_resources_page_other_extensions_add', '')"
+				v-html="t.html('notice_resources_page_other_extensions_add', '')"
 			></div>
 		</a-modal>
 
@@ -55,7 +55,9 @@
 				class="mb-2"
 				banner
 				title="使用提示"
-				:html="t('notice_resources_page_usage', '在此安装与管理脚本管理器及各类拓展资源，安装后将自动加载到浏览器中。')"
+				:html="
+					t.html('notice_resources_page_usage', '在此安装与管理脚本管理器及各类拓展资源，安装后将自动加载到浏览器中。')
+				"
 			/>
 
 			<template v-if="resState.loading && !resState.initialized">
@@ -262,7 +264,8 @@ import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'v
 import { ResourceFile } from '@ocs-desktop/common/web';
 import { resourceLoader } from '../utils/resources.loader';
 import UsageAlertCollapse from './UsageAlertCollapse.vue';
-import { t, store } from '../store/index';
+import { store } from '../store/index';
+import { t } from '../utils/langs';
 import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../utils/node';
 import { remote } from '../utils/remote';

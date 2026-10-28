@@ -5,7 +5,7 @@
 			<div>
 				<a-tooltip position="rt">
 					<template #content>
-						<div v-html="t('setting_browser_path_custom_tip', '')"></div>
+						<div v-html="t.html('setting_browser_path_custom_tip', '')"></div>
 					</template>
 
 					<a-switch
@@ -93,7 +93,7 @@ import { forceClearBrowserCache } from '../../utils/browser';
 import { onMounted, reactive } from 'vue';
 import { ValidBrowser } from '@ocs-desktop/common/web';
 import { processes } from '../../utils/process';
-import { t } from '../../store/index';
+import { t } from '../../utils/langs';
 import { ChevronDownIcon, CircleHelpIcon } from 'lucide-vue-next';
 
 const state = reactive({

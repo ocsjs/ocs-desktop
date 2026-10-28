@@ -207,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { t } from '../store';
+import { t } from '../utils/langs';
 import { sleep } from '../utils';
 import { reactive, watch, nextTick, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';

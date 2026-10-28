@@ -61,7 +61,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
-import { store as Store, t } from '../store/index';
+import { store as Store } from '../store/index';
+import { t } from '../utils/langs';
 import { themeState } from '../utils';
 import { OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import type { Project } from 'easy-us';

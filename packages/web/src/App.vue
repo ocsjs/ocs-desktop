@@ -101,7 +101,8 @@
 
 <script setup lang="ts">
 import { watch, onMounted, onUnmounted } from 'vue';
-import { store, t } from './store';
+import { store } from './store';
+import { t } from './utils/langs';
 import { remote } from './utils/remote';
 import { root } from './fs/folder';
 import { electron } from './utils/node';

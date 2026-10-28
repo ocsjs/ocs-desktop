@@ -51,7 +51,8 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
 import { CheckIcon, SettingsIcon, CirclePlayIcon, GraduationCapIcon } from 'lucide-vue-next';
-import { store, t } from '../store';
+import { store } from '../store';
+import { t } from '../utils/langs';
 import { useEnvironmentDetect } from '../composables/useEnvironmentDetect';
 import { processes } from '../utils/process';
 

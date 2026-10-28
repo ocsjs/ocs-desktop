@@ -52,7 +52,8 @@
 </template>
 
 <script setup lang="ts">
-import { t, store } from '../../store';
+import { store } from '../../store';
+import { t } from '../../utils/langs';
 import OCSConfigs from '../OCSConfigs.vue';
 import { Modal } from '@arco-design/web-vue';
 import { CircleCheckIcon, XIcon, RefreshCwIcon } from 'lucide-vue-next';

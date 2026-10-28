@@ -290,16 +290,3 @@ export const files = reactive<File[]>([]);
 
 /** 打开的文件 */
 export const openedFiles = reactive(new Map<string, File>());
-
-export function t(key: string, def?: string, params?: Record<string, any>) {
-	let text = store.render.langs[key];
-	if (!text) {
-		text = def || '';
-	}
-	if (params) {
-		Object.keys(params).forEach((k) => {
-			text = text.replace(new RegExp(`{{${k}}}`, 'g'), params[k]);
-		});
-	}
-	return text;
-}

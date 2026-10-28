@@ -6,7 +6,7 @@
 			class="mb-3"
 			banner
 			title="使用提示"
-			:html="t('notice_user_scripts_page_usage', '')"
+			:html="t.html('notice_user_scripts_page_usage', '')"
 		/>
 
 		<div class="mb-3 d-flex align-items-center">
@@ -380,7 +380,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { config } from '../config';
-import { t, store, StoreUserScript } from '../store';
+import { store, StoreUserScript } from '../store';
+import { t } from '../utils/langs';
 import { ScriptSearchEngine } from '../types/search';
 import { addScriptFromFile, openScriptSource } from '../utils/user-scripts';
 import { getSpecifiedVersion } from '../utils/script-version';

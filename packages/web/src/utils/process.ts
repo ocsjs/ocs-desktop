@@ -1,6 +1,7 @@
 import { ChildProcess } from 'child_process';
 import { remote } from './remote';
-import { t, store } from '../store';
+import { store } from '../store';
+import { t } from './langs';
 import { LaunchOptions } from 'playwright-core';
 import { reactive, h } from 'vue';
 import type { ScriptWorker, ScreencastPageInfo, ScreencastPagesChangedPayload } from '@ocs-desktop/common/web';

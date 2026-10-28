@@ -236,7 +236,8 @@
 </template>
 
 <script setup lang="ts">
-import { t, store } from '../../store';
+import { store } from '../../store';
+import { t } from '../../utils/langs';
 import { Browser } from '../../fs/browser';
 import { datetime } from '../../utils';
 import Tags from '../Tags.vue';
