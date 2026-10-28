@@ -207,13 +207,16 @@
 									type="add_circle_outline"
 									class="add-icon"
 								/>
-								<span class="add-text">新建浏览器</span>
+								<span class="mb-3">新建浏览器</span>
 								<span
 									class="text-secondary"
 									style="font-size: 11px"
 								>
-									<a-tag>数据隔离</a-tag>
-									<a-tag>账号多开</a-tag>
+									特性：
+									<a-space>
+										<a-tag>数据隔离</a-tag>
+										<a-tag>账号多开</a-tag>
+									</a-space>
 								</span>
 							</div>
 						</div>
