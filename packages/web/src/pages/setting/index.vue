@@ -86,7 +86,7 @@ const activePanel = computed(() => panels[activeMenu.value]);
 
 /* 左侧子菜单栏（与内容区同背景，仅以分割线区分） */
 .setting-sider {
-	width: 128px;
+	width: 150px;
 	flex-shrink: 0;
 	padding: 12px 6px;
 	border-right: 1px solid var(--theme-border-color-light);
