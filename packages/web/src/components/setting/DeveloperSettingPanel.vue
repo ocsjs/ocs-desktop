@@ -230,17 +230,86 @@
 				</a-tooltip>
 			</Description>
 		</a-card>
+
+		<!-- 软件路径（自通用设置迁入开发者界面底部） -->
+		<a-card>
+			<template #title>
+				<span class="card-title-icon">📂</span>
+				软件路径
+			</template>
+			<Path
+				label="浏览器缓存"
+				name="userDataDirsFolder"
+				:setting="true"
+				@on-path-change="onUserDataDirsFolderChange"
+			/>
+			<Path
+				label="文件下载"
+				name="downloadFolder"
+			/>
+			<Path
+				label="软件存储"
+				name="user-data-path"
+			/>
+			<Path
+				label="可执行文件"
+				name="exe-path"
+			/>
+		</a-card>
+
+		<div class="mt-4 mb-5">
+			<a-popconfirm
+				content="确认重置您的设置，并重新启动软件吗？"
+				ok-text="确认"
+				cancel-text="取消"
+				@ok="reset"
+			>
+				<a-button status="danger"> 重置设置 </a-button>
+			</a-popconfirm>
+		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import Description from '../Description.vue';
-import { store } from '../../store';
+import Path from '../Path.vue';
+import { store, DEFAULT_RENDER } from '../../store';
 import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import { remote } from '../../utils/remote';
 import { Message } from '@arco-design/web-vue';
 import { CircleHelpIcon } from 'lucide-vue-next';
+import cloneDeep from 'lodash/cloneDeep';
+import { forceClearBrowserCache } from '../../utils/browser';
+import { Folder } from '../../fs/folder';
+import { Browser } from '../../fs/browser';
+import { restartAppGuarded } from '../../utils/restart';
+
+/** 重置设置 */
+async function reset() {
+	// 仅重置软件设置为默认值，保留浏览器分身、脚本、路径等用户数据
+	store.render.setting = cloneDeep(DEFAULT_RENDER.setting);
+	store.window = { alwaysOnTop: false, autoLaunch: false, hideToTrayOnClose: false };
+	// 同步保存，确保重置落盘后再重启（不依赖关闭流程的保存时序，避免强制退出时丢失）
+	// 加密受开发者设置「数据加密」开关控制（重置会恢复默认开启）
+	const shouldEncrypt =
+		store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
+	remote.methods.callSync('saveStore', JSON.stringify(store), shouldEncrypt);
+	// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
+	restartAppGuarded('设置已重置，需重启软件后生效。');
+}
+
+async function onUserDataDirsFolderChange(previous: string, current: string) {
+	// 更改全部浏览器缓存路径
+	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
+	if (browsers.length > 0) {
+		for (const browser of browsers) {
+			browser.cachePath = await remote.path.call('join', current, browser.uid);
+		}
+	}
+
+	await forceClearBrowserCache('检测到浏览器缓存路径，正在清空之前的缓存数据...', previous);
+}
 
 /** 手动检查更新（配合自定义更新源可做更新流程测试） */
 const checkingUpdate = ref(false);
@@ -275,6 +344,11 @@ async function onCheckUpdate() {
 	border: none !important;
 	border-radius: 0 !important;
 	box-shadow: none !important;
+}
+
+/* 各设置小段之间保留间距（与通用设置一致的卡片间距） */
+.setting > .arco-card + .arco-card {
+	margin-top: 12px;
 }
 
 ::deep(.arco-card-header-title) {

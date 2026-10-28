@@ -48,7 +48,7 @@ const allMenus = [
 	{ key: 'general', title: '通用设置', icon: SettingsIcon },
 	{ key: 'ocs', title: '脚本配置', icon: CodeIcon },
 	{ key: 'app-center', title: '应用中心', icon: Grid3x3Icon },
-	{ key: 'developer', title: '开发者设置', icon: WrenchIcon }
+	{ key: 'developer', title: '开发者', icon: WrenchIcon }
 ] as const;
 
 type MenuKey = (typeof allMenus)[number]['key'];
