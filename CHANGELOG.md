@@ -8,6 +8,14 @@
 * **ci:** 统一安装包存储到单一更新目录，消除重复上传与双倍存储 ([0e6f0ed](https://github.com/ocsjs/ocs-desktop/commit/0e6f0ed4132811a3740b12ccf6d8cb562b7e49eb))
 * **linux:** 升级 Electron 43，无边框不透明窗口实现原生圆角与系统阴影 ([77c7237](https://github.com/ocsjs/ocs-desktop/commit/77c723753abca3ddb10aa9f82f0ef348776e044d))
 
+## [3.5.0](https://github.com/ocsjs/ocs-desktop/compare/v3.4.1...v3.5.0) (2026-10-27)
+
+
+### ✨ 新功能
+
+* **ci:** 统一安装包存储到单一更新目录，消除重复上传与双倍存储 ([0e6f0ed](https://github.com/ocsjs/ocs-desktop/commit/0e6f0ed4132811a3740b12ccf6d8cb562b7e49eb))
+* **linux:** 升级 Electron 43，无边框不透明窗口实现原生圆角与系统阴影 ([77c7237](https://github.com/ocsjs/ocs-desktop/commit/77c723753abca3ddb10aa9f82f0ef348776e044d))
+
 ## [3.4.1](https://github.com/ocsjs/ocs-desktop/compare/v3.4.0...v3.4.1) (2026-10-27)
 
 
