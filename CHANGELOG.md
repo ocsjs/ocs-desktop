@@ -1,30 +1,12 @@
-## [3.2.0](https://github.com/ocsjs/ocs-desktop/compare/v3.1.0...v3.2.0) (2026-10-25)
+# Changelog
+
+## [3.5.0](https://github.com/ocsjs/ocs-desktop/compare/v3.4.1...v3.5.0) (2026-10-27)
 
 
-### ✨ Features
+### ✨ 新功能
 
-* 开发模式（pnpm dev）下软件重启改为引导手动重跑终端 ([8e65b04](https://github.com/ocsjs/ocs-desktop/commit/8e65b04d3ab234977f723ce305b7a54507613ba4))
-* 开发者设置独立子界面，新增软件辅助/下载优化/数据加密开关 ([ea444ba](https://github.com/ocsjs/ocs-desktop/commit/ea444ba59c8a6ff62b89e3332e6f797d8b475dd7))
-* 支持 AppImage 桌面入口集成与 Linux 密钥环运行时检测 ([3acfa26](https://github.com/ocsjs/ocs-desktop/commit/3acfa26feec21a667746493d44927263824b8b4c))
-* 新增 deb 打包目标并声明 Linux 密钥环依赖 ([b35c9bb](https://github.com/ocsjs/ocs-desktop/commit/b35c9bb76c98167c3f4fefe0681f68caa5c16c50))
-* 新增 OCR 识别模块三平台打包工程（CLI + CI 工作流 + Release 上传） ([f1d5060](https://github.com/ocsjs/ocs-desktop/commit/f1d506006092544acda90a5f9222e00f31fae2ff))
-* 统一下载器（分块并发 + 断点续传）并合并应用中心遮罩层 ([baac962](https://github.com/ocsjs/ocs-desktop/commit/baac962283572cbf08d8c4882d4026e2c8b418c6))
-* 自动化程序 OCR 依赖改为启动后非阻塞提示与一键安装 ([9ffc8b2](https://github.com/ocsjs/ocs-desktop/commit/9ffc8b268f556fe125eb934a89e94f53b44bfe9d))
-
-
-### 🐛 Bug Fixes
-
-* **test:** electron mock 补充 app.whenReady 适配加密初始化时序 ([dc528c2](https://github.com/ocsjs/ocs-desktop/commit/dc528c22d47fdd16d8bbc7010c9a65950273b9fc))
-* **test:** 修正软链测试夹具——adm-zip 无法构造 S_IFLNK 条目 ([8bb740e](https://github.com/ocsjs/ocs-desktop/commit/8bb740e52df00a902a70de5de7a581a0649bdf64))
-* 修复全平台主密钥被误判明文存储的严重问题 ([fb96477](https://github.com/ocsjs/ocs-desktop/commit/fb96477cd299ed34426c42823d1d98b6bf2949a6))
-* 平台专属资源下载门控，修复 Linux 误装 win32 OCR 包导致检测不到 ([57b5748](https://github.com/ocsjs/ocs-desktop/commit/57b5748d5fdcf5f78ffcb2830a37b742da6e08bc))
-* 环境检测跳过目录形态的 manifest.json，避免 EISDIR 弹错 ([561797c](https://github.com/ocsjs/ocs-desktop/commit/561797c55c7e2d1c851239649eadff7c0a47f5cf))
-* 重写统一解压管线，修复 macOS OCR 软链丢失与 Windows 初始化 rename EPERM ([c9a4919](https://github.com/ocsjs/ocs-desktop/commit/c9a4919772f207a85e28404c53394326d76771bb))
-
-
-### ♻️ Refactoring
-
-* 解压主体换用 extract-zip，移除 unzipper ([6b7a71b](https://github.com/ocsjs/ocs-desktop/commit/6b7a71be75b1653cace8d22fbf44ca01009796b2))
+* **ci:** 统一安装包存储到单一更新目录，消除重复上传与双倍存储 ([0e6f0ed](https://github.com/ocsjs/ocs-desktop/commit/0e6f0ed4132811a3740b12ccf6d8cb562b7e49eb))
+* **linux:** 升级 Electron 43，无边框不透明窗口实现原生圆角与系统阴影 ([77c7237](https://github.com/ocsjs/ocs-desktop/commit/77c723753abca3ddb10aa9f82f0ef348776e044d))
 
 ## [3.4.1](https://github.com/ocsjs/ocs-desktop/compare/v3.4.0...v3.4.1) (2026-10-27)
 
@@ -62,6 +44,34 @@
 ### 🐛 Bug Fixes
 
 * 修正 CHANGELOG 版本段落顺序 ([c9ffde9](https://github.com/ocsjs/ocs-desktop/commit/c9ffde9a672209bc2fccbce78e98a3e9cbe2c928))
+
+## [3.2.0](https://github.com/ocsjs/ocs-desktop/compare/v3.1.0...v3.2.0) (2026-10-25)
+
+
+### ✨ Features
+
+* 开发模式（pnpm dev）下软件重启改为引导手动重跑终端 ([8e65b04](https://github.com/ocsjs/ocs-desktop/commit/8e65b04d3ab234977f723ce305b7a54507613ba4))
+* 开发者设置独立子界面，新增软件辅助/下载优化/数据加密开关 ([ea444ba](https://github.com/ocsjs/ocs-desktop/commit/ea444ba59c8a6ff62b89e3332e6f797d8b475dd7))
+* 支持 AppImage 桌面入口集成与 Linux 密钥环运行时检测 ([3acfa26](https://github.com/ocsjs/ocs-desktop/commit/3acfa26feec21a667746493d44927263824b8b4c))
+* 新增 deb 打包目标并声明 Linux 密钥环依赖 ([b35c9bb](https://github.com/ocsjs/ocs-desktop/commit/b35c9bb76c98167c3f4fefe0681f68caa5c16c50))
+* 新增 OCR 识别模块三平台打包工程（CLI + CI 工作流 + Release 上传） ([f1d5060](https://github.com/ocsjs/ocs-desktop/commit/f1d506006092544acda90a5f9222e00f31fae2ff))
+* 统一下载器（分块并发 + 断点续传）并合并应用中心遮罩层 ([baac962](https://github.com/ocsjs/ocs-desktop/commit/baac962283572cbf08d8c4882d4026e2c8b418c6))
+* 自动化程序 OCR 依赖改为启动后非阻塞提示与一键安装 ([9ffc8b2](https://github.com/ocsjs/ocs-desktop/commit/9ffc8b268f556fe125eb934a89e94f53b44bfe9d))
+
+
+### 🐛 Bug Fixes
+
+* **test:** electron mock 补充 app.whenReady 适配加密初始化时序 ([dc528c2](https://github.com/ocsjs/ocs-desktop/commit/dc528c22d47fdd16d8bbc7010c9a65950273b9fc))
+* **test:** 修正软链测试夹具——adm-zip 无法构造 S_IFLNK 条目 ([8bb740e](https://github.com/ocsjs/ocs-desktop/commit/8bb740e52df00a902a70de5de7a581a0649bdf64))
+* 修复全平台主密钥被误判明文存储的严重问题 ([fb96477](https://github.com/ocsjs/ocs-desktop/commit/fb96477cd299ed34426c42823d1d98b6bf2949a6))
+* 平台专属资源下载门控，修复 Linux 误装 win32 OCR 包导致检测不到 ([57b5748](https://github.com/ocsjs/ocs-desktop/commit/57b5748d5fdcf5f78ffcb2830a37b742da6e08bc))
+* 环境检测跳过目录形态的 manifest.json，避免 EISDIR 弹错 ([561797c](https://github.com/ocsjs/ocs-desktop/commit/561797c55c7e2d1c851239649eadff7c0a47f5cf))
+* 重写统一解压管线，修复 macOS OCR 软链丢失与 Windows 初始化 rename EPERM ([c9a4919](https://github.com/ocsjs/ocs-desktop/commit/c9a4919772f207a85e28404c53394326d76771bb))
+
+
+### ♻️ Refactoring
+
+* 解压主体换用 extract-zip，移除 unzipper ([6b7a71b](https://github.com/ocsjs/ocs-desktop/commit/6b7a71be75b1653cace8d22fbf44ca01009796b2))
 
 ## [3.1.0](https://github.com/ocsjs/ocs-desktop/compare/v3.0.1...v3.1.0) (2026-10-22)
 
