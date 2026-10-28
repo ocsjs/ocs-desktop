@@ -12,7 +12,7 @@
 				type="text"
 				@click="newBrowserOrInit()"
 			>
-				<Icon type="web">新建浏览器</Icon>
+				<a-space size="mini"><GlobeIcon />新建浏览器</a-space>
 			</a-button>
 		</div>
 
@@ -21,7 +21,7 @@
 				type="text"
 				@click="about"
 			>
-				<Icon type="book">使用教程</Icon>
+				<a-space size="mini"><BookIcon />使用教程</a-space>
 			</a-button>
 		</div>
 
@@ -30,7 +30,7 @@
 				type="text"
 				@click="goto(OCS_WEBSITE)"
 			>
-				<Icon type="home">前往官网</Icon>
+				<a-space size="mini"><HouseIcon />前往官网</a-space>
 			</a-button>
 		</div>
 	</div>
@@ -40,7 +40,7 @@
 import { about, goto } from '../utils';
 import { newBrowserOrInit } from '../utils/browser';
 import { OCS_WEBSITE } from '@ocs-desktop/common/web';
-import Icon from './Icon.vue';
+import { GlobeIcon, BookIcon, HouseIcon } from 'lucide-vue-next';
 </script>
 
 <style scoped></style>

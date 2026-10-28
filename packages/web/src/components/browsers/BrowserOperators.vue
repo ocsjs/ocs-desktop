@@ -20,8 +20,7 @@
 					type="text"
 					@click.stop="instance?.launch()"
 				>
-					<Icon
-						type="play_circle"
+					<CirclePlayIcon
 						color="var(--theme-primary-color)"
 						:class="iconClass"
 					/>
@@ -41,8 +40,7 @@
 					size="mini"
 					@click.stop="instance?.bringToFront()"
 				>
-					<Icon
-						type="push_pin"
+					<PinIcon
 						:class="iconClass"
 						color="var(--theme-primary-color)"
 					/>
@@ -59,8 +57,7 @@
 					size="mini"
 					@click.stop="instance?.relaunch()"
 				>
-					<Icon
-						type="sync"
+					<RefreshCwIcon
 						:class="iconClass"
 						color="var(--theme-primary-color)"
 					/>
@@ -77,8 +74,7 @@
 					size="mini"
 					@click.stop="instance?.close()"
 				>
-					<Icon
-						type="cancel"
+					<CircleXIcon
 						:class="iconClass"
 						color="#ff0000db"
 					/>
@@ -93,7 +89,10 @@
 				size="mini"
 				style="color: gray"
 			>
-				<icon-loading :class="iconClass" />
+				<LoaderCircleIcon
+					:class="iconClass"
+					class="icon-spin"
+				/>
 			</a-button>
 		</template>
 
@@ -102,11 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import Icon from '../Icon.vue';
 import { Process } from '../../utils/process';
 import { computed } from 'vue';
 import { Browser } from '../../fs/browser';
 import { BrowserOptions } from '../../fs/interface';
+import { CirclePlayIcon, PinIcon, RefreshCwIcon, CircleXIcon, LoaderCircleIcon } from 'lucide-vue-next';
 
 const props = withDefaults(
 	defineProps<{

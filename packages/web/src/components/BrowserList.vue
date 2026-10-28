@@ -13,10 +13,7 @@
 			@drop="onParentBackDrop"
 		>
 			<template #icon>
-				<Icon
-					theme="filled"
-					type="folder"
-				></Icon>
+				<a-space size="mini"><FolderIcon /></a-space>
 			</template>
 		</Entity>
 
@@ -38,10 +35,7 @@
 				@drop="onDrop(child)"
 			>
 				<template #icon>
-					<Icon
-						theme="filled"
-						type="folder"
-					></Icon>
+					<a-space size="mini"><FolderIcon /></a-space>
 				</template>
 			</Entity>
 		</template>
@@ -139,7 +133,6 @@ import { Folder, root } from '../fs/folder';
 import { BrowserOptions, FolderOptions, FolderType } from '../fs/interface';
 import BrowserOperators from './browsers/BrowserOperators.vue';
 import Entity from './Entity.vue';
-import Icon from './Icon.vue';
 import Tags from './Tags.vue';
 import {
 	startDrag,
@@ -153,6 +146,7 @@ import {
 } from '../composables/useEntityDrag';
 import { currentFolder } from '../fs';
 import EmptyBrowserCard from './EmptyBrowserCard.vue';
+import { FolderIcon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	entities: Array<BrowserOptions | FolderOptions<FolderType, Folder<FolderType> | Browser>>;

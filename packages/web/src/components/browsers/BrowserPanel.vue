@@ -57,7 +57,7 @@
 					type="primary"
 					@click="state.showAutomationScriptSelector = true"
 				>
-					<icon-plus /> 添加自动程序
+					<PlusIcon /> 添加自动程序
 				</a-button>
 			</a-tooltip>
 
@@ -154,12 +154,10 @@
 							size="mini"
 							class="mb-2"
 						>
-							<Icon
-								type="delete"
-								@click="clearHistory"
-							>
+							<a-space size="mini"
+								><Trash2Icon @click="clearHistory" />
 								清空
-							</Icon>
+							</a-space>
 						</a-button>
 
 						<a-table
@@ -242,7 +240,6 @@ import { t, store } from '../../store';
 import { Browser } from '../../fs/browser';
 import { datetime } from '../../utils';
 import Tags from '../Tags.vue';
-import Icon from '../Icon.vue';
 import { BrowserOptions, Tag } from '../../fs/interface';
 import { Folder } from '../../fs/folder';
 import { currentBrowser } from '../../fs/index';
@@ -254,6 +251,7 @@ import { electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
 import UsageAlertCollapse from '../UsageAlertCollapse.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
+import { PlusIcon, Trash2Icon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	browser: BrowserOptions;

@@ -59,7 +59,9 @@
 							class="multi-operate"
 							:popup-max-height="false"
 						>
-							<a-button size="mini"> <Icon type="checklist">批量操作</Icon> <icon-down /> </a-button>
+							<a-button size="mini">
+								<Icon type="checklist">批量操作</Icon> <Icon type="keyboard_arrow_down" />
+							</a-button>
 							<template #content>
 								<a-doption
 									class="border-bottom"
@@ -122,8 +124,7 @@ import { Entity } from '../../fs/entity';
 import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
 import BrowserList from '../BrowserList.vue';
-import { IconSync } from '@arco-design/web-vue/es/icon';
-import Icon from '../Icon.vue';
+import { LoaderCircleIcon } from 'lucide-vue-next';
 import { Status } from '../../utils/statusBar';
 
 const state = reactive({
@@ -324,7 +325,7 @@ async function multipleOperationRegister(name: string, runner: (canRun: () => bo
 	let canRun = true;
 	const modal = Modal.info({
 		title: '批量化操作',
-		content: () => h('div', [h(IconSync, { spin: true }), ' 正在执行批量化操作中： ' + name]),
+		content: () => h('div', [h(LoaderCircleIcon, { class: 'icon-spin' }), ' 正在执行批量化操作中： ' + name]),
 		maskClosable: false,
 		closable: false,
 		simple: false,

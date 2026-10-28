@@ -12,9 +12,8 @@
 						class="script-icon"
 						@error="failedIcons.add(script.icon!)"
 					/>
-					<Icon
+					<GlobeIcon
 						v-else
-						type="public"
 						:size="18"
 						class="script-icon-fallback"
 					/>
@@ -29,7 +28,7 @@
 					@click="remove(index)"
 				>
 					<template #icon>
-						<icon-close />
+						<XIcon />
 					</template>
 				</a-button>
 			</template>
@@ -108,9 +107,8 @@
 								@input="() => validate(index, cfgKey, cfg)"
 							>
 								<template #suffix>
-									<Icon
+									<LinkIcon
 										v-if="cfg.value && normalizeUrl(cfg.value) !== String(cfg.value).trim()"
-										type="link"
 										:size="14"
 										class="text-secondary"
 										title="失焦后将自动补全 https:// 前缀"
@@ -137,10 +135,7 @@
 								v-if="getError(index, cfgKey)"
 								class="config-error"
 							>
-								<Icon
-									type="error_outline"
-									:size="14"
-								/>
+								<CircleAlertIcon style="font-size: 14px" />
 								{{ getError(index, cfgKey) }}
 							</div>
 						</div>
@@ -157,7 +152,7 @@ import { RawAutomationScript } from './index';
 import type { Config } from '@ocs-desktop/common/web';
 import { normalizeUrl, validateConfigValue } from '@ocs-desktop/common/web';
 import { iconUrl } from '../../utils';
-import Icon from '../Icon.vue';
+import { GlobeIcon, XIcon, LinkIcon, CircleAlertIcon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	automationScripts: RawAutomationScript[];

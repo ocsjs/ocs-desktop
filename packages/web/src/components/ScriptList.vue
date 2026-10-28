@@ -68,9 +68,8 @@
 							class="user-script-icon"
 							@error="onAvatarError(author.avatar)"
 						/>
-						<Icon
+						<CircleUserRoundIcon
 							v-else
-							type="account_circle"
 							style="margin-top: 4px"
 							class="user-script-icon"
 						/>
@@ -162,8 +161,8 @@
 import { ref, reactive, toRefs } from 'vue';
 import { StoreUserScript } from '../store';
 import { store } from '../store/index';
-import Icon from './Icon.vue';
 import { openScriptSource } from '../utils/user-scripts';
+import { CircleUserRoundIcon } from 'lucide-vue-next';
 
 interface ScriptListProps {
 	scripts: StoreUserScript[];

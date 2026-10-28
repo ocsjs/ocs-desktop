@@ -30,7 +30,10 @@
 					</a-button>
 				</a-tooltip>
 				<a-dropdown trigger="hover">
-					<a-button size="mini"> <icon-apps class="me-1" /> 快捷操作 </a-button>
+					<a-button size="mini">
+						<Grid3x3Icon class="me-1" />
+						快捷操作
+					</a-button>
 
 					<template #content>
 						<a-doption
@@ -59,7 +62,7 @@
 					type="primary"
 					@click="state.searchModalVisible = true"
 				>
-					<Icon type="search" /> 搜索脚本
+					<SearchIcon /> 搜索脚本
 				</a-button>
 			</div>
 		</div>
@@ -93,15 +96,15 @@
 									: 'red'
 							"
 						>
-							<icon-refresh
-								v-if="state.script_status[script.id] === 'loading'"
-								spin
-							>
-								正在更新脚本信息...
-							</icon-refresh>
-							<icon-check v-else-if="state.script_status[script.id] === 'done'"> </icon-check>
-							<icon-close v-else-if="state.script_status[script.id] === 'error'"> </icon-close>
-							<icon-exclamation v-else-if="state.script_status[script.id] === 'not_found'"> </icon-exclamation>
+							<template v-if="state.script_status[script.id] === 'loading'">
+								<a-space size="mini">
+									<LoaderCircleIcon class="icon-spin" />
+									正在更新脚本信息...
+								</a-space>
+							</template>
+							<CheckIcon v-else-if="state.script_status[script.id] === 'done'" />
+							<XIcon v-else-if="state.script_status[script.id] === 'error'" />
+							<TriangleAlertIcon v-else-if="state.script_status[script.id] === 'not_found'" />
 						</a-tag>
 						<template #content>
 							<div v-if="state.script_status[script.id] === 'loading'">正在更新脚本信息...</div>
@@ -118,7 +121,7 @@
 						:content-style="{ maxWidth: '400px' }"
 					>
 						<a-tag>
-							<Icon type="info" />
+							<InfoIcon />
 						</a-tag>
 						<template #content>
 							<a-descriptions
@@ -183,7 +186,7 @@
 						@click="showScriptVersionList(script)"
 					>
 						<template v-if="state.versionSelector.currentScriptId === script.id && state.versionSelector.loading">
-							<icon-loading />
+							<LoaderCircleIcon class="icon-spin" />
 						</template>
 						<template v-else>
 							<a-tooltip>
@@ -191,7 +194,7 @@
 									切换脚本版本，启动浏览器后会强制安装此版本<br />
 									如果选择最新版本，那么每次都会同步最新版本
 								</template>
-								<span> <icon-swap /> 版本 </span>
+								<span> <ArrowLeftRightIcon /> 版本 </span>
 							</a-tooltip>
 						</template>
 					</a-button>
@@ -241,7 +244,7 @@
 								status="danger"
 								class="user-script-action"
 							>
-								<Icon type="delete" />
+								<Trash2Icon />
 							</a-button>
 						</a-popconfirm>
 					</a-tooltip>
@@ -317,7 +320,7 @@
 											:type="data.alreadyInstalled ? undefined : 'outline'"
 											@click="onAddScript(data.script)"
 										>
-											<Icon type="add" /> {{ data.alreadyInstalled ? '已添加' : '添加' }}
+											<PlusIcon /> {{ data.alreadyInstalled ? '已添加' : '添加' }}
 										</a-button>
 									</template>
 								</ScriptList>
@@ -379,7 +382,6 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { config } from '../config';
 import { t, store, StoreUserScript } from '../store';
 import { ScriptSearchEngine } from '../types/search';
-import Icon from '../components/Icon.vue';
 import { addScriptFromFile, openScriptSource } from '../utils/user-scripts';
 import { getSpecifiedVersion } from '../utils/script-version';
 import { Message } from '@arco-design/web-vue';
@@ -390,6 +392,18 @@ import { remote } from '../utils/remote';
 import { Status } from '../utils/statusBar';
 import UsageAlertCollapse from '../components/UsageAlertCollapse.vue';
 import AddNetworkScriptModal from '../components/AddNetworkScriptModal.vue';
+import {
+	Grid3x3Icon,
+	SearchIcon,
+	InfoIcon,
+	LoaderCircleIcon,
+	ArrowLeftRightIcon,
+	Trash2Icon,
+	PlusIcon,
+	CheckIcon,
+	XIcon,
+	TriangleAlertIcon
+} from 'lucide-vue-next';
 
 /** 搜索列表 */
 const engineSearchList = ref<

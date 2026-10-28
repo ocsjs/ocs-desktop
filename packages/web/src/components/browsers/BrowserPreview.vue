@@ -11,11 +11,9 @@
 			v-else
 			class="screenshot-placeholder"
 		>
-			<template v-if="!store.render.setting.browser.screenshotPreview">
-				<Icon type="image_not_supported" /> 截图预览未开启
-			</template>
-			<template v-else-if="process?.status === 'launching'"> <Icon type="hourglass_top" /> 等待浏览器启动... </template>
-			<template v-else> <Icon type="hourglass_top" /> 等待截图... </template>
+			<template v-if="!store.render.setting.browser.screenshotPreview"> <ImageOffIcon /> 截图预览未开启 </template>
+			<template v-else-if="process?.status === 'launching'"> <HourglassIcon /> 等待浏览器启动... </template>
+			<template v-else> <HourglassIcon /> 等待截图... </template>
 		</div>
 
 		<!-- 中心操作按钮组：hover 显示 -->
@@ -27,10 +25,7 @@
 				class="view-btn"
 				@click.stop="previewVisible = true"
 			>
-				<Icon
-					type="visibility"
-					class="view-icon"
-				/>
+				<EyeIcon class="view-icon" />
 				<span class="view-text">点击查看</span>
 			</div>
 			<div
@@ -38,10 +33,7 @@
 				class="view-btn"
 				@click.stop="pageSwitchVisible = true"
 			>
-				<Icon
-					type="tab"
-					class="view-icon"
-				/>
+				<AppWindowIcon class="view-icon" />
 				<span class="view-text">切换页面</span>
 			</div>
 		</div>
@@ -52,9 +44,10 @@
 			class="card-screenshot-overlay"
 		>
 			<div class="card-name-text card-name-white">
-				<Icon type="web">
+				<a-space size="mini"
+					><GlobeIcon />
 					{{ browser.name }}
-				</Icon>
+				</a-space>
 			</div>
 			<div class="overlay-actions">
 				<slot name="actions">
@@ -74,7 +67,7 @@
 						@click.stop="dismissClosedPreview"
 					>
 						<template #icon>
-							<Icon type="close" />
+							<XIcon />
 						</template>
 					</a-button>
 				</a-tooltip>
@@ -94,7 +87,7 @@
 		<template #title>
 			<div class="preview-title">
 				<span class="d-flex align-items-center gap-2">
-					<Icon type="web" /> {{ browser.name }} - {{ isLive ? '预览中' : '上一次关闭前截图' }}
+					<GlobeIcon /> {{ browser.name }} - {{ isLive ? '预览中' : '上一次关闭前截图' }}
 				</span>
 				<BrowserOperators
 					v-if="isLive"
@@ -136,9 +129,8 @@
 					class="page-item-icon"
 					@error="failedIcons.add(page.url)"
 				/>
-				<Icon
+				<LanguagesIcon
 					v-else
-					type="language"
 					class="page-item-icon-default"
 				/>
 				<div class="page-item-text">
@@ -156,13 +148,13 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch } from 'vue';
-import Icon from '../Icon.vue';
 import BrowserOperators from './BrowserOperators.vue';
 import { store } from '../../store';
 import { Process, closedPreviews } from '../../utils/process';
 import { iconUrl } from '../../utils/index';
 import { BrowserOptions } from '../../fs/interface';
 import { FRAMERATE_TO_NTH_FRAME, QUALITY_TO_PARAMS } from '../../composables/useScreencastVisibility';
+import { ImageOffIcon, HourglassIcon, EyeIcon, AppWindowIcon, XIcon, GlobeIcon, LanguagesIcon } from 'lucide-vue-next';
 
 const props = withDefaults(
 	defineProps<{

@@ -3,11 +3,11 @@
 		v-if="instance"
 		:trigger="['hover']"
 	>
-		<Icon
-			type="menu"
-			style="cursor: pointer"
-			class="fs-6"
-		></Icon>
+		<a-space size="mini"
+			><MenuIcon
+				style="cursor: pointer"
+				class="fs-6"
+		/></a-space>
 		<template #content>
 			<slot name="dropdown"></slot>
 
@@ -15,33 +15,31 @@
 				v-if="hasPermissions('edit')"
 				@click="instance?.select()"
 			>
-				<Icon type="edit">编辑</Icon>
+				<a-space size="mini"><PencilIcon />编辑</a-space>
 			</a-doption>
 
 			<a-doption
 				v-if="hasPermissions('rename')"
 				@click="instance && (instance.renaming = true)"
 			>
-				<Icon type="text_format">重命名</Icon>
+				<a-space size="mini"><TypeIcon />重命名</a-space>
 			</a-doption>
 
 			<a-doption
 				v-if="hasPermissions('remove')"
 				@click="instance?.remove()"
 			>
-				<Icon
-					style="color: red"
-					type="delete"
-				>
+				<a-space size="mini"
+					><Trash2Icon style="color: red" />
 					删除
-				</Icon>
+				</a-space>
 			</a-doption>
 
 			<a-doption
 				v-if="hasPermissions('location')"
 				@click="instance?.location()"
 			>
-				<Icon type="location_on"> 跳转到文件所在位置 </Icon>
+				<a-space size="mini"><MapPinIcon /> 跳转到文件所在位置 </a-space>
 			</a-doption>
 		</template>
 	</a-dropdown>
@@ -51,7 +49,7 @@
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { FolderOptions, BrowserOptions, FolderType } from '../fs/interface';
-import Icon from './Icon.vue';
+import { MenuIcon, PencilIcon, TypeIcon, Trash2Icon, MapPinIcon } from 'lucide-vue-next';
 
 type Permissions = 'edit' | 'rename' | 'remove' | 'location';
 

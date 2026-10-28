@@ -27,9 +27,8 @@
 							class="script-icon me-1"
 							@error="script.icon && failedIcons.add(script.icon)"
 						/>
-						<Icon
+						<GlobeIcon
 							v-else
-							type="public"
 							:size="18"
 							class="script-icon-fallback me-1"
 						/>
@@ -76,7 +75,7 @@ import { RawAutomationScript } from './index';
 import CommonSelector from '../CommonSelector.vue';
 import { remote } from '../../utils/remote';
 import { iconUrl } from '../../utils';
-import Icon from '../Icon.vue';
+import { GlobeIcon } from 'lucide-vue-next';
 
 const state = reactive({
 	search: ''

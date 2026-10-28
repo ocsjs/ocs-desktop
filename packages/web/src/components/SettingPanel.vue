@@ -33,18 +33,18 @@
 						:key="item.value"
 						:value="item.value"
 					>
-						<Icon
-							:type="item.icon"
-							:size="16"
+						<component
+							:is="item.icon"
+							style="font-size: 16px"
 							class="option-icon"
 						/>
 						{{ item.label }}
 					</a-option>
 					<!-- 选中框自定义渲染（同软件布局） -->
 					<template #label>
-						<Icon
-							:type="currentThemeModeOption.icon"
-							:size="16"
+						<component
+							:is="currentThemeModeOption.icon"
+							style="font-size: 16px"
 							class="option-icon"
 						/>
 						{{ currentThemeModeOption.label }}
@@ -99,10 +99,7 @@
 							<div>4. 仅对之后新启动的浏览器生效，已运行的浏览器需重启后生效；</div>
 							<div>5. ⚠️ 该功能为实验性功能，正在测试中，可能存在未知BUG，请谨慎使用。</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-tooltip content="防休眠/防冻结：浏览器最小化或处于后台时仍可长时间运行 JS。仅对新启动的浏览器生效。">
@@ -143,10 +140,7 @@
 								<div>控制预览帧率，越高越流畅但占用更多资源。</div>
 								<div>实际帧率随页面内容动态变化（静止画面自动停止推流），实时生效。</div>
 							</template>
-							<Icon
-								class="label-help-icon"
-								type="help_outline"
-							/>
+							<CircleHelpIcon class="label-help-icon" />
 						</a-popover>
 					</template>
 					<a-select
@@ -171,10 +165,7 @@
 									2K），帧尺寸按卡片显示大小自适应（窗口越大画面越清晰），配合背压自动降速，多浏览器同时运行也不会卡死。
 								</div>
 							</template>
-							<Icon
-								class="label-help-icon"
-								type="help_outline"
-							/>
+							<CircleHelpIcon class="label-help-icon" />
 						</a-popover>
 					</template>
 					<a-select
@@ -198,10 +189,7 @@
 							<div>当前浏览器缓存总大小超过此数字时则会弹出警告弹窗。</div>
 							<div>也可在左上角工具中找到 "清除浏览器缓存" 功能</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-input-number
@@ -364,7 +352,7 @@ import { remote } from '../utils/remote';
 import cloneDeep from 'lodash/cloneDeep';
 import BrowserPath from './setting/BrowserPath.vue';
 import { changeTheme } from '../utils';
-import Icon from './Icon.vue';
+import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon } from 'lucide-vue-next';
 import { forceClearBrowserCache } from '../utils/browser';
 import { Message } from '@arco-design/web-vue';
 import { Folder } from '../fs/folder';
@@ -382,9 +370,9 @@ const themeColors = [
 
 /** 主题样式选项 */
 const themeModeOptions = [
-	{ value: 'auto', label: '自动（跟随系统）', icon: 'brightness_auto' },
-	{ value: 'light', label: '白天', icon: 'light_mode' },
-	{ value: 'dark', label: '夜间', icon: 'dark_mode' }
+	{ value: 'auto', label: '自动（跟随系统）', icon: SunMoonIcon },
+	{ value: 'light', label: '白天', icon: SunIcon },
+	{ value: 'dark', label: '夜间', icon: MoonIcon }
 ] as const;
 
 /** 当前选中项（用于 select #label 插槽渲染图标；兜底取第一项，兼容历史遗留值） */

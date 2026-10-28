@@ -31,7 +31,7 @@
 								size="mini"
 								@click="resetSearch"
 							>
-								<Icon type="restart_alt"> 重置 </Icon>
+								<a-space size="mini"><RotateCcwIcon /> 重置 </a-space>
 							</a-button>
 						</template>
 
@@ -41,7 +41,7 @@
 							size="mini"
 							@click="toggleLayoutMode"
 						>
-							<Icon type="grid_view">简洁模式</Icon>
+							<a-space size="mini"><Grid2x2Icon />简洁模式</a-space>
 						</a-button>
 					</div>
 
@@ -83,7 +83,6 @@
 </template>
 
 <script setup lang="ts">
-import Icon from '../../components/Icon.vue';
 import { resetSearch } from '../../utils/entity';
 import FileFilters from '../../components/browsers/FileFilters.vue';
 import FileBreadcrumb from '../../components/browsers/FileBreadcrumb.vue';
@@ -95,6 +94,7 @@ import NotificationBanner from '../../components/NotificationBanner.vue';
 import { store } from '../../store';
 import RightClickOpenMenuTip from '../../components/RightClickOpenMenuTip.vue';
 import SimpleBrowserCards from '../../components/browsers/SimpleBrowserCards.vue';
+import { RotateCcwIcon, Grid2x2Icon } from 'lucide-vue-next';
 
 /** 简洁模式：浏览器列表页渲染卡片平铺布局（与专业模式共用同一界面和左侧菜单栏） */
 const isSimpleMode = computed(() => store.render.setting.mode === 'simple');

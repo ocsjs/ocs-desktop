@@ -23,19 +23,27 @@
 					class="border-bottom"
 					@click="checkBrowserCaches"
 				>
-					<Icon type="delete">清除浏览器缓存</Icon>
+					<a-space size="mini"><Trash2Icon />清除浏览器缓存</a-space>
 				</a-doption>
 
-				<a-doption @click="exportData"> <Icon type="save">导出数据</Icon> </a-doption>
+				<a-doption @click="exportData">
+					<a-space size="mini"><SaveIcon />导出数据</a-space>
+				</a-doption>
 				<a-doption
 					class="border-bottom"
 					@click="importData"
 				>
-					<Icon type="upload">导入数据</Icon>
+					<a-space size="mini"><UploadIcon />导入数据</a-space>
 				</a-doption>
-				<a-doption @click="relaunch"> <Icon type="sync">重启软件</Icon> </a-doption>
-				<a-doption @click="openLog"> <Icon type="folder">日志目录</Icon> </a-doption>
-				<a-doption @click="openDevTools"> <Icon type="code">开发者工具</Icon> </a-doption>
+				<a-doption @click="relaunch">
+					<a-space size="mini"><RefreshCwIcon />重启软件</a-space>
+				</a-doption>
+				<a-doption @click="openLog">
+					<a-space size="mini"><FolderIcon />日志目录</a-space>
+				</a-doption>
+				<a-doption @click="openDevTools">
+					<a-space size="mini"><CodeIcon />开发者工具</a-space>
+				</a-doption>
 			</template>
 		</a-dropdown>
 
@@ -51,15 +59,19 @@
 					style="width: 200px"
 					@click="about"
 				>
-					<Icon type="book">使用教程</Icon>
+					<a-space size="mini"><BookIcon />使用教程</a-space>
 				</a-doption>
-				<a-doption @click="allNotify"> <Icon type="notes">查看通知</Icon> </a-doption>
+				<a-doption @click="allNotify">
+					<a-space size="mini"><NotepadTextIcon />查看通知</a-space>
+				</a-doption>
 
-				<a-doption @click="showVersionLogs"> <Icon type="notes">更新日志</Icon> </a-doption>
+				<a-doption @click="showVersionLogs">
+					<a-space size="mini"><NotepadTextIcon />更新日志</a-space>
+				</a-doption>
 
 				<TitleLink :url="OCS_WEBSITE + '/'">
 					<template #title>
-						<Icon type="home">软件官网</Icon>
+						<a-space size="mini"><HouseIcon />软件官网</a-space>
 					</template>
 				</TitleLink>
 			</template>
@@ -87,8 +99,18 @@ import { Folder, root } from '../fs/folder';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import { checkBrowserCaches } from '../utils/browser';
-import Icon from './Icon.vue';
 import PinButton from './PinButton.vue';
+import {
+	Trash2Icon,
+	SaveIcon,
+	UploadIcon,
+	RefreshCwIcon,
+	FolderIcon,
+	CodeIcon,
+	BookIcon,
+	NotepadTextIcon,
+	HouseIcon
+} from 'lucide-vue-next';
 
 const { shell } = electron;
 

@@ -7,10 +7,9 @@
 			:text-style="{ fontSize: '12px' }"
 			@click="shell.showItemInFolder(realPath)"
 		>
-			<Icon
+			<SettingsIcon
 				v-if="setting"
 				class="ms-3"
-				type="settings"
 				@click.stop="change(name)"
 			/>
 		</Description>
@@ -23,8 +22,8 @@ import { Message } from '@arco-design/web-vue';
 import Description from './Description.vue';
 import { remote } from '../utils/remote';
 import { store } from '../store';
-import Icon from './Icon.vue';
 import { electron } from '../utils/node';
+import { SettingsIcon } from 'lucide-vue-next';
 
 interface PathProps {
 	name: keyof typeof store.paths;

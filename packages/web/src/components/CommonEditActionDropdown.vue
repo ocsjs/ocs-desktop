@@ -12,7 +12,7 @@
 			<!-- 实体操作菜单项：右键实体时在最上方显示 -->
 			<template v-if="contextEntity">
 				<div class="context-tip">
-					<icon-info-circle />
+					<InfoIcon />
 					左键：编辑 / 拖动
 				</div>
 				<a-doption
@@ -20,7 +20,9 @@
 					:value="'edit'"
 				>
 					<a-row>
-						<a-col flex="20px"> <Icon type="edit"></Icon> </a-col>
+						<a-col flex="20px">
+							<a-space size="mini"><PencilIcon /></a-space>
+						</a-col>
 						<a-col flex="auto"> 编辑 </a-col>
 					</a-row>
 				</a-doption>
@@ -29,7 +31,9 @@
 					:value="'rename'"
 				>
 					<a-row>
-						<a-col flex="20px"> <Icon type="text_format"></Icon> </a-col>
+						<a-col flex="20px">
+							<a-space size="mini"><TypeIcon /></a-space>
+						</a-col>
 						<a-col flex="auto"> 重命名 </a-col>
 					</a-row>
 				</a-doption>
@@ -39,11 +43,7 @@
 				>
 					<a-row>
 						<a-col flex="20px">
-							<Icon
-								style="color: red"
-								type="delete"
-							>
-							</Icon>
+							<a-space size="mini"><Trash2Icon style="color: red" /> </a-space>
 						</a-col>
 						<a-col flex="auto"> 删除 </a-col>
 					</a-row>
@@ -53,7 +53,9 @@
 					:value="'location'"
 				>
 					<a-row>
-						<a-col flex="20px"> <Icon type="location_on"> </Icon> </a-col>
+						<a-col flex="20px">
+							<a-space size="mini"><MapPinIcon /> </a-space>
+						</a-col>
 						<a-col flex="auto"> 跳转到文件所在位置 </a-col>
 					</a-row>
 				</a-doption>
@@ -64,7 +66,9 @@
 			<template v-if="isBlankArea">
 				<a-doption :value="'newBrowser'">
 					<a-row>
-						<a-col flex="20px"> <Icon type="web"></Icon> </a-col>
+						<a-col flex="20px">
+							<a-space size="mini"><GlobeIcon /></a-space>
+						</a-col>
 						<a-col flex="auto"> 新建浏览器 </a-col>
 					</a-row>
 				</a-doption>
@@ -79,7 +83,7 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> <icon-copy /> </a-col>
+					<a-col flex="20px"> <CopyIcon /> </a-col>
 					<a-col flex="auto"> 复制 </a-col>
 					<a-col
 						flex="auto"
@@ -94,7 +98,7 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> <icon-scissor /> </a-col>
+					<a-col flex="20px"> <ScissorsIcon /> </a-col>
 					<a-col flex="auto"> 剪切 </a-col>
 					<a-col
 						flex="auto"
@@ -109,7 +113,7 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> <icon-paste /> </a-col>
+					<a-col flex="20px"> <ClipboardPasteIcon /> </a-col>
 					<a-col flex="auto"> 粘贴 </a-col>
 					<a-col
 						flex="auto"
@@ -124,7 +128,7 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> <icon-undo /> </a-col>
+					<a-col flex="20px"> <Undo2Icon /> </a-col>
 					<a-col flex="auto"> 上一步（恢复） </a-col>
 					<a-col
 						flex="auto"
@@ -139,7 +143,7 @@
 				@mousedown="mousedown"
 			>
 				<a-row>
-					<a-col flex="20px"> <icon-redo /> </a-col>
+					<a-col flex="20px"> <Redo2Icon /> </a-col>
 					<a-col flex="auto"> 下一步（还原） </a-col>
 					<a-col
 						flex="auto"
@@ -161,7 +165,19 @@ import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderType, FolderOptions } from '../fs/interface';
 import { contextUid, currentSearchedEntities } from '../fs';
 import { newBrowserOrInit } from '../utils/browser';
-import Icon from './Icon.vue';
+import {
+	InfoIcon,
+	CopyIcon,
+	ScissorsIcon,
+	ClipboardPasteIcon,
+	Undo2Icon,
+	Redo2Icon,
+	PencilIcon,
+	TypeIcon,
+	Trash2Icon,
+	MapPinIcon,
+	GlobeIcon
+} from 'lucide-vue-next';
 
 type Permission = 'edit' | 'rename' | 'remove' | 'location';
 

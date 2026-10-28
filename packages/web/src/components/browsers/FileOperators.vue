@@ -5,13 +5,15 @@
 				size="small"
 				type="outline"
 			>
-				<Icon type="more_horiz"> 更多 </Icon>
+				<a-space size="mini"><EllipsisIcon /> 更多 </a-space>
 			</a-button>
 			<template #content>
 				<a-doption @click="state.showAutomationScriptSelector = true">
-					<Icon type="add"> 批量创建-自动化程序浏览器</Icon>
+					<a-space size="mini"><PlusIcon /> 批量创建-自动化程序浏览器</a-space>
 				</a-doption>
-				<a-doption @click="state.remove_tags_modal.visible = true"> <Icon type="delete">批量删除标签</Icon> </a-doption>
+				<a-doption @click="state.remove_tags_modal.visible = true">
+					<a-space size="mini"><Trash2Icon />批量删除标签</a-space>
+				</a-doption>
 			</template>
 		</a-dropdown>
 
@@ -23,10 +25,10 @@
 			@click="newBrowserOrInit()"
 			@select="onCreateSelect"
 		>
-			<Icon type="add"> 新建 </Icon>
+			<a-space size="mini"><PlusIcon /> 新建 </a-space>
 			<template #content>
 				<a-doption value="folder">
-					<Icon type="folder">新建文件夹</Icon>
+					<a-space size="mini"><FolderIcon />新建文件夹</a-space>
 				</a-doption>
 			</template>
 		</a-dropdown-button>
@@ -92,13 +94,13 @@
 
 					<a-tooltip content="导出固定格式的批量创建模板表格，编辑好模板表格后可以导入。">
 						<a-button @click="batchCreateTableRef.exportTemplateExcel">
-							<a-space> <Icon type="download" /> 导出表格模板 </a-space>
+							<a-space> <DownloadIcon /> 导出表格模板 </a-space>
 						</a-button>
 					</a-tooltip>
 
 					<a-tooltip content="导入与上面格式相同的表格数据">
 						<a-button @click="batchCreateTableRef.importTemplateExcelConfirm">
-							<a-space> <Icon type="upload" /> 导入表格 </a-space>
+							<a-space> <UploadIcon /> 导入表格 </a-space>
 						</a-button>
 					</a-tooltip>
 
@@ -106,7 +108,7 @@
 						type="outline"
 						@click="batchCreateTableRef.onConfirm"
 					>
-						<Icon type="web"> 批量创建 </Icon>
+						<a-space size="mini"><GlobeIcon /> 批量创建 </a-space>
 					</a-button>
 				</a-space>
 			</template>
@@ -149,7 +151,6 @@
 </template>
 
 <script setup lang="ts">
-import Icon from '../Icon.vue';
 import { reactive, h, ref } from 'vue';
 import { RawAutomationScript } from '../automation-scripts';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
@@ -159,6 +160,7 @@ import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 import { Modal, Message, Tag } from '@arco-design/web-vue';
+import { DownloadIcon, UploadIcon, EllipsisIcon, PlusIcon, Trash2Icon, FolderIcon, GlobeIcon } from 'lucide-vue-next';
 
 /** 批量创建表格组件引用（footer 插槽按钮经 defineExpose 调用其状态与动作） */
 const batchCreateTableRef = ref<InstanceType<typeof AutomationScriptTable>>();

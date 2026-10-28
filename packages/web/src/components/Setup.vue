@@ -53,19 +53,19 @@
 								v-if="step.status"
 								#icon
 							>
-								<icon-check-circle
+								<CircleCheckIcon
 									v-if="step.status === 'finish'"
 									style="color: green; font-size: 28px"
 									class="finish-check-animate"
 								/>
-								<icon-close-circle
+								<CircleXIcon
 									v-else-if="step.status === 'error'"
 									style="font-size: 28px; background-color: white"
 								/>
-								<icon-refresh
+								<LoaderCircleIcon
 									v-else-if="step.status === 'process'"
 									style="font-size: 28px; color: gray"
-									spin
+									class="icon-spin"
 								/>
 							</template>
 
@@ -102,7 +102,7 @@
 							"
 						>
 							<template v-if="props.autoSetup && state.finish_animate">
-								<icon-check-circle-fill
+								<CircleCheckIcon
 									style="color: greenyellow"
 									class="finish-check-animate me-2"
 								/>
@@ -131,7 +131,8 @@
 							size="small"
 							:disabled="true"
 						>
-							<icon-loading /> 初始化中...
+							<LoaderCircleIcon class="icon-spin" />
+							初始化中...
 						</a-button>
 					</template>
 				</a-space>
@@ -216,6 +217,7 @@ import { Browser } from '../fs/browser';
 import AutomationScriptSelector from './automation-scripts/AutomationScriptSelector.vue';
 import AutomationScriptList from './automation-scripts/AutomationScriptList.vue';
 import type { RawAutomationScript } from './automation-scripts';
+import { CircleCheckIcon, CircleXIcon, LoaderCircleIcon } from 'lucide-vue-next';
 
 type Step = {
 	title: string;

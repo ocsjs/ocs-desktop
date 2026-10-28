@@ -5,13 +5,13 @@
 			class="status-bar"
 			:style="barStyle"
 		>
-			<icon-loading
+			<LoaderCircleIcon
 				v-if="statusBarState.loading"
-				class="status-bar-spin"
+				class="icon-spin"
 			/>
-			<Icon
-				v-else-if="statusBarState.icon"
-				:type="statusBarState.icon"
+			<component
+				:is="STATUS_ICONS[statusBarState.icon]"
+				v-else-if="statusBarState.icon && STATUS_ICONS[statusBarState.icon]"
 			/>
 			<span>{{ statusBarState.message }}</span>
 		</span>
@@ -20,9 +20,32 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import Icon from './Icon.vue';
-import { IconLoading } from '@arco-design/web-vue/es/icon';
+import {
+	LoaderCircleIcon,
+	InfoIcon,
+	CircleCheckIcon,
+	TriangleAlertIcon,
+	CircleAlertIcon,
+	CopyIcon,
+	ScissorsIcon,
+	ClipboardPasteIcon,
+	BanIcon,
+	GripVerticalIcon
+} from 'lucide-vue-next';
 import { statusBarState, getTypeColors } from '../utils/statusBar';
+
+/** 状态栏图标名 → Lucide 组件（statusBar.ts 的 icon 字段可用值即此表的 key） */
+const STATUS_ICONS: Record<string, any> = {
+	info: InfoIcon,
+	check_circle: CircleCheckIcon,
+	warning: TriangleAlertIcon,
+	error: CircleAlertIcon,
+	content_copy: CopyIcon,
+	content_cut: ScissorsIcon,
+	content_paste: ClipboardPasteIcon,
+	block: BanIcon,
+	drag_indicator: GripVerticalIcon
+};
 
 const barStyle = computed(() => {
 	const colors = getTypeColors(statusBarState.type);
@@ -57,12 +80,6 @@ const barStyle = computed(() => {
 	}
 }
 
-.status-bar-spin {
-	animation: status-bar-spin 1s linear infinite;
-	/* 跟随主题颜色（暗色下自动取暗色色板的亮色值） */
-	color: var(--theme-primary-color);
-}
-
 /* 入场：宽度展开 + 淡入上浮 */
 .status-bar-enter-active {
 	transition: opacity 0.35s ease, max-width 0.35s ease, padding 0.35s ease, transform 0.35s ease;
@@ -88,14 +105,5 @@ const barStyle = computed(() => {
 .status-bar-leave-to {
 	opacity: 0;
 	transform: translateY(6px);
-}
-
-@keyframes status-bar-spin {
-	from {
-		transform: rotate(0deg);
-	}
-	to {
-		transform: rotate(360deg);
-	}
 }
 </style>

@@ -35,10 +35,9 @@
 									:content="item.meta.title"
 									position="right"
 								>
-									<Icon
+									<component
+										:is="ROUTE_ICONS[item.meta.icon]"
 										class="icon"
-										:type="item.meta.icon"
-										theme="outlined"
 									/>
 								</Tooltip>
 							</div>
@@ -67,9 +66,16 @@ import { ref, reactive } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import { routes, CustomRouteType, router } from '../route';
 import { remote } from '../utils/remote';
-import Icon from '../components/Icon.vue';
+import { ListIcon, CodeIcon, SettingsIcon } from 'lucide-vue-next';
 import { Tooltip } from '@arco-design/web-vue';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
+
+/** 路由 meta.icon 字符串 → 组件（config 的路由图标可用值即此表的 key） */
+const ROUTE_ICONS: Record<string, any> = {
+	view_list: ListIcon,
+	code: CodeIcon,
+	settings: SettingsIcon
+};
 
 // 当前路由
 const currentRoute = useRouter().currentRoute;

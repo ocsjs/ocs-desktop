@@ -11,9 +11,9 @@
 					:class="{ active: activeMenu === item.key }"
 					@click="activeMenu = item.key"
 				>
-					<Icon
-						:type="item.icon"
-						:size="18"
+					<component
+						:is="item.icon"
+						style="font-size: 18px"
 						class="me-2"
 					/>
 					{{ item.title }}
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from 'vue';
-import Icon from '../../components/Icon.vue';
+import { SettingsIcon, CodeIcon, Grid3x3Icon, WrenchIcon } from 'lucide-vue-next';
 import { devSession } from '../../store';
 
 /** 子设置界面（异步组件，切换到对应菜单时才加载与渲染） */
@@ -45,10 +45,10 @@ const panels = {
 };
 
 const allMenus = [
-	{ key: 'general', title: '通用设置', icon: 'settings' },
-	{ key: 'ocs', title: '脚本配置', icon: 'code' },
-	{ key: 'app-center', title: '应用中心', icon: 'apps' },
-	{ key: 'developer', title: '开发者设置', icon: 'build' }
+	{ key: 'general', title: '通用设置', icon: SettingsIcon },
+	{ key: 'ocs', title: '脚本配置', icon: CodeIcon },
+	{ key: 'app-center', title: '应用中心', icon: Grid3x3Icon },
+	{ key: 'developer', title: '开发者设置', icon: WrenchIcon }
 ] as const;
 
 type MenuKey = (typeof allMenus)[number]['key'];

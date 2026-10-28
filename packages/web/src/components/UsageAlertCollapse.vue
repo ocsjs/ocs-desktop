@@ -17,7 +17,7 @@
 				"
 			>
 				<template #icon>
-					<icon-exclamation-circle-fill />
+					<CircleAlertIcon />
 				</template>
 
 				<template #action>
@@ -52,6 +52,7 @@
 <script lang="ts" setup>
 import { AlertInstance } from '@arco-design/web-vue';
 import { ref } from 'vue';
+import { CircleAlertIcon } from 'lucide-vue-next';
 
 defineProps<{
 	title: string;

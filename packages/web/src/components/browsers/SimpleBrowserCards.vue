@@ -55,7 +55,7 @@
 						class="ms-auto"
 						@click="switchToProfessional"
 					>
-						<Icon type="view_sidebar">专业模式</Icon>
+						<a-space size="mini"><PanelLeftIcon />专业模式</a-space>
 					</a-button>
 				</div>
 			</div>
@@ -130,7 +130,8 @@
 											v-if="!showCover(browser.uid)"
 											class="card-name-text"
 										>
-											<Icon type="web">
+											<a-space size="mini"
+												><GlobeIcon />
 												<!-- 重命名状态 -->
 												<template v-if="getBrowserInstance(browser.uid)?.renaming">
 													<a-input
@@ -144,7 +145,7 @@
 												<template v-else>
 													{{ browser.name }}
 												</template>
-											</Icon>
+											</a-space>
 										</div>
 									</template>
 
@@ -197,10 +198,7 @@
 								class="browser-card add-card"
 								@click="handleAddBrowser"
 							>
-								<Icon
-									type="add_circle_outline"
-									class="add-icon"
-								/>
+								<CirclePlusIcon class="add-icon" />
 								<span class="mb-3">新建浏览器</span>
 								<span
 									class="text-secondary"
@@ -223,7 +221,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onActivated, watch, nextTick } from 'vue';
-import Icon from '../Icon.vue';
 import Tags from '../Tags.vue';
 import BrowserOperators from './BrowserOperators.vue';
 import { store } from '../../store';
@@ -237,6 +234,7 @@ import EmptyBrowserCard from '../EmptyBrowserCard.vue';
 import BeginnerGuide from '../BeginnerGuide.vue';
 import BrowserPreview from './BrowserPreview.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
+import { CirclePlusIcon, PanelLeftIcon, GlobeIcon } from 'lucide-vue-next';
 
 /** 获取所有浏览器（递归） */
 const allBrowsers = computed(() => {

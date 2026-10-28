@@ -27,7 +27,7 @@
 						class="me-1"
 						size="small"
 					>
-						{{ state.validBrowsers.length }} 个可用路径 <icon-down
+						{{ state.validBrowsers.length }} 个可用路径 <ChevronDownIcon
 					/></a-button>
 					<a-input
 						v-model="state.tempExecutablePath"
@@ -54,10 +54,7 @@
 									</div>
 								</template>
 
-								<Icon
-									type="help_outline"
-									style="cursor: pointer"
-								/>
+								<CircleHelpIcon style="cursor: pointer" />
 							</a-popover>
 						</template>
 					</a-input>
@@ -92,12 +89,12 @@ import { store } from '../../store';
 import { Message, Modal } from '@arco-design/web-vue';
 import { remote } from '../../utils/remote';
 import Description from '../Description.vue';
-import Icon from '../Icon.vue';
 import { forceClearBrowserCache } from '../../utils/browser';
 import { onMounted, reactive } from 'vue';
 import { ValidBrowser } from '@ocs-desktop/common/web';
 import { processes } from '../../utils/process';
 import { t } from '../../store/index';
+import { ChevronDownIcon, CircleHelpIcon } from 'lucide-vue-next';
 
 const state = reactive({
 	validBrowsers: [] as ValidBrowser[],

@@ -226,7 +226,7 @@
 									position="top"
 									background-color="rgba(20, 20, 30, 0.95)"
 								>
-									<icon-info-circle
+									<InfoIcon
 										class="suggestion-info-icon"
 										:size="14"
 										@mousedown.prevent.stop
@@ -355,6 +355,7 @@ import { onMounted, ref, reactive, computed } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { BookmarkResource } from '@ocs-desktop/common/web';
 import { iconUrl, getRemoteInfos } from '../utils/index';
+import { InfoIcon } from 'lucide-vue-next';
 
 type BookMark = BookmarkResource;
 

@@ -6,7 +6,7 @@
 	>
 		<div class="d-flex align-items-center justify-content-between mb-3">
 			<div class="guide-title">
-				<Icon type="school"> 新手使用指引 </Icon>
+				<a-space size="mini"><GraduationCapIcon /> 新手使用指引 </a-space>
 			</div>
 			<a-tag
 				color="arcoblue"
@@ -26,8 +26,8 @@
 				:status="step1Status"
 			>
 				<template #icon>
-					<Icon
-						:type="step1Done ? 'check' : 'settings'"
+					<component
+						:is="step1Done ? CheckIcon : SettingsIcon"
 						:color="step1Done ? '#52c41a' : undefined"
 					/>
 				</template>
@@ -38,8 +38,8 @@
 				:status="step2Status"
 			>
 				<template #icon>
-					<Icon
-						:type="step2Done ? 'check' : 'play_circle'"
+					<component
+						:is="step2Done ? CheckIcon : CirclePlayIcon"
 						:color="step2Done ? '#52c41a' : undefined"
 					/>
 				</template>
@@ -50,7 +50,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue';
-import Icon from './Icon.vue';
+import { CheckIcon, SettingsIcon, CirclePlayIcon, GraduationCapIcon } from 'lucide-vue-next';
 import { store, t } from '../store';
 import { useEnvironmentDetect } from '../composables/useEnvironmentDetect';
 import { processes } from '../utils/process';
@@ -122,7 +122,7 @@ onMounted(() => {
 		overflow: hidden;
 	}
 	/* 自定义图标在步骤槽位中偏上，下移与标题基线对齐 */
-	:deep(.arco-steps-icon .material-icons-outlined) {
+	:deep(.arco-steps-icon svg) {
 		transform: translateY(2px);
 	}
 }

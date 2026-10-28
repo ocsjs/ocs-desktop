@@ -250,3 +250,26 @@ body[arco-theme='dark'] {
 		background-color: #3a3a3a;
 	}
 }
+
+/* 图标旋转动画（加载/刷新中状态，SVG 图标组件通用） */
+.icon-spin {
+	display: inline-block;
+	animation: icon-rotate 1s linear infinite;
+}
+
+@keyframes icon-rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Lucide 图标默认固定 24px，改为随字号缩放（对齐原字体图标行为；显式 font-size 处按 1em 生效） */
+svg.lucide {
+	width: 1em;
+	height: 1em;
+	stroke-width: 2.5;
+	vertical-align: -0.125em;
+}

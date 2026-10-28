@@ -61,7 +61,7 @@
 									@click="removeAll"
 								>
 									<template #icon>
-										<icon-delete />
+										<Trash2Icon />
 									</template>
 								</a-button>
 							</a-tooltip>
@@ -84,6 +84,7 @@
 
 <script setup lang="ts" generic="Item extends {key: string}  ">
 import { Ref, ref, reactive } from 'vue';
+import { Trash2Icon } from 'lucide-vue-next';
 
 const props = withDefaults(
 	defineProps<{

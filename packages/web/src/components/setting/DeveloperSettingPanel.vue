@@ -35,10 +35,7 @@
 								<div>仅对之后启动的浏览器生效。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-switch v-model="store.render.setting.dev.scriptAssistance" />
@@ -57,10 +54,7 @@
 								<div>仅对之后启动的浏览器生效。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-switch v-model="store.render.setting.dev.downloadOptimization" />
@@ -84,10 +78,7 @@
 								<div>关闭后全部按明文存储于 config.json，任何能读取该文件的人都能看到敏感信息。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-switch v-model="store.render.setting.dev.dataEncryption" />
@@ -117,10 +108,7 @@
 								<div>留空则使用默认线上源。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-input
@@ -159,10 +147,7 @@
 								<div>留空则使用默认线上接口。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-input
@@ -184,10 +169,7 @@
 								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-input
@@ -207,10 +189,7 @@
 								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
 							</div>
 						</template>
-						<Icon
-							class="label-help-icon"
-							type="help_outline"
-						/>
+						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
 				</template>
 				<a-input
@@ -257,11 +236,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import Description from '../Description.vue';
-import Icon from '../Icon.vue';
 import { store } from '../../store';
 import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
 import { remote } from '../../utils/remote';
 import { Message } from '@arco-design/web-vue';
+import { CircleHelpIcon } from 'lucide-vue-next';
 
 /** 手动检查更新（配合自定义更新源可做更新流程测试） */
 const checkingUpdate = ref(false);

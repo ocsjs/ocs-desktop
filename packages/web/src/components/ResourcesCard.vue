@@ -16,7 +16,7 @@
 					@click="openDownloadFolder"
 				>
 					<template #icon>
-						<icon-folder />
+						<FolderIcon />
 					</template>
 					资源文件夹
 				</a-button>
@@ -26,7 +26,7 @@
 					@click="() => (otherExtensionsAddVisible = !otherExtensionsAddVisible)"
 				>
 					<template #icon>
-						<icon-question-circle />
+						<CircleHelpIcon />
 					</template>
 					加载其他拓展
 				</a-button>
@@ -107,10 +107,7 @@
 												v-if="file.icon"
 												:src="file.icon"
 											/>
-											<Icon
-												v-else
-												type="grid_4x4"
-											></Icon>
+											<LayoutGridIcon v-else />
 										</div>
 									</a-radio>
 									<div class="resource-info">
@@ -178,10 +175,7 @@
 									v-if="file.icon"
 									:src="file.icon"
 								/>
-								<Icon
-									v-else
-									type="grid_4x4"
-								></Icon>
+								<LayoutGridIcon v-else />
 							</div>
 							<div class="resource-info">
 								<a
@@ -267,7 +261,6 @@
 import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue';
 import { ResourceFile } from '@ocs-desktop/common/web';
 import { resourceLoader } from '../utils/resources.loader';
-import Icon from './Icon.vue';
 import UsageAlertCollapse from './UsageAlertCollapse.vue';
 import { t, store } from '../store/index';
 import { Message } from '@arco-design/web-vue';
@@ -275,6 +268,7 @@ import { child_process, electron } from '../utils/node';
 import { remote } from '../utils/remote';
 import { useResources } from '../composables/useResources';
 import { promptRestartAfterOcrInstall } from '../utils/ocr';
+import { FolderIcon, CircleHelpIcon, LayoutGridIcon } from 'lucide-vue-next';
 
 const { ipcRenderer } = electron;
 

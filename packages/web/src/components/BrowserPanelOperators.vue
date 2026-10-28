@@ -55,7 +55,7 @@
 							size="mini"
 							@click="browser.onlyLaunch()"
 						>
-							<Icon type="web" />
+							<GlobeIcon />
 						</a-button>
 					</a-tooltip>
 					<a-tooltip
@@ -70,7 +70,7 @@
 								size="mini"
 								status="danger"
 							>
-								<Icon type="delete" />
+								<Trash2Icon />
 							</a-button>
 						</a-popconfirm>
 					</a-tooltip>
@@ -84,7 +84,7 @@
 import { nextTick, reactive, ref } from 'vue';
 import { Browser } from '../fs/browser';
 import BrowserOperators from './browsers/BrowserOperators.vue';
-import Icon from './Icon.vue';
+import { GlobeIcon, Trash2Icon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	browser: Browser;

@@ -13,7 +13,7 @@
 						v-if="store.render.setting.ocs.openSync"
 						color="green"
 					>
-						<a-space> <IconCheckCircleFill /> 同步中 </a-space>
+						<a-space> <CircleCheckIcon /> 同步中 </a-space>
 					</a-tag>
 				</a-space>
 			</template>
@@ -31,7 +31,7 @@
 								}
 							"
 						>
-							<IconClose /> 取消配置同步
+							<XIcon /> 取消配置同步
 						</a-button>
 					</a-tooltip>
 					<a-button
@@ -40,7 +40,7 @@
 						size="small"
 						@click="onSyncOCSConfig"
 					>
-						<IconSync />同步配置到各浏览器
+						<RefreshCwIcon />同步配置到各浏览器
 					</a-button>
 				</a-space>
 			</template>
@@ -55,7 +55,7 @@
 import { t, store } from '../../store';
 import OCSConfigs from '../OCSConfigs.vue';
 import { Modal } from '@arco-design/web-vue';
-import { IconCheckCircleFill, IconSync, IconClose } from '@arco-design/web-vue/es/icon';
+import { CircleCheckIcon, XIcon, RefreshCwIcon } from 'lucide-vue-next';
 
 /** 同步OCS配置到各浏览器 */
 function onSyncOCSConfig() {

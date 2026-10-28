@@ -6,8 +6,7 @@
 		:title="store.window.alwaysOnTop ? '取消窗口置顶' : '窗口置顶'"
 		@click="togglePin"
 	>
-		<Icon
-			type="push_pin"
+		<PinIcon
 			:theme="store.window.alwaysOnTop ? 'filled' : 'outlined'"
 			:size="16"
 		/>
@@ -16,8 +15,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import Icon from './Icon.vue';
 import { store } from '../store';
+import { PinIcon } from 'lucide-vue-next';
 
 /**
  * 顶部栏窗口置顶按钮
