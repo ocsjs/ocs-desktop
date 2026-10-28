@@ -15,18 +15,21 @@
 				{{ doneCount }}/2
 			</a-tag>
 		</div>
+		<!-- 不用 type="dot"：圆点模式不渲染 #icon 插槽，完成态的绿色打勾无法显示 -->
 		<a-steps
 			:current="currentStep"
 			size="small"
-			type="dot"
 		>
 			<a-step
-				:title="t('beginner_guide_step1_title', '初始化软件设置')"
-				:description="t('beginner_guide_step1_desc', '浏览器环境正常后即完成')"
+				:title="t('beginner_guide_step1_title', '环境自动准备')"
+				:description="t('beginner_guide_step1_desc', '启动浏览器时将自动检测并补全环境')"
 				:status="step1Status"
 			>
 				<template #icon>
-					<Icon :type="step1Done ? 'check' : 'settings'" />
+					<Icon
+						:type="step1Done ? 'check' : 'settings'"
+						:color="step1Done ? '#52c41a' : undefined"
+					/>
 				</template>
 			</a-step>
 			<a-step
@@ -35,7 +38,10 @@
 				:status="step2Status"
 			>
 				<template #icon>
-					<Icon :type="step2Done ? 'check' : 'play_circle'" />
+					<Icon
+						:type="step2Done ? 'check' : 'play_circle'"
+						:color="step2Done ? '#52c41a' : undefined"
+					/>
 				</template>
 			</a-step>
 		</a-steps>
@@ -114,6 +120,10 @@ onMounted(() => {
 	}
 	:deep(.arco-steps-item-tail) {
 		overflow: hidden;
+	}
+	/* 自定义图标在步骤槽位中偏上，下移与标题基线对齐 */
+	:deep(.arco-steps-icon .material-icons-outlined) {
+		transform: translateY(2px);
 	}
 }
 </style>
