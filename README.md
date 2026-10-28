@@ -59,6 +59,9 @@ pnpm dev:app   # 仅启动 Electron 主进程
 pnpm build
 ```
 
+Windows 安装包使用安装向导，安装时可以选择 OCS Desktop 的安装目录。
+此选项仅设置软件安装位置；浏览器数据与用户配置的保存位置仍由软件原有设置管理。
+
 ## 注意
 
 新项目打包时需删除 node_modules/chromium/lib/chromium 中的文件，否则打包后会带有 chromium 文件导致体积非常大。

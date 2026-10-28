@@ -24,13 +24,10 @@
 		"!node_modules/xlsx/dist/{shim.min,xlsx.core.min,xlsx.extendscript,xlsx.full.min,xlsx,xlsx.min,xlsx.mini.min}.js"
 	],
 	"nsis": {
-		"oneClick": true
+		"oneClick": false,
+		"allowToChangeInstallationDirectory": true
 	},
-	"electronLanguages": [
-		"en-US",
-		"en-GB",
-		"zh-CN"
-	],
+	"electronLanguages": ["en-US", "en-GB", "zh-CN"],
 	"publish": {
 		"provider": "generic",
 		"url": "https://cdn.ocsjs.com/app/electron-updater/"
@@ -81,8 +78,6 @@
 			"libasound2",
 			"gnome-keyring"
 		],
-		"recommends": [
-			"kwallet6"
-		]
+		"recommends": ["kwallet6"]
 	}
 }
