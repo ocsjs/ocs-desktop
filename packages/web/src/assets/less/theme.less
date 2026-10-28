@@ -273,3 +273,12 @@ svg.lucide {
 	stroke-width: 2.5;
 	vertical-align: -0.125em;
 }
+
+/* 图标去掉浏览器默认焦点框：
+ * 内联 SVG 在 Chromium 中可被点击聚焦，UA 样式会给 :focus 元素绘制 outline: auto 5px
+ * （颜色取自平台焦点环，Linux 下呈黄色），表现为「点哪个图标就冒出一圈黄框」。
+ * 图标均为装饰性元素（aria-hidden），不是键盘焦点目标，统一移除该焦点框。 */
+svg:focus,
+svg:focus-visible {
+	outline: none;
+}
