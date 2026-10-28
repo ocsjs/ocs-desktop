@@ -6,7 +6,7 @@ import { remote } from './remote';
 import { notify } from './notify';
 import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
-import { OCSApi, OCS_API, DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
+import { OCSApi, OCS_API, OCS_UPDATER, DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import axios from 'axios';
 import { Infos } from '@ocs-desktop/common';
 
@@ -85,12 +85,12 @@ export async function fetchRemoteNotify(readAll: boolean) {
 		}
 
 		if (remoteNotify.length) {
-			Modal.confirm({
-				title: () => '🎉最新公告🎉',
+			Modal.open({
+				title: () => '📢 最新公告',
+				titleAlign: 'center',
 				okText: readAll ? '确定' : '朕已阅读',
 				cancelText: readAll ? '取消' : '下次一定',
 				hideCancel: false,
-				simple: true,
 				width: 600,
 				content: () =>
 					h(
@@ -184,6 +184,19 @@ export function detectWeakNetwork(): Promise<boolean> {
 			return weak;
 		});
 	return _weakNetInflight;
+}
+
+/**
+ * 拉取更新日志 markdown（与 electron-updater 同源：更新源目录下的 CHANGELOG.md），
+ * 支持开发者设置的自定义更新源覆盖（store.updater.feedUrl），与主进程 effectiveFeedUrl 行为一致
+ */
+export async function fetchChangelogMarkdown(): Promise<string> {
+	const base = (store.updater?.feedUrl || OCS_UPDATER.feedUrl).replace(/\/?$/, '/');
+	// ?t= 防 CDN 缓存；15s 超时避免弱网挂起
+	const { data } = await axios.get(base + OCS_UPDATER.changelogFileName + '?t=' + Date.now(), {
+		timeout: 15 * 1000
+	});
+	return String(data);
 }
 
 /**

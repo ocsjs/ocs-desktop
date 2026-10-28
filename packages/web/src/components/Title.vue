@@ -74,7 +74,9 @@
 
 <script setup lang="ts">
 import { h, ref } from 'vue';
-import { fetchRemoteNotify, date, about, getRemoteInfos } from '../utils';
+import { fetchRemoteNotify, date, about, fetchChangelogMarkdown } from '../utils';
+import { ensureUpdaterChangelogStyle } from '../utils/ipc';
+import { marked } from 'marked';
 import { remote } from '../utils/remote';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal, InputPassword } from '@arco-design/web-vue';
@@ -323,17 +325,27 @@ function openDevTools() {
 }
 
 async function showVersionLogs() {
-	const infos = await getRemoteInfos();
+	// 与 electron-updater 同源：直接拉取更新源目录的 CHANGELOG.md（markdown 全文展示）
+	let changelog = '';
+	try {
+		changelog = await fetchChangelogMarkdown();
+	} catch (err) {
+		Message.error('更新日志获取失败：' + err);
+		return;
+	}
 
-	Modal.confirm({
-		title: () => '🎉 更新日志 🎉',
+	ensureUpdaterChangelogStyle();
+
+	Modal.open({
+		title: () => '🎉更新日志',
+		titleAlign: 'center',
 		okText: '确定',
 		hideCancel: true,
-		simple: true,
+		simple: false,
 		width: 600,
 		content: () =>
 			h('div', [
-				h('h', [
+				h('div', [
 					'可前往官网下载最新版本：',
 					h(
 						'a',
@@ -344,36 +356,18 @@ async function showVersionLogs() {
 						OCS_DOWNLOAD_PAGE
 					)
 				]),
-				h(
-					'div',
-					{
-						style: {
-							maxHeight: '320px',
-							overflow: 'auto'
+				h('div', {
+					class: 'update-changelog-content',
+					innerHTML: marked.parse(changelog || '暂无更新日志'),
+					// markdown 中的链接（commit/compare 链接）统一用系统浏览器打开
+					onClick: (event: MouseEvent) => {
+						const anchor = (event.target as HTMLElement).closest('a');
+						if (anchor) {
+							event.preventDefault();
+							shell.openExternal(anchor.href);
 						}
-					},
-					infos.versions.map((item) =>
-						h('div', [
-							h(
-								'div',
-								{
-									style: {
-										marginBottom: '6px',
-										fontWeight: 'bold'
-									}
-								},
-								item.tag
-							),
-							h(
-								'ul',
-								(item.description.feat || [])
-									.concat(item.description.fix || [])
-									.concat(item.description.other || [])
-									.map((text: string) => h('li', text))
-							)
-						])
-					)
-				)
+					}
+				})
 			])
 	});
 }

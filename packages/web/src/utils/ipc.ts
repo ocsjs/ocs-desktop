@@ -8,8 +8,8 @@ import { marked } from 'marked';
 import { remote } from './remote';
 const { ipcRenderer, shell } = electron;
 
-/** 更新弹窗的 markdown 样式（注入一次） */
-function ensureUpdaterChangelogStyle() {
+/** 更新弹窗/更新日志弹窗的 markdown 样式（注入一次，两处共用） */
+export function ensureUpdaterChangelogStyle() {
 	if (document.getElementById('updater-changelog-style')) {
 		return;
 	}
