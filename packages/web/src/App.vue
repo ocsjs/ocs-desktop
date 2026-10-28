@@ -33,9 +33,10 @@
 				</div>
 			</a-modal>
 
-			<!-- 全局：欢迎使用引导（首次进入时于初始化弹窗之前展示） -->
+			<!-- 全局：欢迎使用介绍（仅首次进入展示，纯介绍无初始化功能；
+			     环境检测与补全在启动浏览器时自动执行，见 utils/env-bootstrap.ts） -->
 			<a-modal
-				:visible="store.render.state.welcome && store.render.state.setup"
+				:visible="store.render.state.welcome"
 				:footer="false"
 				:closable="false"
 				:mask-closable="false"
@@ -51,12 +52,12 @@
 						{{
 							t(
 								'welcome_desc',
-								'OCS 桌面软件是一款浏览器自动化工具，可以帮助你自动初始化浏览器环境、脚本管理器拓展与用户脚本，支持浏览器多开管理、自动登录、自动安装用户脚本等，让浏览器自动化变得简单高效。'
+								'OCS 桌面软件是一款浏览器自动化工具，支持浏览器多开管理、自动登录、自动安装用户脚本等，让浏览器自动化变得简单高效。'
 							)
 						}}
 					</p>
 					<p class="welcome-tip">
-						{{ t('welcome_init_tip', '使用软件前需要初始化一下环境，点击下方按钮开始！') }}
+						{{ t('welcome_init_tip', '无需任何手动设置，启动浏览器时将自动完成环境检测与补全。') }}
 					</p>
 					<div
 						class="text-center"
@@ -67,33 +68,11 @@
 							size="large"
 							@click="store.render.state.welcome = false"
 						>
-							{{ t('welcome_start_btn', '开始初始化') }}
+							{{ t('welcome_start_btn', '开始使用') }}
 						</a-button>
 					</div>
 				</div>
 			</a-modal>
-
-			<!-- 全局：一键安装 -->
-			<template v-if="!store.render.state.welcome">
-				<Setup
-					v-model:visible="store.render.state.setup"
-					:auto-setup="true"
-					:preset-steps="[
-						'show_desc',
-						'init_env',
-						'new_browser',
-						'init_automationScript',
-						'init_extensions',
-						'init_script',
-						'update_env'
-					]"
-					@finish="
-						() => {
-							store.render.state.setup = false;
-						}
-					"
-				></Setup>
-			</template>
 
 			<!-- 全局：新建浏览器自动初始化（仅打开时挂载，避免启动即运行初始化流程并永久挂起） -->
 			<Setup
@@ -207,8 +186,8 @@ onMounted(async () => {
 	/** 获取远程语言 */
 	fetchRemoteLangs().catch(console.error);
 
-	// 首次初始化不显示通知。
-	if (!store.render.state.setup) {
+	// 首次进入（欢迎弹窗展示期间）不显示通知。
+	if (!store.render.state.welcome) {
 		/** 获取最新远程通知 */
 		fetchRemoteNotify(false).catch(console.error);
 	}

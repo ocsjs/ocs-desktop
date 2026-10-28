@@ -1,8 +1,13 @@
-import { reactive, watch } from 'vue';
+import { reactive } from 'vue';
 import { Environment } from '../utils/environment';
 import type { ValidBrowser } from '@ocs-desktop/common/web';
-import { store } from '../store';
 
+/**
+ * 环境检测状态（供新手引导等展示层使用）。
+ *
+ * 检测刷新为显式调用（updateEnvironmentDetect），无模块级 watch 副作用；
+ * 环境补全不在这里做——启动浏览器时由 utils/env-bootstrap.ts 自动执行。
+ */
 const state = reactive({
 	/** 环境是否就绪 */
 	isReady: true,
@@ -14,10 +19,6 @@ const state = reactive({
 	supportedExtension: null as any | undefined | null,
 	/** 检测到的默认用户脚本 */
 	validUserScript: null as any | undefined | null,
-	/** 修复弹窗是否可见 */
-	envSetupFixVisible: false,
-	/** 修复弹窗是否可见 */
-	setupTitle: '',
 	/** 是否正在检测中 */
 	isLoading: true
 });
@@ -39,20 +40,9 @@ async function updateEnvironmentDetect() {
 	state.isLoading = false;
 }
 
-watch(
-	() => [store.render.setting.launchOptions.executablePath],
-	() => {
-		updateEnvironmentDetect();
-	}
-);
-
 export function useEnvironmentDetect() {
 	return {
 		state,
-		updateEnvironmentDetect,
-		openSetupModal: (setupTitle: string) => {
-			state.envSetupFixVisible = true;
-			state.setupTitle = setupTitle;
-		}
+		updateEnvironmentDetect
 	};
 }

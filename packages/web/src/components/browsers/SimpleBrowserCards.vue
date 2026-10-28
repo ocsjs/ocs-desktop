@@ -67,12 +67,6 @@
 				:class="isTile ? 'tile-container' : 'container-md'"
 				:style="isTile ? undefined : { maxWidth: cardGridMaxWidth }"
 			>
-				<!-- 环境检测提示（平铺模式下隐藏，铺满整个区域） -->
-				<EnvironmentAlert
-					v-if="!isTile"
-					class="mb-3"
-				/>
-
 				<BeginnerGuide
 					v-if="!isTile"
 					class="mb-2"
@@ -241,7 +235,6 @@ import { BrowserOptions } from '../../fs/interface';
 import { newBrowserOrInit } from '../../utils/browser';
 import EmptyBrowserCard from '../EmptyBrowserCard.vue';
 import BeginnerGuide from '../BeginnerGuide.vue';
-import EnvironmentAlert from '../EnvironmentAlert.vue';
 import BrowserPreview from './BrowserPreview.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
 

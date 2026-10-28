@@ -12,8 +12,8 @@ export type FileState = Record<string, FileStateItem>;
  * 全局共享的资源状态（模块级单例，所有调用者共享同一份响应式数据）。
  *
  * 设计参考 useEnvironmentDetect：state 定义在函数外，保证跨组件实时同步。
- * 例如用户在"软件设置-应用设置"中安装了脚本管理器，
- * 切回简洁模式首页时 EnvironmentAlert 也能感知到已安装。
+ * 例如用户在"软件设置-应用中心"中安装了脚本管理器，
+ * 其他页面/检测逻辑也能实时感知到已安装。
  */
 
 const resourceGroups = ref<ResourceGroup[]>([]);

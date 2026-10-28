@@ -51,8 +51,6 @@
 
 				<!-- 浏览器列表：白色卡片背景 -->
 				<div class="list-card">
-					<EnvironmentAlert class="p-2"> </EnvironmentAlert>
-
 					<template v-if="currentSearchedEntities !== undefined && currentSearchedEntities.length === 0">
 						<a-empty
 							class="p-3"
@@ -96,7 +94,6 @@ import { computed } from 'vue';
 import NotificationBanner from '../../components/NotificationBanner.vue';
 import { store } from '../../store';
 import RightClickOpenMenuTip from '../../components/RightClickOpenMenuTip.vue';
-import EnvironmentAlert from '../../components/EnvironmentAlert.vue';
 import SimpleBrowserCards from '../../components/browsers/SimpleBrowserCards.vue';
 
 /** 简洁模式：浏览器列表页渲染卡片平铺布局（与专业模式共用同一界面和左侧菜单栏） */

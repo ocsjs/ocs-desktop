@@ -11,6 +11,7 @@ import { remote } from '../utils/remote';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { RawAutomationScript } from '../components/automation-scripts';
 import { child_process } from '../utils/node';
+import { ensureEnvironmentReady } from '../utils/env-bootstrap';
 
 export class Browser extends Entity implements BrowserOptions {
 	type: BrowserType;
@@ -52,6 +53,14 @@ export class Browser extends Entity implements BrowserOptions {
 				return;
 			}
 		}
+		// 被动环境检测与自动补全：缺失浏览器/脚本管理器/官方脚本时自动安装（见 utils/env-bootstrap.ts）。
+		// 浏览器二进制不可用时抛错中断启动；拓展/脚本补全失败仅告警放行（下次启动重试）
+		try {
+			await ensureEnvironmentReady();
+		} catch (e: any) {
+			Message.error('环境准备失败，已取消启动：' + (e?.message || String(e)));
+			return;
+		}
 		const process = new Process(this, {
 			executablePath: store.render.setting.launchOptions.executablePath,
 			headless: false
@@ -74,6 +83,13 @@ export class Browser extends Entity implements BrowserOptions {
 	 * 适用于模拟更真实的浏览器环境
 	 */
 	async onlyLaunch() {
+		// 与 launch() 一致：裸启动同样需要被动环境补全（浏览器路径/脚本管理器）
+		try {
+			await ensureEnvironmentReady();
+		} catch (e: any) {
+			Message.error('环境准备失败，已取消启动：' + (e?.message || String(e)));
+			return;
+		}
 		// 复用主进程 getExtensionPaths，确保与正常启动一致的过滤逻辑（仅含 manifest.json 的目录）
 		const extensionPaths: string[] = await remote.methods.call('getExtensionPaths', store.paths.extensionsFolder);
 		// 起始页：启用自定义导航页时直接以导航页 URL 启动，否则为空白页。

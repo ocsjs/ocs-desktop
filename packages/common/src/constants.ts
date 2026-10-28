@@ -36,3 +36,7 @@ export const OCS_SCRIPT_RESOURCES = {
 
 /** 本地服务器默认端口（各处 || 15319 兜底统一引用此常量） */
 export const DEFAULT_SERVER_PORT = 15319;
+
+/** 受支持的浏览器最高主版本号（超出则无法自动加载脚本管理器拓展）。
+ *  web 端环境检测（utils/environment.ts）与 worker 启动校验（worker/index.ts）共用此阈值 */
+export const SUPPORTED_BROWSER_MAX_MAJOR = 137;

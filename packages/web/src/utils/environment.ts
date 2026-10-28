@@ -1,7 +1,7 @@
 import { getRemoteInfos } from '.';
 import { store } from '../store';
 import { remote } from './remote';
-import { Infos, ResourceFile } from '@ocs-desktop/common';
+import { Infos, ResourceFile, SUPPORTED_BROWSER_MAX_MAJOR } from '@ocs-desktop/common/web';
 import { ResourceLoader } from './resources.loader';
 import _get from 'lodash/get';
 import { ref } from 'vue';
@@ -54,9 +54,9 @@ export const Environment = {
 		// 排序版本，从大到小
 		browsers = browsers.sort((a, b) => (b.major_version || 0) - (a.major_version || 0));
 
-		if (browsers.some((b) => b.major_version && b.major_version <= 137)) {
+		if (browsers.some((b) => b.major_version && b.major_version <= SUPPORTED_BROWSER_MAX_MAJOR)) {
 			const valid_version_browser = browsers.find(
-				(_, i) => browsers?.[i] && (browsers?.[i].major_version || 999) <= 137
+				(_, i) => browsers?.[i] && (browsers?.[i].major_version || 999) <= SUPPORTED_BROWSER_MAX_MAJOR
 			);
 			return valid_version_browser;
 		}
@@ -67,7 +67,7 @@ export const Environment = {
 		const current_browser_path = store.render.setting.launchOptions.executablePath;
 		if (!current_browser_path) return false;
 		const current_browser_version = await remote.methods.call('getBrowserMajorVersion', current_browser_path);
-		if (current_browser_version && current_browser_version <= 137) {
+		if (current_browser_version && current_browser_version <= SUPPORTED_BROWSER_MAX_MAJOR) {
 			return true;
 		}
 		return false;

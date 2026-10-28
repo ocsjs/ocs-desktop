@@ -19,8 +19,6 @@
 			<span class="title-item"> 工具 </span>
 			<template #content>
 				<a-doption style="width: 200px"> </a-doption>
-
-				<a-doption @click="openSetup"> <Icon type="settings">初始化设置</Icon> </a-doption>
 				<a-doption
 					class="border-bottom"
 					@click="checkBrowserCaches"
@@ -93,12 +91,6 @@ import Icon from './Icon.vue';
 import PinButton from './PinButton.vue';
 
 const { shell } = electron;
-
-// 打开初始化设置弹窗（手动触发时跳过「欢迎使用」引导，直接进入初始化）
-function openSetup() {
-	store.render.state.welcome = false;
-	store.render.state.setup = true;
-}
 
 // 重启（dev 感知：pnpm dev 下提示手动重启终端，见 utils/restart.ts）
 function relaunch() {

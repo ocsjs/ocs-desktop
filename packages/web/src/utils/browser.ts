@@ -12,6 +12,7 @@ import { Entity } from '../fs/entity';
 import { currentFolder } from '../fs';
 import type { RawAutomationScript } from '@ocs-desktop/common/web';
 import { resetSearch } from './entity';
+import { ensureEnvironmentReady } from './env-bootstrap';
 const { shell } = electron;
 
 /**
@@ -114,10 +115,18 @@ export function newBrowser(opts?: {
 }
 
 /**
- * 新建浏览器：打开「新建浏览器自动初始化」弹窗并自动执行初始化流程（新建浏览器 + 添加自动化程序）。
+ * 新建浏览器：先做被动环境检测与自动补全（复用启动链路的 ensureEnvironmentReady，
+ * 避免浏览器路径未配置时流程走到「新建浏览器」步骤才报错），
+ * 环境就绪后打开「新建浏览器自动初始化」弹窗并自动执行流程（新建浏览器 + 添加自动化程序）。
  * 浏览器名称由命名算法自动生成（流程内不再询问），如需自定义可在浏览器列表中重命名。
  */
-export function newBrowserOrInit(): void {
+export async function newBrowserOrInit(): Promise<void> {
+	try {
+		await ensureEnvironmentReady();
+	} catch (e: any) {
+		Message.error('环境准备失败，请稍后重试：' + (e?.message || String(e)));
+		return;
+	}
 	store.render.state.newBrowserSetup = true;
 }
 

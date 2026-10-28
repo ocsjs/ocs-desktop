@@ -1,5 +1,5 @@
 import { Instance as Chalk } from 'chalk';
-import { LoggerCore, DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
+import { LoggerCore, DEFAULT_SERVER_PORT, SUPPORTED_BROWSER_MAX_MAJOR } from '@ocs-desktop/common';
 import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request, CDPSession } from 'playwright-core';
@@ -181,7 +181,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 		if (process.platform === 'win32') {
 			const major = getBrowserMajorVersion(options.executablePath);
 			console.log('major', major);
-			if (major && major > 137) {
+			if (major && major > SUPPORTED_BROWSER_MAX_MAJOR) {
 				console.error(
 					ScriptWorker.lang(
 						'error_when_browser_version_too_high',
