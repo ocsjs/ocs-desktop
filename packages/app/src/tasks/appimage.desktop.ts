@@ -84,7 +84,7 @@ export function integrateAppImageDesktop() {
 			fs.writeFileSync(desktopPath, desktopContent, { mode: 0o755 });
 		}
 
-		// 图标：app 目录下 public/icons/256.png（asar:false 布局直接可读）
+		// 图标：app 目录下 public/icons/256.png（asar 内文件经 Electron fs 补丁直接可读）
 		const iconSource = path.join(app.getAppPath(), 'public', 'icons', '256.png');
 		const iconTarget = iconTargetPath();
 		if (fs.existsSync(iconSource)) {

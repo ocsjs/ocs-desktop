@@ -6,7 +6,6 @@
 		"description": "OCS 浏览器自动化神器，一键浏览器多开，用户脚本环境一键配置。"
 	},
 	"productName": "OCS Desktop",
-	"asar": false,
 	"directories": {
 		"output": "../../releases"
 	},
