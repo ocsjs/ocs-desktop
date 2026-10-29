@@ -3,6 +3,7 @@
 	"version": "3.5.0",
 	"description": "desktop for userscript",
 	"main": "./out/main/index.js",
+	"desktopName": "ocs-desktop.desktop",
 	"scripts": {
 		"dev": "electron-vite dev",
 		"build": "electron-vite build",

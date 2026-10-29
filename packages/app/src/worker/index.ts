@@ -290,19 +290,19 @@ export class ScriptWorker implements ScriptWorkerContract {
 								'error_when_browser_launch_failed_too_fast',
 								'异常启动，请尝试重启浏览器，或者在设置中更换其他浏览器',
 								{
-									error: err.message.substring(0, 500)
+									error: err.message.substring(0, 4000)
 								}
 							)
 						);
 					} else {
-						console.error('异常关闭，请尝试重启浏览器。', err.message.substring(0, 500));
+						console.error('异常关闭，请尝试重启浏览器。', err.message.substring(0, 4000));
 					}
 				} else {
 					// 其它启动错误（如无法读取浏览器路径/权限/启动参数非法等）
-					console.error('浏览器启动失败 : ', err.message.substring(0, 500));
+					console.error('浏览器启动失败 : ', err.message.substring(0, 4000));
 				}
 			} else {
-				console.error('未知错误 : ', String(err).substring(0, 500));
+				console.error('未知错误 : ', String(err).substring(0, 4000));
 			}
 			// 统一走 close()：内部会 send('browser-closed') 并 process.exit()
 			return await this.close();
@@ -1000,6 +1000,19 @@ export async function launchBrowser({
 		// 启动前把浏览器 profile 的默认下载目录指向软件"文件下载"目录（原生下载行为落盘位置）
 		prepareDownloadPreferences(userDataDir, downloadsPath);
 
+		// Linux 显示环境诊断：worker 由渲染进程 fork，沙箱清理后可能丢失 DISPLAY，
+		// 记录实际环境变量与据此选择的 ozone 平台（经 worker stdout 回流到浏览器日志面板）
+		if (process.platform === 'linux') {
+			console.log(
+				'[display]',
+				`DISPLAY=${process.env.DISPLAY || '(空)'}`,
+				`WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || '(空)'}`,
+				`XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '(空)'}`,
+				'→',
+				process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
+			);
+		}
+
 		chromium
 			.launchPersistentContext(userDataDir, {
 				headless,
@@ -1022,10 +1035,9 @@ export async function launchBrowser({
 						? [
 								'--no-sandbox',
 								'--disable-setuid-sandbox',
-								// 纯 Wayland 桌面会话无 DISPLAY：主进程（Electron 原生 Wayland）正常，
-								// 但拉起的 Chrome 默认走 X11，报 "Missing X server" 崩溃。
-								// 该参数让 Chrome 优先使用 Wayland（WAYLAND_DISPLAY），无则回退 X11
-								'--ozone-platform-hint=auto'
+								// 显示平台按环境探测：纯 Wayland 会话无 DISPLAY，Chrome 默认走 X11
+								// 报 "Missing X server" → 强制 Wayland；有 DISPLAY 走 X11 正常路径
+								process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
 						  ]
 						: []),
 					// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组

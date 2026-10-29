@@ -73,7 +73,7 @@ export function integrateAppImageDesktop() {
 			'Type=Application',
 			'Terminal=false',
 			'Categories=Utility;',
-			'StartupWMClass=OCS Desktop',
+			'StartupWMClass=ocs-desktop',
 			`${MARKER}=true`,
 			''
 		].join('\n');

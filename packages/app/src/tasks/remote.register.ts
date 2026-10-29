@@ -190,6 +190,19 @@ const methods: RemoteMethods = {
 	 * 非 Linux 平台返回 undefined（该 API 仅 Linux 有意义）。
 	 */
 	getStorageBackend: () => (process.platform === 'linux' ? safeStorage.getSelectedStorageBackend() : undefined),
+	getDisplayEnv: () => {
+		// Linux 打包版：Chromium 沙箱会清理渲染进程环境变量（DISPLAY 丢失），
+		// worker 由渲染进程 fork 继承残缺 env，内置 Chrome 报 "Missing X server"。
+		// 从主进程返回真实显示变量，供 fork worker 时合并（非 Linux 为空对象，合并无副作用）
+		const keys = ['DISPLAY', 'WAYLAND_DISPLAY', 'XAUTHORITY', 'XDG_RUNTIME_DIR', 'XDG_SESSION_TYPE'];
+		const env: Record<string, string> = {};
+		for (const key of keys) {
+			if (process.env[key]) {
+				env[key] = process.env[key] as string;
+			}
+		}
+		return env;
+	},
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,

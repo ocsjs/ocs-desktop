@@ -133,6 +133,8 @@ export interface RemoteMethods {
 	getServerToken: () => string;
 	/** 获取 Linux 密钥环后端（basic_text = 无密钥环）；非 Linux 返回 undefined */
 	getStorageBackend: () => string | undefined;
+	/** 获取主进程真实显示环境变量（Linux 沙箱会清理渲染进程 env 导致 DISPLAY 丢失，fork worker 前需取回） */
+	getDisplayEnv: () => Record<string, string>;
 	isDirectory: (path: string) => boolean;
 	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
 	canOCR: () => boolean;

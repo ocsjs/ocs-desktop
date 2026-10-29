@@ -193,7 +193,9 @@ export class Process extends EventEmitter {
 			await remote.path.call('join', await remote.app.call('getAppPath'), './out/main/script.js'),
 			{
 				stdio: ['ipc'],
-				env: process.env
+				// Linux 打包版：Chromium 沙箱清理了渲染进程环境变量（DISPLAY 丢失），
+				// 用主进程真实显示变量补齐，否则内置 Chrome 报 "Missing X server" 启动失败
+				env: { ...process.env, ...remote.methods.callSync('getDisplayEnv') }
 			}
 		);
 		this.worker = createRemoteScriptWorker(this.shell);

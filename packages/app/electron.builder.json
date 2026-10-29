@@ -54,7 +54,9 @@
 		]
 	},
 	"linux": {
-		"icon": "public/favicon.png",
+		"icon": "public/icons/512.png",
+		"executableName": "ocs-desktop",
+		"syncDesktopName": true,
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{
