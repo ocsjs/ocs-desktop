@@ -85,6 +85,10 @@ export class ScriptWorker implements ScriptWorkerContract {
 	private pageListBroadcastTimer?: ReturnType<typeof setTimeout>;
 	/** 页面列表跟踪的监听清理函数集合 */
 	private pageListCleanups: (() => void)[] = [];
+	/** 内存占用上报定时器（launch 后启动，close/dispose 时清理） */
+	private memoryReportTimer?: ReturnType<typeof setInterval>;
+	/** 上次 CPU 采样（累计 cpuTime 秒数 + 采样时间戳），用于计算占用率 */
+	private lastCpuSample?: { time: number; cpuTime: number };
 	static langs?: Langs;
 	static lang: (key: keyof Langs, def?: string, replace?: Record<string, string>) => string = (key, def, replace) => {
 		const result = _get(ScriptWorker.langs, key, def);
@@ -246,6 +250,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 					// 浏览器启动完成
 					send('launched');
+					// 内存占用定时上报（真实值供渲染端启动预检测使用）
+					this.startMemoryReporting();
 					// 截图预览的启停交由渲染进程按卡片可见性驱动（Page.startScreencast），
 					// 此处不再自启动定时截图，避免不可见卡片浪费资源
 				},
@@ -312,10 +318,73 @@ export class ScriptWorker implements ScriptWorkerContract {
 		send('init');
 	}
 
+	/**
+	 * 获取该浏览器实例的真实资源占用（内存 MB + 全部子进程累计 cpuTime 秒）。
+	 * CDP 的 SystemInfo.getProcessInfo 只提供进程 PID 与 cpuTime（无内存字段），
+	 * 内存需再经系统 API 按 PID 汇总（见 getPidsMemoryMB）。
+	 */
+	async getResourceUsage(): Promise<{ mb: number; cpuTime: number }> {
+		if (!this.browser) return { mb: 0, cpuTime: 0 };
+		try {
+			const pwBrowser = this.browser.browser();
+			if (!pwBrowser) return { mb: 0, cpuTime: 0 };
+			const session = await pwBrowser.newBrowserCDPSession();
+			let pids: number[] = [];
+			let cpuTime = 0;
+			try {
+				const result = (await session.send('SystemInfo.getProcessInfo' as any)) as any;
+				const infos = (result?.processInfo || []) as any[];
+				pids = infos.map((p) => p.id).filter((id) => typeof id === 'number');
+				cpuTime = infos.reduce((sum, p) => sum + (p.cpuTime || 0), 0);
+			} finally {
+				await session.detach().catch(() => {});
+			}
+			return { mb: await getPidsMemoryMB(pids), cpuTime };
+		} catch (e) {
+			console.warn('[memory] 获取浏览器资源占用失败：', e);
+			return { mb: 0, cpuTime: 0 };
+		}
+	}
+
+	/** 启动资源占用定时上报：launch 后立即上报一次，此后每 10s 上报（事件：memory-usage） */
+	private startMemoryReporting() {
+		this.stopMemoryReporting();
+		this.lastCpuSample = undefined;
+		const report = async () => {
+			const { mb, cpuTime } = await this.getResourceUsage();
+			if (mb > 0 && !this.closing) {
+				// CPU 占用率：两次采样的累计 cpuTime 差值 / 墙钟时间（多核并行可超过 100%）
+				let cpuPercent = 0;
+				const now = Date.now();
+				if (this.lastCpuSample) {
+					const dt = (now - this.lastCpuSample.time) / 1000;
+					if (dt > 0) {
+						cpuPercent = Math.max(0, ((cpuTime - this.lastCpuSample.cpuTime) / dt) * 100);
+					}
+				}
+				this.lastCpuSample = { time: now, cpuTime };
+				send('memory-usage', this.uid, { mb, cpuPercent: Math.round(cpuPercent * 10) / 10 });
+			}
+		};
+		report();
+		this.memoryReportTimer = setInterval(report, 10 * 1000);
+		// unref：定时器不应阻止 worker 进程退出
+		this.memoryReportTimer.unref?.();
+	}
+
+	private stopMemoryReporting() {
+		if (this.memoryReportTimer) {
+			clearInterval(this.memoryReportTimer);
+			this.memoryReportTimer = undefined;
+		}
+		this.lastCpuSample = undefined;
+	}
+
 	async close() {
 		// 先置关闭屏障：阻止在途的 startScreencast 后续附着新的 CDP screencast session，
 		// 否则 browser.close() 撞上活跃 screencast 可能永久挂起（渲染端一直转圈）
 		this.closing = true;
+		this.stopMemoryReporting();
 		this.stopPageListTracking();
 		// 仅内部停止推流（detach session），不发 screencast-cleared：
 		// 渲染进程在 browser-closed 时保留最后一帧，用于"浏览器关闭后的预览图"展示
@@ -343,6 +412,7 @@ export class ScriptWorker implements ScriptWorkerContract {
 	 */
 	async dispose() {
 		try {
+			this.stopMemoryReporting();
 			this.stopPageListTracking();
 		} catch {}
 		try {
@@ -1259,6 +1329,51 @@ async function waitForInstallSuccess(installPage: Page, timeout: number): Promis
 
 function send(event: string, ...args: any[]) {
 	process.send?.({ event, args });
+}
+
+/** execFile 的 Promise 包装（用于系统内存查询命令） */
+function execCmd(file: string, args: string[]): Promise<string> {
+	return new Promise((resolve, reject) => {
+		child_process.execFile(file, args, { timeout: 10_000, windowsHide: true }, (err, stdout) => {
+			if (err) reject(err);
+			else resolve(String(stdout));
+		});
+	});
+}
+
+/**
+ * 按 PID 汇总进程真实内存（MB）：
+ * - Linux：读 /proc/<pid>/status 的 VmRSS
+ * - macOS：ps -o rss
+ * - Windows：PowerShell Get-Process 的 WorkingSet64
+ */
+async function getPidsMemoryMB(pids: number[]): Promise<number> {
+	if (pids.length === 0) return 0;
+	if (process.platform === 'linux') {
+		let totalKB = 0;
+		for (const pid of pids) {
+			try {
+				const status = fs.readFileSync(`/proc/${pid}/status`, 'utf8');
+				const match = status.match(/VmRSS:\s+(\d+)\s+kB/);
+				if (match) totalKB += parseInt(match[1], 10);
+			} catch {
+				// 进程可能已退出，忽略
+			}
+		}
+		return Math.round(totalKB / 1024);
+	}
+	if (process.platform === 'darwin') {
+		const out = await execCmd('ps', ['-o', 'rss=', '-p', pids.join(',')]);
+		const totalKB = out.split('\n').reduce((sum, line) => sum + (parseInt(line.trim(), 10) || 0), 0);
+		return Math.round(totalKB / 1024);
+	}
+	// Windows
+	const out = await execCmd('powershell', [
+		'-NoProfile',
+		'-Command',
+		`(Get-Process -Id ${pids.join(',')} -ErrorAction SilentlyContinue | Measure-Object WorkingSet64 -Sum).Sum`
+	]);
+	return Math.round((parseInt(out.trim(), 10) || 0) / 1024 / 1024);
 }
 
 function sleep(t: number) {

@@ -143,6 +143,10 @@ export class Process extends EventEmitter {
 	pages: ScreencastPageInfo[] = [];
 	/** 当前推流目标页 URL（worker pages-changed 事件实时更新） */
 	screencastPageUrl: string = '';
+	/** 浏览器实例真实内存占用 MB（worker 定时上报 memory-usage 事件更新，0 = 暂无数据） */
+	memoryUsageMB: number = 0;
+	/** 浏览器实例 CPU 占用率 %（worker 同事件上报，多核并行可超 100%，0 = 暂无数据） */
+	cpuPercent: number = 0;
 	/** 上一帧 Blob URL，用于更新前 revoke 避免内存泄漏 */
 	private _blobUrl: string = '';
 	/** 最近一帧的 base64（用于关闭时最终落盘） */
@@ -248,6 +252,13 @@ export class Process extends EventEmitter {
 			'pages-changed': (_uid: string, payload: ScreencastPagesChangedPayload) => {
 				this.pages = payload?.pages || [];
 				this.screencastPageUrl = payload?.current || '';
+			},
+			/** 资源占用上报（worker 每 10s 推送，启动预检测/资源监控浮层使用真实值替代估算） */
+			'memory-usage': (_uid: string, payload: { mb: number; cpuPercent: number }) => {
+				if (payload && typeof payload.mb === 'number' && payload.mb > 0) {
+					this.memoryUsageMB = payload.mb;
+					this.cpuPercent = typeof payload.cpuPercent === 'number' ? payload.cpuPercent : 0;
+				}
 			},
 			/** 网页下载完成（worker 监听下载目录实时回传） */
 			'file-downloaded': (_uid: string, file: { filename: string; path: string }) => {
