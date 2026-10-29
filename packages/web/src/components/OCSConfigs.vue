@@ -19,10 +19,7 @@
 		</template>
 
 		<template v-else>
-			<div
-				style="position: sticky; top: 0px; z-index: 99"
-				class="bg-white pb-2 ocs-configs-bar"
-			>
+			<div class="bg-white pb-2 ocs-configs-bar">
 				<a-alert class="mb-2">
 					<span
 						v-html="
@@ -52,14 +49,35 @@
 			</div>
 			<div
 				id="ocs-browser-configs"
-				class="mt-3 ps-2 pe-2"
-			></div>
+				class="mt-3"
+			>
+				<!-- easy-us 内部元素（脚本弹窗/消息/提示）的 Shadow DOM 挂载点 -->
+				<div ref="shadowHostEl"></div>
+				<!-- 手风琴模式展示脚本设置（替代原 $modal.simple 弹窗，交互更快且无大小限制） -->
+				<a-collapse
+					v-model:active-key="state.activeKey"
+					accordion
+					@change="onActiveScriptChange"
+				>
+					<a-collapse-item
+						v-for="script of visibleScripts"
+						:key="script.namespace"
+						:header="script.name"
+						@mouseenter="preRenderScriptPanel(script.namespace)"
+					>
+						<div
+							:ref="(el) => setPanelHost(el, script.namespace)"
+							class="ocs-script-panel"
+						></div>
+					</a-collapse-item>
+				</a-collapse>
+			</div>
 		</template>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, onActivated, reactive, watch, ref, WatchStopHandle, onDeactivated } from 'vue';
+import { onMounted, nextTick, onActivated, reactive, watch, ref, computed, WatchStopHandle, onDeactivated } from 'vue';
 import { remote } from '../utils/remote';
 import { store as Store } from '../store/index';
 import { t } from '../utils/langs';
@@ -92,17 +110,65 @@ const state = reactive({
 	watchStopHandle: undefined as WatchStopHandle | undefined,
 	hidden_projects: ['后台'],
 	pin_projects: '通用',
-	hidden_scripts: ['common.online-search', 'common.work-results']
+	hidden_scripts: ['common.online-search', 'common.work-results'],
+	/** 手风琴当前展开的脚本 namespace（arco Collapse 即使手风琴模式也使用数组） */
+	activeKey: [] as (string | number)[]
 });
 
+/** 当前项目下可配置的脚本列表 */
+const visibleScripts = computed(() => {
+	const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
+	if (!project) {
+		return [] as any[];
+	}
+	const list = [] as any[];
+	for (const key in project.scripts) {
+		if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
+			const script = project.scripts[key];
+
+			if (script.namespace && state.hidden_scripts.includes(script.namespace)) {
+				continue;
+			}
+
+			const { notes, ...otherConfigs } = script.configs || {};
+
+			if (
+				script.namespace &&
+				// 如果没有配置项，则不显示
+				Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
+				!script.hideInPanel
+			) {
+				list.push(script);
+			}
+		}
+	}
+	return list;
+});
+
+/** 切换 Tab 延迟展开的定时器 */
+let expandTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** 切换项目 Tab 时延迟 200ms 自动展开第一项配置（避免频繁切换时的渲染抖动） */
 watch(
 	() => [Store.render.setting.ocs.currentProjectName],
 	() => {
-		nextTick(renderOCS);
+		clearTimeout(expandTimer);
+		expandTimer = setTimeout(expandFirstScript, 200);
 	}
 );
 
-/** 主题变化时切换 Shadow DOM 暗色类（无需重渲染列表） */
+/** 自动展开当前项目的第一项配置（先挂载面板再展开，保证展开动画测量到完整高度） */
+function expandFirstScript() {
+	const first = visibleScripts.value[0];
+	if (!first?.namespace) {
+		state.activeKey = [];
+		return;
+	}
+	mountScriptPanel(first.namespace);
+	state.activeKey = [first.namespace];
+}
+
+/** 主题变化时切换 Shadow DOM 暗色类 */
 watch(
 	() => themeState.dark,
 	(dark) => wrapper?.classList.toggle('ocs-dark', dark)
@@ -114,105 +180,100 @@ state.watchStopHandle = watch(store, () => {
 
 let wrapper = null as HTMLElement | null;
 let root = null as ShadowRoot | null;
+/** easy-us 内部元素根节点的宿主元素 */
+const shadowHostEl = ref<HTMLElement>();
 
-function renderOCS() {
-	if (!root || !wrapper) return;
+/** 手风琴内容区的面板挂载点（namespace -> host div） */
+const panelHosts = new Map<string, HTMLElement>();
+
+function setPanelHost(el: any, namespace?: string) {
+	if (!namespace) {
+		return;
+	}
+	if (el) {
+		panelHosts.set(namespace, el as HTMLElement);
+	} else {
+		panelHosts.delete(namespace);
+	}
+}
+
+function onActiveScriptChange(key: string | number | (string | number)[] | undefined) {
+	const namespace = Array.isArray(key) ? key[0] : key;
+	if (namespace) {
+		// 同步挂载：内容区是 v-show 提前渲染的，宿主已存在；
+		// 必须在展开动画测量高度（onEnter scrollHeight）前就位，否则会先测到空内容高度再跳变
+		mountScriptPanel(String(namespace));
+	}
+}
+
+/** 面板样式（OCS 完整样式 + 覆盖样式），每次创建新节点以便在 Shadow DOM 间移动 */
+function createPanelStyles() {
+	// OCS 完整样式
+	const style = document.createElement('style');
+	style.textContent = state.css;
+	// 覆盖样式：去除阴影/缩放；标题由手风琴头部展示，隐藏面板自带分隔符标题
+	const overrides = document.createElement('style');
+	overrides.textContent = [
+		'script-panel-element { box-shadow: none; resize: none; color: #2e2e2e; }',
+		// 标题由手风琴头部展示，隐藏面板自带分隔符标题
+		'script-panel-element > .separator { display: none; }',
+		// 禁用面板子元素 fade-in 入场动画（OCS 样式 script-panel-element > div { animation: fade-in 0.3s }），避免展开时内容延迟出现
+		'script-panel-element > div, script-panel-link { animation: none !important; }'
+	].join('\n');
+	return [style, overrides];
+}
+
+/** 创建脚本设置面板（每次新建，保证配置项为最新状态） */
+function createScriptPanel(namespace: string) {
+	const script = visibleScripts.value.find((s) => s.namespace === namespace);
+	if (!script) {
+		return undefined;
+	}
 	// @ts-ignore
 	const EUS = global.EUS as typeof import('easy-us');
-	const { definedCustomElements, h, $, $ui, $store, $modal } = EUS;
+	const { $ui, $store } = EUS;
+	return $ui.scriptPanel(script, $store) as unknown as HTMLElement;
+}
 
-	try {
-		const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
-
-		// 清空元素
-		root.replaceChildren();
-
-		loadCustomElements(definedCustomElements as any[]);
-
-		root.append(h('style', state.css));
-
-		/** 删除阴影 */
-		root.append(h('style', `script-panel-element {box-shadow: none;resize: none;color:#2e2e2e}`));
-
-		/** 列表样式 */
-		root.append(
-			h(
-				'style',
-				[
-					'.ocs-list { display: flex; flex-direction: column; gap: 6px; }',
-					'.ocs-list-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; border: 1px solid #eceef1; background: #fff; cursor: pointer; user-select: none; transition: all 0.2s ease; }',
-					'.ocs-list-item:hover { border-color: var(--theme-primary-color); box-shadow: 0 4px 14px rgba(var(--primary-6),0.12); transform: translateY(-1px); }',
-					'.ocs-list-item:active { transform: translateY(0); }',
-					'.ocs-list-item-name { flex: 1; font-weight: 600; font-size: 13px; color: #1d2129; }',
-					'.ocs-list-item-arrow { width: 7px; height: 7px; border-right: 2px solid #c9cdd4; border-bottom: 2px solid #c9cdd4; transform: rotate(-45deg); transition: transform 0.2s, border-color 0.2s; flex-shrink: 0; }',
-					'.ocs-list-item:hover .ocs-list-item-arrow { transform: rotate(-45deg) translate(2px, -2px); border-color: var(--theme-primary-color); }',
-					// 暗色模式（通过 shadow host 上的 .ocs-dark 类触发，body[arco-theme] 无法穿透 Shadow DOM）
-					':host(.ocs-dark) .ocs-list-item { background: #2c2c2c; border-color: #4b4848; }',
-					':host(.ocs-dark) .ocs-list-item:hover { border-color: var(--theme-primary-color); box-shadow: 0 4px 14px rgba(0,0,0,0.3); }',
-					':host(.ocs-dark) .ocs-list-item-name { color: #cccccc; }',
-					':host(.ocs-dark) .ocs-list-item-arrow { border-color: #6a6a6a; }'
-				].join('\n')
-			)
-		);
-
-		/** 弹窗内容自适应，最大 800px；隐藏标题（脚本面板自带 header，避免重复） */
-		root.append(
-			h(
-				'style',
-				[
-					'modal-element { width: fit-content !important; max-width: 800px !important; }',
-					'.modal-body { max-width: 800px; }',
-					'.modal-title { display: none; }'
-				].join('\n')
-			)
-		);
-
-		// 根据 当前主题状态切换 shadow host 的暗色类
-		wrapper?.classList.toggle('ocs-dark', themeState.dark);
-
-		const list = h('div', { className: 'ocs-list' });
-
-		if (project) {
-			console.log('[ocsjs project]', project);
-			for (const key in project.scripts) {
-				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
-					const script = project.scripts[key];
-
-					if (script.namespace && state.hidden_scripts.includes(script.namespace)) {
-						continue;
-					}
-
-					/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
-					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
-					const { notes, ...otherConfigs } = script.configs || {};
-
-					if (
-						script.namespace &&
-						// 如果没有配置项，则不显示
-						Object.keys(otherConfigs).filter((k) => otherConfigs[k].label !== undefined).length &&
-						!script.hideInPanel
-					) {
-						const item = h('div', { className: 'ocs-list-item' });
-						item.append(h('span', { className: 'ocs-list-item-name' }, script.name));
-						item.append(h('span', { className: 'ocs-list-item-arrow' }));
-						item.addEventListener('click', () => {
-							const panel = $ui.scriptPanel(script, $store);
-							$modal.simple({ content: panel, maskCloseable: true }, root ?? undefined);
-						});
-						list.append(item);
-					}
-				}
-			}
-		}
-
-		root.append(list);
-
-		/** 挂载 ocs panel */
-		document.querySelector('#ocs-browser-configs')?.replaceChildren(wrapper);
-	} catch (err) {
-		state.err = String(err);
-		console.error(err);
+/** hover 时预渲染：直接挂载进真实宿主（内容区 v-show 提前渲染，宿主始终存在），点击展开时高度已就位 */
+function preRenderScriptPanel(namespace?: string) {
+	if (namespace) {
+		mountScriptPanel(namespace);
 	}
+}
+
+/**
+ * 挂载脚本设置面板到独立的 Shadow DOM 中（每次新建，保证配置项为最新状态）。
+ * OCS 样式表含全局选择器（ul/a/.card 等），直接注入 document 会污染软件自身样式，
+ * 因此每个面板使用独立 ShadowRoot 隔离样式。
+ */
+function mountScriptPanel(namespace: string) {
+	const host = panelHosts.get(namespace);
+	if (!host) {
+		return;
+	}
+	// hover 已渲染过则跳过，避免重复创建
+	if (host.shadowRoot?.querySelector('script-panel-element')) {
+		return;
+	}
+	const panel = createScriptPanel(namespace);
+	if (!panel) {
+		return;
+	}
+	const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
+	shadow.replaceChildren(...createPanelStyles(), panel);
+}
+
+/** 挂载 easy-us 内部元素根节点（脚本弹窗/消息等会渲染到此 Shadow DOM） */
+function mountShadowWrapper() {
+	const host = shadowHostEl.value;
+	if (!host || !wrapper) {
+		return;
+	}
+	if (wrapper.parentElement !== host) {
+		host.appendChild(wrapper);
+	}
+	wrapper.classList.toggle('ocs-dark', themeState.dark);
 }
 
 async function loadOCS() {
@@ -243,23 +304,41 @@ async function loadOCS() {
 		// @ts-ignore
 		const EUS = global.EUS as typeof import('easy-us');
 
-		const { MemoryStoreProvider, $elements, h } = EUS;
+		const { MemoryStoreProvider, $elements, definedCustomElements, h, $ } = EUS;
 
 		wrapper = wrapper || h('div');
 		root = root || wrapper.attachShadow({ mode: 'closed' });
 
 		OCS.$elements.root = root;
 		$elements.root = root;
-		console.log(OCS);
-		console.log(EUS);
+
+		/** easy-us 内部元素（弹窗/消息）的样式注入一次即可 */
+		if (root.childNodes.length === 0) {
+			root.append(h('style', state.css));
+			/** 弹窗内容自适应，最大 800px */
+			root.append(h('style', ['modal-element { !important; max-width: 800px !important; }'].join('\n')));
+		}
+
+		loadCustomElements(definedCustomElements as any[]);
 
 		/** 双向绑定数据 */
 		MemoryStoreProvider._source.store = store.value;
 
 		state.projects = OCS.definedProjects();
 		emits('update:project', state.projects as Project[]);
-		if (!Store.render.setting.ocs.currentProjectName) {
-			// 默认打开 pin_projects（如「通用」），找不到则回退到首个项目
+
+		/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
+		for (const project of state.projects) {
+			for (const key in project.scripts) {
+				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
+					const script = project.scripts[key];
+					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
+				}
+			}
+		}
+
+		if (state.projects.length) {
+			// 打开界面时默认选中 pin_projects（如「通用」），找不到则回退到首个项目
 			const preferred = state.projects.find((p) => p.name === state.pin_projects);
 			Store.render.setting.ocs.currentProjectName = (preferred || state.projects[0]).name;
 		}
@@ -271,24 +350,24 @@ async function loadOCS() {
 
 	state.loading = false;
 	emits('loaded');
+	nextTick(() => {
+		mountShadowWrapper();
+		// 加载后 DOM 已重建（原面板随之销毁），自动展开第一项配置
+		expandFirstScript();
+	});
 }
 
 onMounted(() => {
-	nextTick(async () => {
-		await loadOCS();
-		renderOCS();
-	});
+	nextTick(loadOCS);
 });
 
 onActivated(() => {
-	nextTick(async () => {
-		await loadOCS();
-		renderOCS();
-	});
+	nextTick(loadOCS);
 });
 
 onDeactivated(() => {
 	state.watchStopHandle?.();
+	clearTimeout(expandTimer);
 });
 
 /** 加载自定义元素 */
@@ -321,9 +400,7 @@ function resolveCustomElementName<T extends HTMLElement = HTMLElement>(el: { new
 #ocs-browser-configs {
 	overflow: overlay;
 	height: calc(100% - 64px);
-}
-
-.script-panels {
+	padding: 0 8px;
 }
 
 /** 暗色模式：配置栏背景与项目 Tabs 适配 */
@@ -342,5 +419,20 @@ body[arco-theme='dark'] {
 		background-color: #3b3b3b;
 		color: #ffffffd9;
 	}
+
+	.ocs-script-collapse {
+		:deep(.arco-collapse-item) {
+			border-color: #4b4848;
+			background-color: #2c2c2c;
+		}
+	}
+}
+
+.ocs-script-panel {
+	border-radius: 12px;
+}
+
+:deep(.arco-collapse-item-content) {
+	background-color: white;
 }
 </style>
