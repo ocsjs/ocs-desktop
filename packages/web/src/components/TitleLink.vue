@@ -1,5 +1,8 @@
 <template>
-	<a-doption @click="open(url)">
+	<a-doption
+		uninject-context
+		@click="open(url)"
+	>
 		<slot name="title">
 			{{ title }}
 		</slot>

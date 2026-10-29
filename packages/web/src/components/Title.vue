@@ -11,71 +11,126 @@
 				src="../../public/favicon.png"
 			/>
 		</span>
-		<a-dropdown
+		<!--
+			使用 a-trigger 替代 a-dropdown：当前 arco 版本的 Dropdown 不透传
+			trigger-props（mouseEnterDelay 默认 100ms 无法配置），导致 hover 展开有延迟。
+			a-trigger 可直接配置 mouse-enter-delay。
+			注意：不能设为 0 —— Trigger 在 delay 为 0 时不会清除挂起的关闭定时器，
+			会导致鼠标移入弹窗后仍被延迟关闭；1ms 人眼无感且行为正确。
+		-->
+		<a-trigger
+			v-model:popup-visible="toolsMenuVisible"
 			class="tittle-dropdown"
 			trigger="hover"
-			:popup-max-height="false"
+			position="bl"
+			:popup-offset="4"
+			:mouse-enter-delay="1"
+			animation-name="slide-dynamic-origin"
+			auto-fit-transform-origin
 		>
 			<span class="title-item"> 工具 </span>
 			<template #content>
-				<a-doption style="width: 200px"> </a-doption>
-				<a-doption
-					class="border-bottom"
-					@click="checkBrowserCaches"
+				<div
+					class="arco-dropdown"
+					@click="toolsMenuVisible = false"
 				>
-					<a-space size="mini"><Trash2Icon />清除浏览器缓存</a-space>
-				</a-doption>
+					<ul class="arco-dropdown-list">
+						<a-doption
+							uninject-context
+							style="width: 200px"
+						>
+						</a-doption>
+						<a-doption
+							uninject-context
+							class="border-bottom"
+							@click="checkBrowserCaches"
+						>
+							<a-space size="mini"><Trash2Icon />清除浏览器缓存</a-space>
+						</a-doption>
 
-				<a-doption @click="exportData">
-					<a-space size="mini"><SaveIcon />导出数据</a-space>
-				</a-doption>
-				<a-doption
-					class="border-bottom"
-					@click="importData"
-				>
-					<a-space size="mini"><UploadIcon />导入数据</a-space>
-				</a-doption>
-				<a-doption @click="relaunch">
-					<a-space size="mini"><RefreshCwIcon />重启软件</a-space>
-				</a-doption>
-				<a-doption @click="openLog">
-					<a-space size="mini"><FolderIcon />日志目录</a-space>
-				</a-doption>
-				<a-doption @click="openDevTools">
-					<a-space size="mini"><CodeIcon />开发者工具</a-space>
-				</a-doption>
+						<a-doption
+							uninject-context
+							@click="exportData"
+						>
+							<a-space size="mini"><SaveIcon />导出数据</a-space>
+						</a-doption>
+						<a-doption
+							uninject-context
+							class="border-bottom"
+							@click="importData"
+						>
+							<a-space size="mini"><UploadIcon />导入数据</a-space>
+						</a-doption>
+						<a-doption
+							uninject-context
+							@click="relaunch"
+						>
+							<a-space size="mini"><RefreshCwIcon />重启软件</a-space>
+						</a-doption>
+						<a-doption
+							uninject-context
+							@click="openLog"
+						>
+							<a-space size="mini"><FolderIcon />日志目录</a-space>
+						</a-doption>
+						<a-doption
+							uninject-context
+							@click="openDevTools"
+						>
+							<a-space size="mini"><CodeIcon />开发者工具</a-space>
+						</a-doption>
+					</ul>
+				</div>
 			</template>
-		</a-dropdown>
+		</a-trigger>
 
-		<a-dropdown
+		<a-trigger
+			v-model:popup-visible="helpMenuVisible"
 			class="tittle-dropdown"
-			position="bottom"
 			trigger="hover"
-			:popup-max-height="false"
+			position="bl"
+			:popup-offset="4"
+			:mouse-enter-delay="1"
+			animation-name="slide-dynamic-origin"
+			auto-fit-transform-origin
 		>
 			<span class="title-item"> 帮助 </span>
 			<template #content>
-				<a-doption
-					style="width: 200px"
-					@click="about"
+				<div
+					class="arco-dropdown"
+					@click="helpMenuVisible = false"
 				>
-					<a-space size="mini"><BookIcon />使用教程</a-space>
-				</a-doption>
-				<a-doption @click="allNotify">
-					<a-space size="mini"><NotepadTextIcon />查看通知</a-space>
-				</a-doption>
+					<ul class="arco-dropdown-list">
+						<a-doption
+							uninject-context
+							style="width: 200px"
+							@click="about"
+						>
+							<a-space size="mini"><BookIcon />使用教程</a-space>
+						</a-doption>
+						<a-doption
+							uninject-context
+							@click="allNotify"
+						>
+							<a-space size="mini"><NotepadTextIcon />查看通知</a-space>
+						</a-doption>
 
-				<a-doption @click="showVersionLogs">
-					<a-space size="mini"><NotepadTextIcon />更新日志</a-space>
-				</a-doption>
+						<a-doption
+							uninject-context
+							@click="showVersionLogs"
+						>
+							<a-space size="mini"><NotepadTextIcon />更新日志</a-space>
+						</a-doption>
 
-				<TitleLink :url="OCS_WEBSITE + '/'">
-					<template #title>
-						<a-space size="mini"><HouseIcon />软件官网</a-space>
-					</template>
-				</TitleLink>
+						<TitleLink :url="OCS_WEBSITE + '/'">
+							<template #title>
+								<a-space size="mini"><HouseIcon />软件官网</a-space>
+							</template>
+						</TitleLink>
+					</ul>
+				</div>
 			</template>
-		</a-dropdown>
+		</a-trigger>
 
 		<!-- 窗口置顶按钮：绝对定位避让系统 traffic light 控制区域（mac 在左侧，其余在右上角） -->
 		<PinButton />
@@ -113,6 +168,10 @@ import {
 } from 'lucide-vue-next';
 
 const { shell } = electron;
+
+/** 标题栏菜单弹窗显隐（点击选项后关闭） */
+const toolsMenuVisible = ref(false);
+const helpMenuVisible = ref(false);
 
 // 重启（dev 感知：pnpm dev 下提示手动重启终端，见 utils/restart.ts）
 function relaunch() {
