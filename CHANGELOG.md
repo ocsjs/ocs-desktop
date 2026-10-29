@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.6.0](https://github.com/ocsjs/ocs-desktop/compare/v3.5.0...v3.6.0) (2026-10-28)
+
+
+### ✨ 新功能
+
+* 图标体系统一为 Lucide（lucide-vue-next），获得组件级导入与代码补全 ([d1270a7](https://github.com/ocsjs/ocs-desktop/commit/d1270a7725c0e17ecc41461ebe5f77bee0720f1e))
+* 新手引导完成步骤显示绿色打勾图标，文案改为「环境自动准备」 ([6251dcd](https://github.com/ocsjs/ocs-desktop/commit/6251dcdb44f3b43805a310189090dbb38022da52))
+* 环境系统被动化重构——启动浏览器时自动检测补全，移除主动初始化焦虑入口 ([c69a8ad](https://github.com/ocsjs/ocs-desktop/commit/c69a8adb113e3b3d97c0937a91ace81692ccfe6e))
+
+
+### 🐛 问题修复
+
+* **linux:** 纯 Wayland 环境下内置浏览器无法启动 ([b54c596](https://github.com/ocsjs/ocs-desktop/commit/b54c596c24ed7759449725632aa80edb489fb049))
+* 修正 CHANGELOG 版本段落顺序并补回 H1 标题 ([52bc8ed](https://github.com/ocsjs/ocs-desktop/commit/52bc8ed1cd2a607f956ab106bf9fb02ec8601fb5))
+* 移除无用vite构建文件，防止图标被误删除 ([3c5c22c](https://github.com/ocsjs/ocs-desktop/commit/3c5c22c7c4052cd703c64846e98c1ebe7337b90e))
+
+
+### ⚡ 性能优化
+
+* 优化新建浏览器卡片文案 ([8b0319c](https://github.com/ocsjs/ocs-desktop/commit/8b0319c90fccedcaabd6616490a18bc0e7f4aca3))
+* 更新日志弹窗切换为与 electron-updater 同源的 CHANGELOG.md，弹窗标题居中统一样式 ([da2c1b4](https://github.com/ocsjs/ocs-desktop/commit/da2c1b4b3a6f87b7fef487e5a34dbab2a47110cd))
+
+
+### 💄 样式更新
+
+* 优化设置侧边栏宽度 ([b5bc9ae](https://github.com/ocsjs/ocs-desktop/commit/b5bc9ae44848b5d83cbf4c3e90f004f42e3899aa))
+
 ## [3.5.0](https://github.com/ocsjs/ocs-desktop/compare/v3.4.1...v3.5.0) (2026-10-27)
 
 
