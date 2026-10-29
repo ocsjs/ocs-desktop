@@ -123,6 +123,7 @@ import { remote } from '../../utils/remote';
 import { Entity } from '../../fs/entity';
 import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
+import { checkLaunchCapacity, warnBatchBlocked } from '../../utils/launch-check';
 import BrowserList from '../BrowserList.vue';
 import { LoaderCircleIcon } from 'lucide-vue-next';
 import { Status } from '../../utils/statusBar';
@@ -228,16 +229,27 @@ async function launchAll() {
 					.filter((e) => e !== undefined) as Browser[];
 
 				if (type.value === '延时启动') {
-					for (const browser of browsers) {
+					for (let i = 0; i < browsers.length; i++) {
 						if (canRun()) {
-							browser.launch();
+							// 每次启动前预检测：内存随已启动浏览器递减，不足时拦截剩余启动
+							const guard = await checkLaunchCapacity();
+							if (!guard.pass) {
+								warnBatchBlocked(guard.reason || '资源不足', browsers.length - i);
+								break;
+							}
+							browsers[i].launch({ skipGuardCheck: true });
 							await new Promise((resolve) => setTimeout(resolve, time.value * 1000));
 						}
 					}
 				} else {
-					for (const browser of browsers) {
+					for (let i = 0; i < browsers.length; i++) {
 						if (canRun()) {
-							await browser.launch();
+							const guard = await checkLaunchCapacity();
+							if (!guard.pass) {
+								warnBatchBlocked(guard.reason || '资源不足', browsers.length - i);
+								break;
+							}
+							await browsers[i].launch({ skipGuardCheck: true });
 						}
 					}
 				}

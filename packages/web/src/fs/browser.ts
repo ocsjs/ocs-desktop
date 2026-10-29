@@ -12,6 +12,7 @@ import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { RawAutomationScript } from '../components/automation-scripts';
 import { child_process } from '../utils/node';
 import { ensureEnvironmentReady } from '../utils/env-bootstrap';
+import { checkLaunchCapacity, warnLaunchBlocked } from '../utils/launch-check';
 
 export class Browser extends Entity implements BrowserOptions {
 	type: BrowserType;
@@ -43,14 +44,26 @@ export class Browser extends Entity implements BrowserOptions {
 		return root().find('browser', uid);
 	}
 
-	/** 启动浏览器 */
-	async launch() {
+	/**
+	 * 启动浏览器
+	 * @param opts.skipGuardCheck 跳过内存/CPU 预检测（批量启动由调用方统一检测后逐个点名，避免重复检测）
+	 * @returns 被预检测拦截时返回 false
+	 */
+	async launch(opts?: { skipGuardCheck?: boolean }): Promise<number | false | undefined> {
 		// 浏览器增强开启时限制并发数量：运行中（启动中+已启动）达到上限直接拒绝启动
 		if (store.render.setting.browser.browserEnhancement) {
 			const runningCount = processes.filter((p) => p.status === 'launching' || p.status === 'launched').length;
 			if (runningCount >= 4) {
 				Message.error('浏览器增强已开启：最多同时运行 4 个浏览器，请先关闭其他浏览器，或在设置中关闭浏览器增强功能');
 				return;
+			}
+		}
+		// 内存/CPU 启动预检测（设置中「内存检测」关闭时内部直接放行）
+		if (!opts?.skipGuardCheck) {
+			const guard = await checkLaunchCapacity();
+			if (!guard.pass) {
+				warnLaunchBlocked(guard.reason || '资源不足');
+				return false;
 			}
 		}
 		// 被动环境检测与自动补全：缺失浏览器/脚本管理器/官方脚本时自动安装（见 utils/env-bootstrap.ts）。
@@ -83,6 +96,12 @@ export class Browser extends Entity implements BrowserOptions {
 	 * 适用于模拟更真实的浏览器环境
 	 */
 	async onlyLaunch() {
+		// 内存/CPU 启动预检测（与 launch() 一致）
+		const guard = await checkLaunchCapacity();
+		if (!guard.pass) {
+			warnLaunchBlocked(guard.reason || '资源不足');
+			return;
+		}
 		// 与 launch() 一致：裸启动同样需要被动环境补全（浏览器路径/脚本管理器）
 		try {
 			await ensureEnvironmentReady();
