@@ -68,6 +68,29 @@ export function datetime(time: number) {
 }
 
 /**
+ * 相对时间显示：按 秒/分/时/天 逐级换算，超过 30 天显示具体日期时间
+ * （用于操作历史等列表，具体时间可通过 tooltip 补充展示）
+ */
+export function relativeTime(time: number) {
+	const diff = Date.now() - time;
+	if (diff < 0) return datetime(time);
+
+	const seconds = Math.floor(diff / 1000);
+	if (seconds < 60) return `${Math.max(seconds, 1)} 秒前`;
+
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${minutes} 分钟前`;
+
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours} 小时前`;
+
+	const days = Math.floor(hours / 24);
+	if (days < 30) return `${days} 天前`;
+
+	return datetime(time);
+}
+
+/**
  * 获取远程通知
  * @param readAll 是否阅读全部
  */

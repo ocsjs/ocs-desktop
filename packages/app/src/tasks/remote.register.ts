@@ -15,6 +15,7 @@ import { updateApp, updater } from './updater';
 import { AutomationScripts } from '../scripts';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { installBuiltinChrome } from './init.chrome';
+import { ensureExtensionsIntegrity, installBundledExtension, getBundledExtensions } from '../extensions/bundled';
 import type { AppStore, RawAutomationScript, RemoteMethods } from '@ocs-desktop/common';
 import {
 	encryptRenderString,
@@ -128,6 +129,10 @@ const methods: RemoteMethods = {
 	getValidBrowsers: getValidBrowsers,
 	getBrowserMajorVersion: getBrowserMajorVersion,
 	getExtensionPaths: getExtensionPaths,
+	// 内置拓展（构建期打入 asar）：完整性校验/按需释放/清单查询
+	ensureBuiltinExtensionsIntegrity: ensureExtensionsIntegrity,
+	installBundledExtension: installBundledExtension,
+	getBundledExtensions: getBundledExtensions,
 	/**
 	 * 下载并安装内置浏览器（供前端「环境修复」复用多源下载，不重启应用）。
 	 * 进度通过 webContents.send('builtin-chrome-install-progress', progress) 推送。
@@ -286,11 +291,18 @@ const methods: RemoteMethods = {
 		return Promise.all(
 			urls.map(async (url) => {
 				try {
+					// URL 归一化：脚本托管地址可能含中文/空格等未转义字符
+					// （如 ScriptCat 托管脚本），Node 网络栈（axios）会直接抛 ERR_UNESCAPED_CHARACTERS，
+					// 统一经 URL 构造器百分号编码后再请求
+					let fetchUrl = url;
+					try {
+						fetchUrl = new URL(url).href;
+					} catch {}
 					// net.fetch 优先（系统代理，与浏览器一致），失败回退 axios 直连，各自保留真实错误原因
-					let result = await fetchViaNet(url);
+					let result = await fetchViaNet(fetchUrl);
 					if (result.error) {
 						const netError = result.error;
-						result = await fetchViaAxios(url);
+						result = await fetchViaAxios(fetchUrl);
 						if (result.error) {
 							result.error = `代理网络栈失败[${netError}]，直连失败[${result.error}]`;
 						}

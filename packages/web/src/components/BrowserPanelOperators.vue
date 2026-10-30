@@ -49,7 +49,7 @@
 					</a-button>
 				</a-tooltip>
 			</template>
-			</div>
+		</div>
 		<div
 			style="flex: 0 0 auto"
 			class="d-flex justify-content-end"
@@ -182,6 +182,8 @@ function openNotesModal() {
 }
 
 function saveNotes() {
+	// browser 为响应式实体类实例（fs/browser.ts Browser），直接写 notes 是有意的数据更新而非 prop 误用
+	// eslint-disable-next-line vue/no-mutating-props
 	props.browser.notes = state.notesDraft;
 }
 </script>

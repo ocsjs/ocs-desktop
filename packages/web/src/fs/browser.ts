@@ -1,6 +1,7 @@
 import { nextTick } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { store } from '../store';
+import { sleep } from '../utils';
 import { Process, processes, clearClosedPreview } from '../utils/process';
 import { resetSearch } from '../utils/entity';
 import { router } from '../route';
@@ -8,7 +9,7 @@ import { Entity } from './entity';
 import { Folder, root } from './folder';
 import { BrowserOptions, BrowserOperateHistory, Tag, BrowserType, EntityOptions } from './interface';
 import { remote } from '../utils/remote';
-import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
+import { DEFAULT_SERVER_PORT, formatExtensionArguments } from '@ocs-desktop/common/web';
 import { RawAutomationScript } from '../components/automation-scripts';
 import { child_process } from '../utils/node';
 import { ensureEnvironmentReady } from '../utils/env-bootstrap';
@@ -172,10 +173,13 @@ export class Browser extends Entity implements BrowserOptions {
 	}
 
 	async remove() {
-		// 如果在运行，关闭当前浏览器
-		const process = Process.from(this.uid);
+		// 如果在运行（含启动中），先关闭当前浏览器
+		const process = Process.fromRunning(this.uid);
 		if (process) {
 			await process.close();
+			// 等待进程退出事件后再延迟 100ms：Windows 下浏览器进程的文件句柄
+			// （缓存/Cookie 等）释放滞后于 close 事件，立即删除易触发 EPERM
+			await sleep(100);
 		}
 
 		// 清理浏览器关闭后保留的预览图
@@ -186,8 +190,24 @@ export class Browser extends Entity implements BrowserOptions {
 
 		const exists = await remote.fs.call('existsSync', this.cachePath);
 		if (exists) {
-			// 删除本地缓存
-			await remote.fs.call('rmSync', this.cachePath, { recursive: true });
+			// 删除本地缓存。Chrome 子进程（crashpad/GPU/utility）退出明显滞后于主进程，
+			// 目录句柄可能数秒后才释放——渐进退避重试（累计最长约 7s），
+			// 仍失败则提示手动删除（浏览器已从列表移除，不影响功能）
+			let lastErr: unknown;
+			for (const wait of [0, 1000, 2000, 3000]) {
+				if (wait) await sleep(wait);
+				try {
+					await remote.fs.call('rmSync', this.cachePath, { recursive: true, force: true });
+					lastErr = undefined;
+					break;
+				} catch (e) {
+					lastErr = e;
+				}
+			}
+			if (lastErr) {
+				console.error('删除浏览器缓存失败：', lastErr);
+				Message.warning('浏览器缓存目录暂时被占用，删除失败，可稍后手动删除：' + this.cachePath);
+			}
 		}
 	}
 
@@ -208,11 +228,4 @@ export class Browser extends Entity implements BrowserOptions {
 	}
 }
 
-function formatExtensionArguments(extensionPaths: string[]) {
-	const paths = extensionPaths
-		.filter((f) => !f.includes('.DS_Store'))
-		.map((p) => p.replace(/\\/g, '/'))
-		.join(',');
-	// 与主进程保持一致：--disable-extensions-except 防止 Chrome 禁用侧载扩展
-	return paths.length === 0 ? [] : [`--load-extension=${paths}`, `--disable-extensions-except=${paths}`];
-}
+// formatExtensionArguments 已收敛至 @ocs-desktop/common（src/utils/browser.args.ts），此处直接使用共享实现

@@ -212,6 +212,12 @@
 							}"
 							:columns="[
 								{
+									dataIndex: 'time',
+									title: '时间',
+									slotName: 'time',
+									width: 110
+								},
+								{
 									title: '操作',
 									dataIndex: 'action',
 									width: 100
@@ -220,17 +226,13 @@
 									title: '备注',
 									dataIndex: 'content',
 									slotName: 'content'
-								},
-								{
-									dataIndex: 'time',
-									title: '时间',
-									slotName: 'time',
-									width: 160
 								}
 							]"
 						>
 							<template #time="{ record }">
-								{{ datetime(record.time) }}
+								<a-tooltip :content="datetime(record.time)">
+									<span>{{ relativeTime(record.time) }}</span>
+								</a-tooltip>
 							</template>
 							<template #content="{ record }">
 								<a-tooltip :content="record.content || '无备注'">
@@ -278,7 +280,7 @@
 import { store } from '../../store';
 import { t } from '../../utils/langs';
 import { Browser } from '../../fs/browser';
-import { datetime } from '../../utils';
+import { datetime, relativeTime } from '../../utils';
 import Tags from '../Tags.vue';
 import { BrowserOptions, Tag } from '../../fs/interface';
 import { Folder } from '../../fs/folder';

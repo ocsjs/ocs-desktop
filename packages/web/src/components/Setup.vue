@@ -138,71 +138,6 @@
 				</a-space>
 			</a-col>
 		</a-row>
-
-		<!-- 自动化程序选择弹窗 -->
-		<a-modal
-			v-model:visible="setupState.showScriptSelector"
-			:footer="false"
-			unmount-on-close
-			:mask-closable="false"
-			:closable="false"
-		>
-			<template #title> 选择自动化程序 </template>
-			<div class="mb-2">
-				<span style="font-size: 12px">请选择需要添加到新建浏览器的自动化程序</span>
-			</div>
-			<AutomationScriptSelector
-				:automation-scripts="[]"
-				@confirm="onSelectorConfirm"
-			>
-				<template #actions>
-					<a-button
-						size="small"
-						type="text"
-						@click="skipScriptSelector"
-					>
-						跳过此步骤
-					</a-button>
-				</template>
-			</AutomationScriptSelector>
-		</a-modal>
-
-		<!-- 自动化程序配置弹窗 -->
-		<a-modal
-			v-model:visible="setupState.showScriptConfig"
-			:footer="false"
-			unmount-on-close
-			:mask-closable="false"
-			:closable="false"
-			:width="620"
-		>
-			<template #title> 填写自动化程序配置 </template>
-			<div class="text-secondary mb-2">请填写所选自动化程序的配置信息</div>
-			<div style="max-height: 60vh; overflow: overlay">
-				<a-empty v-if="setupState.configScripts.length === 0" />
-				<AutomationScriptList
-					v-else
-					v-model:automation-scripts="setupState.configScripts"
-				></AutomationScriptList>
-			</div>
-			<div class="d-flex justify-content-end mt-2">
-				<a-space>
-					<a-button
-						size="small"
-						@click="skipScriptConfig"
-					>
-						跳过
-					</a-button>
-					<a-button
-						type="primary"
-						size="small"
-						@click="onConfigConfirm"
-					>
-						保存配置
-					</a-button>
-				</a-space>
-			</div>
-		</a-modal>
 	</a-modal>
 </template>
 
@@ -213,10 +148,6 @@ import { reactive, watch, nextTick, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { Environment } from '../utils/environment';
 import { getDefaultBrowserName, newBrowser } from '../utils/browser';
-import { Browser } from '../fs/browser';
-import AutomationScriptSelector from './automation-scripts/AutomationScriptSelector.vue';
-import AutomationScriptList from './automation-scripts/AutomationScriptList.vue';
-import type { RawAutomationScript } from './automation-scripts';
 import { CircleCheckIcon, CircleXIcon, LoaderCircleIcon } from 'lucide-vue-next';
 
 type Step = {
@@ -246,31 +177,15 @@ const _preset_steps = {
 				step.error = '浏览器创建失败，请确保已在左侧软件设置中配置浏览器路径。';
 				return;
 			}
-			setupState.newBrowserInstance = browser;
-			step.description = `已创建浏览器：${browser.name}，可在浏览器列表中查看并重命名。`;
+			step.description = `已创建浏览器：${browser.name}（默认不含自动化程序，可在浏览器面板中按需添加），可在浏览器列表中查看并重命名。`;
 		}
 	} as Step,
 	init_automationScript: {
+		// 已下线：新建浏览器移除自动化程序选择，默认为空程序（可在浏览器面板中按需添加）。
+		// 保留空步骤仅为兼容 PresetSteps 类型推导，任何 presetSteps 均不再引用它。
 		title: '添加自动化程序',
-		async action(step) {
-			await sleep(500);
-			step.description = '请选择需要添加的自动化程序...';
-			const selected = await openScriptSelector();
-			// 未选择则跳过此步骤
-			if (!selected || selected.length === 0) {
-				step.description = '已跳过自动化程序添加。';
-				return;
-			}
-			// 紧接着弹出配置弹窗，提示用户填写配置信息
-			setupState.configScripts = JSON.parse(JSON.stringify(selected));
-			const configured = await openScriptConfig();
-			if (configured && configured.length && setupState.newBrowserInstance) {
-				setupState.newBrowserInstance.automationScripts = configured;
-				step.description = `已为浏览器「${setupState.newBrowserInstance.name}」添加 ${configured.length} 个自动化程序。`;
-			} else {
-				step.description = '未保存自动化程序配置，已跳过。';
-			}
-		}
+		hidden: true,
+		async action() {}
 	} as Step
 };
 
@@ -291,8 +206,9 @@ const props = withDefaults(
 		cancelText: '稍后手动设置',
 		title: '初始化软件设置',
 		autoSetup: false,
-		// 默认仅新建浏览器流程（全局一键初始化已移除，环境补全改为启动浏览器时自动执行）
-		presetSteps: () => ['new_browser', 'init_automationScript']
+		// 默认仅新建浏览器流程（全局一键初始化已移除，环境补全改为启动浏览器时自动执行；
+		// 自动化程序选择已下线，新建浏览器默认为空程序）
+		presetSteps: () => ['new_browser']
 	}
 );
 
@@ -301,68 +217,6 @@ const state = reactive({
 	finish_animate: false,
 	steps: [] as Step[]
 });
-
-/** 新建浏览器与自动化程序交互状态 */
-const setupState = reactive({
-	showScriptSelector: false,
-	showScriptConfig: false,
-	/** 用户已选中的自动化程序（用于配置弹窗编辑） */
-	configScripts: [] as RawAutomationScript[],
-	/** 新建的浏览器实例 */
-	newBrowserInstance: null as Browser | null
-});
-
-/** 弹窗的 Promise resolve 回调（非响应式，无需放入 reactive） */
-let selectorResolver: ((v: RawAutomationScript[] | null) => void) | null = null;
-let configResolver: ((v: RawAutomationScript[] | null) => void) | null = null;
-
-/** 弹出自动化程序选择弹窗，返回用户选择的脚本（跳过/未选时返回 null） */
-function openScriptSelector(): Promise<RawAutomationScript[] | null> {
-	return new Promise((resolve) => {
-		selectorResolver = resolve;
-		setupState.showScriptSelector = true;
-	});
-}
-
-function onSelectorConfirm(scripts: RawAutomationScript[]) {
-	setupState.showScriptSelector = false;
-	if (selectorResolver) {
-		selectorResolver(scripts && scripts.length ? scripts : null);
-		selectorResolver = null;
-	}
-}
-
-function skipScriptSelector() {
-	setupState.showScriptSelector = false;
-	if (selectorResolver) {
-		selectorResolver(null);
-		selectorResolver = null;
-	}
-}
-
-/** 弹出自动化程序配置弹窗，返回填写完成的脚本（跳过时返回 null） */
-function openScriptConfig(): Promise<RawAutomationScript[] | null> {
-	return new Promise((resolve) => {
-		configResolver = resolve;
-		setupState.showScriptConfig = true;
-	});
-}
-
-function onConfigConfirm() {
-	setupState.showScriptConfig = false;
-	if (configResolver) {
-		configResolver(JSON.parse(JSON.stringify(setupState.configScripts)));
-		configResolver = null;
-	}
-}
-
-function skipScriptConfig() {
-	setupState.showScriptConfig = false;
-	if (configResolver) {
-		configResolver(null);
-		configResolver = null;
-	}
-}
 
 const emits = defineEmits<{
 	(e: 'finish'): void;
@@ -400,10 +254,6 @@ function prepare() {
 	state.current_step = -1;
 	state.steps = [];
 	state.finish_animate = false;
-	setupState.showScriptSelector = false;
-	setupState.showScriptConfig = false;
-	setupState.configScripts = [] as RawAutomationScript[];
-	setupState.newBrowserInstance = null as Browser | null;
 
 	for (const key in _preset_steps) {
 		if (!Object.hasOwn(_preset_steps, key)) continue;
