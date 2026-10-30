@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.7.0](https://github.com/ocsjs/ocs-desktop/compare/v3.6.0...v3.7.0) (2026-10-30)
+
+
+### ✨ 新功能
+
+* **setting:** 脚本配置界面改为手风琴面板展示 ([7bf3180](https://github.com/ocsjs/ocs-desktop/commit/7bf31804bf458de7f1b991e3486490214271b73e))
+* 启用 asar 打包（历史禁用原因已失效） ([57729c0](https://github.com/ocsjs/ocs-desktop/commit/57729c00b4a9f77682c5f0f3e4cb5e3c978fd10d))
+* 浏览器启动预检测（内存/CPU）与批量启动智能拦截 ([8e90844](https://github.com/ocsjs/ocs-desktop/commit/8e908441f88ae0fe0ad108971ae14df13109f046))
+* 浏览器资源实测统计、右下角监控浮层与内存/资源设置开关 ([1a4990c](https://github.com/ocsjs/ocs-desktop/commit/1a4990c5ad4b49014eb09a03937eba003be0ac6f))
+
+
+### 🐛 问题修复
+
+* **linux:** 修复打包版浏览器启动失败与 deb 打包问题 ([c1511d1](https://github.com/ocsjs/ocs-desktop/commit/c1511d1b8a55ea08e827099f697acf3166d1336b))
+* **title:** 修复标题栏下拉菜单 hover 展开延迟 ([3657af2](https://github.com/ocsjs/ocs-desktop/commit/3657af294ea646ed8a4c36cf4ca7b1c7e055ee55))
+* 点击 SVG 图标出现浏览器默认焦点框（Linux 下呈黄色描边） ([4895bc1](https://github.com/ocsjs/ocs-desktop/commit/4895bc16d511d0a29bf0985b9d0c157ff14a0aa7))
+
+
+### ⚡ 性能优化
+
+* 优化简洁模式浏览器操作简介 ([6d437d0](https://github.com/ocsjs/ocs-desktop/commit/6d437d0c90ca538985aba05e4d6d465f067f1552))
+* 优化系统资源统计监控浮层文案 ([202485d](https://github.com/ocsjs/ocs-desktop/commit/202485dc75e3c5e1746939eb7773ede3369b8b73))
+
+
+### ♻️ 重构
+
+* t 函数迁移至 utils/langs.ts，新增 t.html 净化变体防 XSS ([617a733](https://github.com/ocsjs/ocs-desktop/commit/617a73365c3e931c19b7893ed9a1e099452f7563))
+* 简洁/专业模式切换按钮改为纯图标 + tooltip ([582da96](https://github.com/ocsjs/ocs-desktop/commit/582da96816caed020a2ec2fd911f3d3b3dadbf02))
+* 软件路径与重置设置迁移至开发者界面，浏览器增强文案接入语言包 ([e2a62e6](https://github.com/ocsjs/ocs-desktop/commit/e2a62e6567d4ccb009fa7c3ec01c9b8ddbcfe6f6))
+
 ## [3.6.0](https://github.com/ocsjs/ocs-desktop/compare/v3.5.0...v3.6.0) (2026-10-28)
 
 
