@@ -21,11 +21,35 @@
 						class="ms-2"
 						@click="rename"
 					>
-						<IconEdit />
+						<PencilIcon />
+					</a-button>
+				</a-tooltip>
+				<a-tooltip
+					content="编辑备注"
+					position="bottom"
+				>
+					<a-button
+						type="text"
+						size="mini"
+						@click="openNotesModal"
+					>
+						<NotebookPenIcon />
+					</a-button>
+				</a-tooltip>
+				<a-tooltip
+					content="添加标签"
+					position="bottom"
+				>
+					<a-button
+						type="text"
+						size="mini"
+						@click="emits('add-tag')"
+					>
+						<TagIcon />
 					</a-button>
 				</a-tooltip>
 			</template>
-		</div>
+			</div>
 		<div
 			style="flex: 0 0 auto"
 			class="d-flex justify-content-end"
@@ -74,26 +98,67 @@
 							</a-button>
 						</a-popconfirm>
 					</a-tooltip>
+					<template v-if="closable">
+						<a-divider direction="vertical" />
+						<a-tooltip
+							content="关闭面板"
+							position="br"
+						>
+							<a-button
+								size="mini"
+								@click="emits('close')"
+							>
+								<XIcon />
+							</a-button>
+						</a-tooltip>
+					</template>
 				</template>
 			</BrowserOperators>
 		</div>
 	</div>
+
+	<!-- 备注编辑弹窗（编辑入口从备注展示区迁移到操作栏） -->
+	<a-modal
+		v-model:visible="state.showNotesModal"
+		title="编辑备注"
+		align-center
+		ok-text="确认"
+		cancel-text="取消"
+		@ok="saveNotes"
+	>
+		<a-textarea
+			v-model="state.notesDraft"
+			placeholder="备注为空时，浏览器卡片将展示自动化程序信息"
+			:auto-size="{ minRows: 3, maxRows: 8 }"
+			allow-clear
+		/>
+	</a-modal>
 </template>
 
 <script lang="ts" setup>
 import { nextTick, reactive, ref } from 'vue';
 import { Browser } from '../fs/browser';
 import BrowserOperators from './browsers/BrowserOperators.vue';
-import { GlobeIcon, Trash2Icon } from 'lucide-vue-next';
+import { GlobeIcon, Trash2Icon, PencilIcon, XIcon, NotebookPenIcon, TagIcon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	browser: Browser;
+	/** 是否显示关闭按钮（浏览器面板全屏抽屉模式下无遮罩可点，需显式关闭入口） */
+	closable?: boolean;
+}>();
+
+const emits = defineEmits<{
+	(e: 'close'): void;
+	/** 添加标签：弹窗复用 BrowserPanel 内 Tags 组件，由父级转发调用 */
+	(e: 'add-tag'): void;
 }>();
 
 const name = defineModel<string>({ default: '' });
 
 const state = reactive({
-	renaming: false
+	renaming: false,
+	showNotesModal: false,
+	notesDraft: ''
 });
 
 const renameRef = ref();
@@ -109,6 +174,15 @@ function rename() {
 function onBlur() {
 	props.browser?.rename(name.value);
 	state.renaming = false;
+}
+
+function openNotesModal() {
+	state.notesDraft = props.browser.notes || '';
+	state.showNotesModal = true;
+}
+
+function saveNotes() {
+	props.browser.notes = state.notesDraft;
 }
 </script>
 

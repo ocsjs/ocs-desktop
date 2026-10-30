@@ -1,11 +1,13 @@
 <template>
 	<div class="context-hint">
-		<IconInfoCircle />
+		<InfoIcon />
 		右键浏览器/空白处可打开菜单
 	</div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { InfoIcon } from 'lucide-vue-next';
+</script>
 
 <style scoped lang="less">
 .context-hint {

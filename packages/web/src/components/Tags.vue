@@ -1,6 +1,6 @@
 <template>
 	<a-space
-		v-if="readOnly === false || tags.length > 0"
+		v-if="(!readOnly && !hideAdd) || tags.length > 0"
 		class="flex-wrap"
 		:size="1"
 	>
@@ -30,7 +30,7 @@
 		</template>
 
 		<a-tag
-			v-if="!readOnly"
+			v-if="!readOnly && !hideAdd"
 			style="border: 1px gray; border-style: dashed; cursor: pointer"
 			:size="props.size"
 			@click="showModel"
@@ -105,10 +105,13 @@ const props = withDefaults(
 		tags: Tag[];
 		size: 'medium' | 'large' | 'small' | undefined;
 		readOnly?: boolean;
+		/** 隐藏「添加」按钮（添加入口外置时，通过 expose 的 openAddModal 打开弹窗） */
+		hideAdd?: boolean;
 		defaultColor?: string;
 	}>(),
 	{
 		readOnly: false,
+		hideAdd: false,
 		size: 'small',
 		defaultColor: '#808080'
 	}
@@ -151,6 +154,9 @@ const showModel = () => {
 		inputRef.value.focus();
 	}, 300);
 };
+
+/** 外置添加入口（如浏览器面板操作栏按钮）通过 ref 调用打开添加标签弹窗 */
+defineExpose({ openAddModal: showModel });
 
 const handleInputConfirm = () => {
 	const inputValue = state.inputValue;

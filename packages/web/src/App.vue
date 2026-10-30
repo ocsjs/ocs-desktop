@@ -13,25 +13,33 @@
 				</router-view>
 			</div>
 
-			<!-- 全局：浏览器操作面板 -->
-			<a-modal
-				:closable="false"
+			<!-- 全局：浏览器操作面板（抽屉；窗口宽度 <= electron 最小宽度时全屏展示） -->
+			<a-drawer
 				:visible="!!currentBrowser"
-				:width="600"
-				:top="8"
-				:align-center="false"
-				:footer="false"
+				:width="browserPanelWidth"
 				:header="false"
+				:footer="false"
+				placement="right"
+				class="browser-panel-drawer"
 				@cancel="store.render.browser.currentBrowserUid = ''"
 			>
 				<div v-if="currentBrowser">
-					<BrowserPanelOperators :browser="currentBrowser"></BrowserPanelOperators>
+					<!-- 全屏抽屉铺满窗口、无遮罩可点，通过 closable 让操作栏显示关闭按钮 -->
+					<BrowserPanelOperators
+						:browser="currentBrowser"
+						:closable="browserPanelFullscreen"
+						@close="store.render.browser.currentBrowserUid = ''"
+						@add-tag="browserPanelRef?.openAddTagModal()"
+					></BrowserPanelOperators>
 					<a-divider class="mt-2 mb-1" />
-					<div style="max-height: 80vh; overflow: auto">
-						<BrowserPanel :browser="currentBrowser"></BrowserPanel>
+					<div style="max-height: calc(100vh - 90px); overflow: auto">
+						<BrowserPanel
+							ref="browserPanelRef"
+							:browser="currentBrowser"
+						></BrowserPanel>
 					</div>
 				</div>
-			</a-modal>
+			</a-drawer>
 
 			<!-- 全局：欢迎使用介绍（仅首次进入展示，纯介绍无初始化功能；
 			     环境检测与补全在启动浏览器时自动执行，见 utils/env-bootstrap.ts） -->
@@ -81,7 +89,7 @@
 				auto-setup
 				title="新建浏览器"
 				confirm-text="开始初始化"
-				:preset-steps="['new_browser', 'init_automationScript']"
+				:preset-steps="['new_browser']"
 				@finish="
 					() => {
 						store.render.state.newBrowserSetup = false;
@@ -103,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted } from 'vue';
+import { watch, onMounted, onUnmounted, ref, computed } from 'vue';
 import { store } from './store';
 import { t } from './utils/langs';
 import { remote } from './utils/remote';
@@ -349,7 +357,23 @@ onUnmounted(() => {
 });
 
 /** 屏幕响应式检测 */
+/** electron 主窗口最小宽度（packages/app/src/window.ts minWidth），需与其保持一致 */
+const ELECTRON_MIN_WIDTH = 700;
+
+/** 当前视口宽度，用于浏览器面板抽屉的全屏切换 */
+const windowWidth = ref(document.documentElement.clientWidth);
+
+/** 浏览器面板是否全屏：视口 <= electron 最小宽度时全屏展示 */
+const browserPanelFullscreen = computed(() => windowWidth.value <= ELECTRON_MIN_WIDTH);
+
+/** 浏览器面板抽屉宽度：全屏时铺满，否则固定 600px */
+const browserPanelWidth = computed(() => (browserPanelFullscreen.value ? '100%' : 600));
+
+/** 浏览器面板引用：转发操作栏的「添加标签」动作到面板内 Tags 组件的弹窗 */
+const browserPanelRef = ref<InstanceType<typeof BrowserPanel>>();
+
 function onResize() {
+	windowWidth.value = document.documentElement.clientWidth;
 	const isInMobile = document.documentElement.clientWidth < 1200;
 	store.render.state.mini = isInMobile;
 	store.render.state.responsive = isInMobile ? 'mini' : 'small';
@@ -418,6 +442,12 @@ function onResize() {
 	z-index: 100;
 	top: 0;
 	left: 0;
+}
+
+/* 浏览器面板抽屉：内容区已自带滚动（max-height + overflow:auto），
+   body 隐藏溢出避免出现内外两条重复滚动条 */
+.browser-panel-drawer .arco-drawer-body {
+	overflow: hidden;
 }
 
 /** 浏览器编辑抽屉导航栏样式 */
