@@ -109,17 +109,11 @@
 				</a-tooltip>
 			</Description>
 
-			<Description label="内存检测">
+			<Description label="CPU/内存检测">
 				<a-tooltip
 					content="启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动（含批量启动的剩余启动）；关闭后忽略警告直接启动"
 				>
 					<a-switch v-model="store.render.setting.browser.memoryCheck" />
-				</a-tooltip>
-			</Description>
-
-			<Description label="资源监控">
-				<a-tooltip content="有浏览器运行时在右下角显示全部浏览器的 CPU/内存占用统计浮层；关闭后不渲染">
-					<a-switch v-model="store.render.setting.browser.resourceMonitor" />
 				</a-tooltip>
 			</Description>
 

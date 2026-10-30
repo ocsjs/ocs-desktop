@@ -1,5 +1,5 @@
 <template>
-	<!-- 资源监控浮层：右下角绝对定位、全页面可见，仅在有浏览器运行且设置开启时渲染 -->
+	<!-- 资源监控浮层：右下角绝对定位、全页面可见，仅在有浏览器运行时渲染 -->
 	<a-tooltip
 		v-if="visible"
 		position="top"
@@ -20,7 +20,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { processes } from '../utils/process';
 import { remote } from '../utils/remote';
-import { store } from '../store';
 import { CpuIcon, MemoryStickIcon } from 'lucide-vue-next';
 
 /** 系统总内存（MB），挂载时获取一次即可（不变量） */
@@ -34,8 +33,8 @@ onMounted(async () => {
 /** 运行中（启动中+已启动）的浏览器进程 */
 const runningProcs = computed(() => processes.filter((p) => p.status === 'launching' || p.status === 'launched'));
 
-/** 仅在有浏览器运行且「资源监控」设置开启时渲染 */
-const visible = computed(() => store.render.setting.browser.resourceMonitor !== false && runningProcs.value.length > 0);
+/** 仅在有浏览器运行时渲染 */
+const visible = computed(() => runningProcs.value.length > 0);
 
 /** 全部运行中浏览器的 CPU 占用合计（worker 实测上报；多核并行可超 100%） */
 const cpuText = computed(() => {

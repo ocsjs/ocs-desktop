@@ -37,7 +37,7 @@ async function sampleCpuUsage(intervalMs = 200): Promise<number> {
 
 /**
  * 浏览器启动预检测：剩余内存（按运行中浏览器预留）+ CPU 负载。
- * 设置「内存检测」关闭时直接放行；检测本身异常时放行（不阻断用户操作）。
+ * 设置「CPU/内存检测」关闭时直接放行；检测本身异常时放行（不阻断用户操作）。
  * 批量启动逐个调用本函数：随着浏览器启动，可用内存递减，自然拦截剩余启动。
  */
 export async function checkLaunchCapacity(): Promise<LaunchGuardResult> {
@@ -83,12 +83,12 @@ export async function checkLaunchCapacity(): Promise<LaunchGuardResult> {
 
 /** 拦截提示（单个启动） */
 export function warnLaunchBlocked(reason: string) {
-	Message.warning(`已拦截启动：${reason}。可在 设置 → 浏览器设置 中关闭「内存检测」忽略此限制`);
+	Message.warning(`已拦截启动：${reason}。可在 设置 → 浏览器设置 中关闭「CPU/内存检测」忽略此限制`);
 }
 
 /** 拦截提示（批量启动） */
 export function warnBatchBlocked(reason: string, remaining: number) {
 	Message.warning(
-		`批量启动已拦截：${reason}。剩余 ${remaining} 个浏览器未启动（可在 设置 → 浏览器设置 中关闭「内存检测」忽略此限制）`
+		`批量启动已拦截：${reason}。剩余 ${remaining} 个浏览器未启动（可在 设置 → 浏览器设置 中关闭「CPU/内存检测」忽略此限制）`
 	);
 }

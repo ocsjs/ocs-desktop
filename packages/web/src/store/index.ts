@@ -71,10 +71,8 @@ export type WebStore = {
 			screenshotQuality: 'ultra' | 'high' | 'medium' | 'low';
 			/** 浏览器增强（防休眠/防冻结）：启动时附加防节流参数并注入静音音频豁免，仅对新启动的浏览器生效 */
 			browserEnhancement: boolean;
-			/** 内存/CPU 启动预检测：启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动；关闭后忽略警告直接启动 */
+			/** CPU/内存启动预检测：启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动；关闭后忽略警告直接启动 */
 			memoryCheck: boolean;
-			/** 资源监控浮层：有浏览器运行时在右下角显示全部浏览器的 CPU/内存占用统计 */
-			resourceMonitor: boolean;
 			/** 导航页设置 */
 			bookmarkPage: {
 				/** 是否启用自定义导航页（关闭后不更改浏览器新建页面，显示默认空白导航页） */
@@ -189,7 +187,6 @@ export const DEFAULT_RENDER = {
 			screenshotQuality: 'medium' as const,
 			browserEnhancement: false,
 			memoryCheck: true,
-			resourceMonitor: true,
 			bookmarkPage: {
 				enable: true,
 				enableSearch: true,
