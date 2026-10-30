@@ -260,6 +260,26 @@ export class Process extends EventEmitter {
 					this.cpuPercent = typeof payload.cpuPercent === 'number' ? payload.cpuPercent : 0;
 				}
 			},
+			/** 脚本管理器拓展验证失败（两轮检测均无 SW）：浏览器可用但脚本功能缺失，提示用户 */
+			'extension-verify-failed': () => {
+				notify(
+					'脚本管理器未加载',
+					`${this.browser.name}：未检测到脚本管理器拓展运行，浏览器已启动但脚本功能不可用。可尝试重启浏览器，或前往「应用中心」重新安装脚本管理器。`,
+					'ext-verify-failed-' + this.uid,
+					{ duration: 60 * 1000, copy: true, type: 'warning' }
+				);
+			},
+			/** 扩展 SW 存在但未匹配脚本管理器（ID 推导不一致，降级放行并提示） */
+			'extension-verify-degraded': (_uid: string, urls: string[]) => {
+				notify(
+					'脚本管理器状态存疑',
+					`${this.browser.name}：检测到扩展运行，但未能确认脚本管理器已加载，脚本功能可能失效。${(urls || []).join(
+						'、'
+					)}`,
+					'ext-verify-degraded-' + this.uid,
+					{ duration: 60 * 1000, copy: true, type: 'warning' }
+				);
+			},
 			/** 网页下载完成（worker 监听下载目录实时回传） */
 			'file-downloaded': (_uid: string, file: { filename: string; path: string }) => {
 				if (!file?.path) return;
@@ -385,8 +405,15 @@ export class Process extends EventEmitter {
 
 			// 弱网探测（3s）：弱网模式下跳过脚本版本远程检查，已安装脚本视为最新，加速启动
 			const weakNetwork = await detectWeakNetwork();
+			// 脚本按浏览器 profile 安装：新建/清缓存后的 profile 无标记文件，
+			// 此时不能凭全局 lastInstalledVersion 跳过安装（拓展内实际并无脚本）
+			const scriptMarkerPath = await remote.path.call('join', this.browser.cachePath, '.ocs-scripts-installed.json');
+			const profileInitialized = await remote.fs.call('existsSync', scriptMarkerPath);
 			Status.loading(weakNetwork ? '检测到弱网环境，跳过脚本更新检查...' : '正在检查脚本更新...');
-			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts, { skipRemoteCheck: weakNetwork });
+			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts, {
+				skipRemoteCheck: weakNetwork,
+				profileInitialized
+			});
 			if (scriptsToInstall.length > 0) {
 				Status.loading(`正在启动 ${this.browser.name}（需更新/安装 ${scriptsToInstall.length} 个脚本）...`);
 			} else {
@@ -398,12 +425,21 @@ export class Process extends EventEmitter {
 			const urlToItem = new Map<string, ScriptToInstall>();
 
 			// 本地脚本：直接通过本地服务器代理（拓展只能拦截 http/https）
+			// 脚本管理器（ScriptCat 1.5+/Tampermonkey 5.5+）仅拦截「路径以 .user.js 结尾」的 URL，
+			// 查询参数形态不触发安装页，因此把文件名编入路径段（真实文件仍由 ?path= 指定）
+			const buildUserscriptUrl = (localPath: string) => {
+				const base = (localPath.split(/[\\/]/).pop() || 'script').replace(/[?#].*$/, '');
+				const name = base.toLowerCase().endsWith('.user.js') ? base : `${base}.user.js`;
+				return `http://localhost:${port}/api/local-userscript/${encodeURIComponent(name)}?path=${encodeURIComponent(
+					localPath
+				)}`;
+			};
 			const remoteItems: { item: ScriptToInstall; remoteUrl: string }[] = [];
 			for (const item of scriptsToInstall) {
 				const script = item.script;
 				if (script.isLocalScript) {
 					const localPath = script.info?.code_url || script.url;
-					const installUrl = `http://localhost:${port}/api/local-userscript?path=${encodeURIComponent(localPath)}`;
+					const installUrl = buildUserscriptUrl(localPath);
 					userscripts.push(installUrl);
 					urlToItem.set(installUrl, item);
 				} else {
@@ -422,7 +458,7 @@ export class Process extends EventEmitter {
 					const { item, remoteUrl } = remoteItems[i];
 					const r = results?.[i];
 					if (r && r.success && r.path) {
-						const installUrl = `http://localhost:${port}/api/local-userscript?path=${encodeURIComponent(r.path)}`;
+						const installUrl = buildUserscriptUrl(r.path);
 						userscripts.push(installUrl);
 						urlToItem.set(installUrl, item);
 					} else {
@@ -439,12 +475,14 @@ export class Process extends EventEmitter {
 
 			// 接收 worker 回传的安装结果，按成功情况更新 lastInstalledVersion
 			this.once('userscript-install-result', (results: InstallResult[]) => {
+				let allSucceeded = (results || []).length > 0;
 				for (const r of results || []) {
 					const item = urlToItem.get(r.url);
 					if (!item) continue;
 					if (r.success) {
 						item.script.lastInstalledVersion = item.latestVersion;
 					} else {
+						allSucceeded = false;
 						notify(
 							'脚本安装失败',
 							`${item.script.info?.name || r.url} 安装失败：${r.reason || ''}，下次启动将重试`,
@@ -452,6 +490,13 @@ export class Process extends EventEmitter {
 							{ duration: 60 * 1000, type: 'warning', copy: true }
 						);
 					}
+				}
+				// 本次请求的脚本全部安装成功 → 写入 profile 安装标记；
+				// 有失败则不写标记，下次启动该 profile 按全新处理重试全部
+				if (allSucceeded) {
+					remote.fs
+						.call('writeFileSync', scriptMarkerPath, JSON.stringify({ time: Date.now(), count: results.length }))
+						.catch(() => {});
 				}
 				Status.clear();
 			});

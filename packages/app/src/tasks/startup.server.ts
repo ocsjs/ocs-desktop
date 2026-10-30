@@ -416,7 +416,10 @@ export async function startupServer() {
 	// 提供本地用户脚本（扩展只能拦截 http/https 请求安装脚本）
 	// ⚠️ 安全：路径白名单——仅放行预下载目录与用户显式注册的本地脚本，
 	// 防任意文件读取（如 ?path=C:/Users/x/.ssh/id_rsa）
-	app.get('/api/local-userscript', (req, res) => {
+	// 兼容两种 URL 形态：ScriptCat 1.5+/Tampermonkey 5.5+ 仅拦截「路径以 .user.js 结尾」的 URL，
+	// 因此新形态把文件名编入路径段（:scriptFile 仅为触发拦截的装饰参数，真实文件仍由 ?path= 指定）；
+	// 旧查询参数形态保留兼容。
+	app.get(['/api/local-userscript', '/api/local-userscript/:scriptFile'], (req, res) => {
 		const filePath = String(req.query.path || '');
 		const predownloadDir = path.resolve(electronApp.getPath('temp'), './ocs-userscripts');
 		// 用户通过「添加本地脚本」显式注册的路径（render.scripts 中 isLocalScript 条目）
