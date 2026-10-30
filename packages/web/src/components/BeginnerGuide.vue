@@ -122,9 +122,5 @@ onMounted(() => {
 	:deep(.arco-steps-item-tail) {
 		overflow: hidden;
 	}
-	/* 自定义图标在步骤槽位中偏上，下移与标题基线对齐 */
-	:deep(.arco-steps-icon svg) {
-		transform: translateY(2px);
-	}
 }
 </style>
