@@ -30,47 +30,44 @@
 						"
 					></span>
 				</a-alert>
-
-				<a-tabs
-					v-model:active-key="Store.render.setting.ocs.currentProjectName"
-					type="card-gutter"
-					hide-content
-					size="small"
-				>
-					<a-tab-pane
+			</div>
+			<!-- 侧边栏（项目列表）+ 手风琴配置列表 左右布局：脚本较多时不受横向空间限制 -->
+			<div class="ocs-configs-body">
+				<div class="ocs-project-sider">
+					<div
 						v-for="project of state.projects
 							.filter((p) => !state.hidden_projects.includes(p.name))
 							.sort((a, b) => (a.name === state.pin_projects ? -1 : 1))"
 						:key="project.name"
-						:title="project.name"
+						class="ocs-project-item"
+						:class="{ active: Store.render.setting.ocs.currentProjectName === project.name }"
+						@click="Store.render.setting.ocs.currentProjectName = project.name"
 					>
-					</a-tab-pane>
-				</a-tabs>
-			</div>
-			<div
-				id="ocs-browser-configs"
-				class="mt-3"
-			>
-				<!-- easy-us 内部元素（脚本弹窗/消息/提示）的 Shadow DOM 挂载点 -->
-				<div ref="shadowHostEl"></div>
-				<!-- 手风琴模式展示脚本设置（替代原 $modal.simple 弹窗，交互更快且无大小限制） -->
-				<a-collapse
-					v-model:active-key="state.activeKey"
-					accordion
-					@change="onActiveScriptChange"
-				>
-					<a-collapse-item
-						v-for="script of visibleScripts"
-						:key="script.namespace"
-						:header="script.name"
-						@mouseenter="preRenderScriptPanel(script.namespace)"
+						{{ project.name }}
+					</div>
+				</div>
+				<div id="ocs-browser-configs">
+					<!-- easy-us 内部元素（脚本弹窗/消息/提示）的 Shadow DOM 挂载点 -->
+					<div ref="shadowHostEl"></div>
+					<!-- 手风琴模式展示脚本设置（替代原 $modal.simple 弹窗，交互更快且无大小限制） -->
+					<a-collapse
+						v-model:active-key="state.activeKey"
+						accordion
+						@change="onActiveScriptChange"
 					>
-						<div
-							:ref="(el) => setPanelHost(el, script.namespace)"
-							class="ocs-script-panel"
-						></div>
-					</a-collapse-item>
-				</a-collapse>
+						<a-collapse-item
+							v-for="script of visibleScripts"
+							:key="script.namespace"
+							:header="script.name"
+							@mouseenter="preRenderScriptPanel(script.namespace)"
+						>
+							<div
+								:ref="(el) => setPanelHost(el, script.namespace)"
+								class="ocs-script-panel"
+							></div>
+						</a-collapse-item>
+					</a-collapse>
+				</div>
 			</div>
 		</template>
 	</div>
@@ -145,10 +142,10 @@ const visibleScripts = computed(() => {
 	return list;
 });
 
-/** 切换 Tab 延迟展开的定时器 */
+/** 切换侧边栏项目延迟展开的定时器 */
 let expandTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** 切换项目 Tab 时延迟 200ms 自动展开第一项配置（避免频繁切换时的渲染抖动） */
+/** 切换项目时延迟 200ms 自动展开第一项配置（避免频繁切换时的渲染抖动） */
 watch(
 	() => [Store.render.setting.ocs.currentProjectName],
 	() => {
@@ -397,27 +394,62 @@ function resolveCustomElementName<T extends HTMLElement = HTMLElement>(el: { new
 </script>
 
 <style scoped lang="less">
-#ocs-browser-configs {
-	overflow: overlay;
+/** 侧边栏 + 手风琴列表左右布局 */
+.ocs-configs-body {
+	display: flex;
+	gap: 12px;
 	height: calc(100% - 64px);
-	padding: 0 8px;
 }
 
-/** 暗色模式：配置栏背景与项目 Tabs 适配 */
+/** 项目侧边栏：纵向排列，不受横向空间限制 */
+.ocs-project-sider {
+	width: 110px;
+	flex-shrink: 0;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-right: 8px;
+	border-right: 1px solid var(--color-neutral-2, #eceef1);
+}
+
+.ocs-project-item {
+	padding: 8px 12px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--theme-text-color-secondary, #4e5969);
+	user-select: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+
+	&:hover {
+		background-color: var(--theme-hover-bg, #f2f3f5);
+	}
+
+	&.active {
+		background-color: rgb(var(--primary-1));
+		color: var(--theme-primary-color, rgb(var(--primary-6)));
+		font-weight: 500;
+	}
+}
+
+#ocs-browser-configs {
+	flex: 1;
+	min-width: 0;
+	overflow: overlay;
+	padding-right: 8px;
+}
+
+/** 暗色模式：配置栏背景与侧边栏适配 */
 body[arco-theme='dark'] {
 	.ocs-configs-bar {
 		background-color: #2c2c2c !important;
 	}
 
-	:deep(.arco-tabs-card-gutter) .arco-tabs-tab {
-		background-color: #2c2c2c;
-		border-color: #4b4848;
-		color: #cccccc;
-	}
-
-	:deep(.arco-tabs-card-gutter) .arco-tabs-tab-active {
-		background-color: #3b3b3b;
-		color: #ffffffd9;
+	.ocs-project-sider {
+		border-right-color: #4b4848;
 	}
 
 	.ocs-script-collapse {
