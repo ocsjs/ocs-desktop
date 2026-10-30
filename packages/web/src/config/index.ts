@@ -74,9 +74,12 @@ export const config = reactive({
 	scriptSearchEngines: [
 		(() => {
 			const transformToCommonByInfo = (script: CommonUserScript, info: ScriptCatUserScript) => {
+				// 脚本猫 API 结构变更：搜索列表项的 script_id 移至顶层 id（script 内仅剩 meta_json/version），
+				// 详情接口仍保留 script.script_id，做新旧双兼容
+				const scriptId = info.id ?? info.script?.script_id;
 				script.version = info.script.version;
-				script.code_url = `https://scriptcat.org/scripts/code/${info.script.script_id}/${info.name}.user.js`;
-				script.url = `https://scriptcat.org/script-show-page/${info.script.script_id}`;
+				script.code_url = `https://scriptcat.org/scripts/code/${scriptId}/${info.name}.user.js`;
+				script.url = `https://scriptcat.org/script-show-page/${scriptId}`;
 				script.authors = [
 					{
 						url: `https://scriptcat.org/users/${info.user_id}`,
@@ -91,7 +94,8 @@ export const config = reactive({
 				script.description = info.description;
 				script.name = info.name;
 				script.ratings = info.score / (info.score_num ?? 1) / 10; // 5分制
-				script.create_time = info.createtime * 1000;
+				// 搜索列表项无 createtime（仅有 updatetime），回退用 updatetime
+				script.create_time = (info.createtime ?? info.updatetime) * 1000;
 				script.update_time = info.updatetime * 1000;
 				script.daily_installs = info.today_install;
 				script.total_installs = info.total_install;
@@ -122,7 +126,7 @@ export const config = reactive({
 					return list.map((item) => {
 						return {
 							...transformToCommonByInfo({} as CommonUserScript, item),
-							id: item.script.script_id,
+							id: item.id ?? item.script?.script_id,
 							version: item.script.version
 						} as CommonUserScript;
 					});

@@ -55,7 +55,8 @@ export interface ScriptCatUserScript {
 	script: {
 		meta: string;
 		meta_json: Record<string, string[]>;
-		script_id: number;
+		/** 搜索列表项已不含此字段（ID 移至顶层 id），详情/版本接口仍有 */
+		script_id?: number;
 		version: string;
 	};
 	id: number;
@@ -63,7 +64,8 @@ export interface ScriptCatUserScript {
 	description: string;
 	today_install: number;
 	total_install: number;
-	createtime: number;
+	/** 搜索列表项无此字段（仅有 updatetime），详情接口有 */
+	createtime?: number;
 	updatetime: number;
 }
 
