@@ -2,9 +2,13 @@
 	<!-- 资源监控浮层：右下角绝对定位、全页面可见，仅在有浏览器运行且设置开启时渲染 -->
 	<a-tooltip
 		v-if="visible"
-		content="全部运行中浏览器的实测资源占用（每 10 秒更新）：CPU 为多核累计占用率（可超 100%），内存为占系统总内存的百分比"
 		position="top"
 	>
+		<template #content>
+			<div>全部运行中浏览器的实测资源占用（每 10 秒更新）</div>
+			<div>CPU：{{ cpuText }}（多核累计占用率，可超 100%）</div>
+			<div>内存：{{ memText }}（{{ totalMemMBText }}，占系统总内存比例）</div>
+		</template>
 		<div class="resource-monitor">
 			<span class="rm-item"><CpuIcon class="rm-icon" />{{ cpuText }}</span>
 			<span class="rm-item"><MemoryStickIcon class="rm-icon" />{{ memText }}</span>
@@ -39,11 +43,20 @@ const cpuText = computed(() => {
 	return total.toFixed(1) + '%';
 });
 
+/** 全部运行中浏览器的内存占用合计（MB） */
+const totalMemMB = computed(() => runningProcs.value.reduce((sum, p) => sum + p.memoryUsageMB, 0));
+
 /** 全部运行中浏览器的内存占用合计，占系统总内存百分比 */
 const memText = computed(() => {
 	if (!totalSystemMB.value) return '--';
-	const totalMB = runningProcs.value.reduce((sum, p) => sum + p.memoryUsageMB, 0);
-	return ((totalMB / totalSystemMB.value) * 100).toFixed(1) + '%';
+	return ((totalMemMB.value / totalSystemMB.value) * 100).toFixed(1) + '%';
+});
+
+/** tooltip 中的内存具体数值：已用 / 总量（GB 显示更直观） */
+const totalMemMBText = computed(() => {
+	if (!totalSystemMB.value) return '获取中...';
+	const toGB = (mb: number) => (mb / 1024).toFixed(1);
+	return `${toGB(totalMemMB.value)} / ${toGB(totalSystemMB.value)} GB`;
 });
 </script>
 
