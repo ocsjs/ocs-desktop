@@ -436,11 +436,16 @@ async function download(group_name: string, file: ResourceFile) {
 		ipcRenderer.on('download', listener);
 		try {
 			fileStatus[file.url].downloading = true;
-			await resourceLoader.download(group_name, file);
+			if (group_name === 'extensions') {
+				// 内置拓展随包发版：从 asar 释放（官方源构建期获取 + 逐文件完整性校验），无网络下载
+				await remote.methods.call('installBundledExtension', file.id);
+			} else {
+				await resourceLoader.download(group_name, file);
+			}
 			fileStatus[file.url].downloading = false;
 			fileStatus[file.url].downloadRate = 0;
 
-			if (resourceLoader.isZipFile(file)) {
+			if (group_name !== 'extensions' && resourceLoader.isZipFile(file)) {
 				fileStatus[file.url].unzipping = true;
 				Message.info(`正在解压：${file.name}`);
 				await resourceLoader.unzip(group_name, file);

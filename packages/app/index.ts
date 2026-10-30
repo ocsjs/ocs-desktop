@@ -11,6 +11,7 @@ import { handleError } from './src/tasks/error.handler';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
+import { ensureExtensionsIntegrity } from './src/extensions/bundled';
 import { initCrypto } from './src/crypto';
 import { integrateAppImageDesktop } from './src/tasks/appimage.desktop';
 
@@ -66,6 +67,9 @@ function bootstrap() {
 			task('初始化加密密钥', () => initCrypto()).then(() =>
 				task('初始化本地设置', async () => {
 					initStore();
+					// 内置拓展完整性校验（asar 基准，篡改自动重释放）：依赖 store.paths，
+					// 不阻塞启动（快检毫秒级；首次释放/修复才有秒级耗时，环境补全链路另有兜底安装）
+					task('校验内置拓展', () => ensureExtensionsIntegrity());
 					await task('启动接口服务', () => startupServer());
 				})
 			),

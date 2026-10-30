@@ -2,6 +2,11 @@
 
 **/*.zip
 
+# 内置拓展构建期产物（fetch-extensions.js 生成，extensions.lock.json 本身入库）
+packages/app/resources/extensions/*.manifest.json
+# 内置拓展许可证副本（构建期从 scripts/licenses 模板生成）
+packages/app/LICENSES/extensions/*-LICENSE.txt
+
 **/*/.DS_Store
 
 .chrome-temp/

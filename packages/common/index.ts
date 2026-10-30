@@ -15,3 +15,4 @@ export * from './src/contract';
 export * from './src/scripts/interface';
 export * from './src/scripts/script';
 export { LoggerCore } from './src/logger.core';
+export { formatExtensionArguments } from './src/utils/browser.args';

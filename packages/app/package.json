@@ -9,6 +9,7 @@
 		"build": "electron-vite build",
 		"pack": "electron-vite build && electron-builder --config ./electron.builder.json --dir --publish never",
 		"dist": "electron-vite build && electron-builder --config ./electron.builder.json --publish never",
+		"fetch:extensions": "node ./scripts/fetch-extensions.js",
 		"test": "vitest run",
 		"proxy": "HTTPS_PROXY=127.0.0.1:7890"
 	},

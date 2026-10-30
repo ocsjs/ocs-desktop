@@ -1,0 +1,70 @@
+{
+	"comment": "内置拓展锁定清单（提交入库，改动需 code review）。sha256 为「最终打入 asar 的 zip 字节」的钉值：scriptcat 为官方 GitHub Release zip 的原值（与 GitHub API digest 一致）；tampermonkey 无官方 zip，来源为 Edge 扩展商店官方 crx（国内可达），sha256 为剥离 crx3 头后的 zip 字节哈希。权限白名单用于构建期审计：官方包新增任何权限都会导致构建失败，需人工评审后更新本文件。",
+	"extensions": [
+		{
+			"id": "scriptcat",
+			"name": "ScriptCat 脚本猫",
+			"version": "1.5.0",
+			"format": "zip",
+			"sources": [
+				"https://github.com/scriptscat/scriptcat/releases/download/v1.5.0/scriptcat-v1.5.0-chrome.zip"
+			],
+			"sha256": "44e5ab9c1cc3ba8ca5200d3485cdc12f5bb1312c174a2781eb8bae2ff59da8d3",
+			"license": "GPL-3.0",
+			"sourceUrl": "https://github.com/scriptscat/scriptcat",
+			"homepage": "https://docs.scriptcat.org",
+			"permissions": [
+				"tabs",
+				"alarms",
+				"storage",
+				"cookies",
+				"offscreen",
+				"scripting",
+				"downloads",
+				"activeTab",
+				"webRequest",
+				"userScripts",
+				"contextMenus",
+				"webNavigation",
+				"notifications",
+				"clipboardWrite",
+				"unlimitedStorage",
+				"declarativeNetRequest"
+			],
+			"hostPermissions": ["<all_urls>"]
+		},
+		{
+			"id": "tampermonkey",
+			"name": "Tampermonkey 油猴",
+			"version": "5.5.1",
+			"format": "crx",
+			"sources": [
+				"https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=edgecrx&acceptformat=crx3&x=id%3Diikmkjmpaadaobahmlepeloendndfphd%26installsource%3Dondemand%26uc"
+			],
+			"sha256": "20eaf044d4d096e8c292f9a5d3d0755037be7cf609c5a02e1075b074d32b157a",
+			"license": "GPL-3.0",
+			"sourceUrl": "https://www.tampermonkey.net",
+			"homepage": "https://www.tampermonkey.net",
+			"permissions": [
+				"notifications",
+				"unlimitedStorage",
+				"tabs",
+				"idle",
+				"webNavigation",
+				"webRequest",
+				"webRequestBlocking",
+				"storage",
+				"contextMenus",
+				"chrome://favicon/",
+				"clipboardWrite",
+				"cookies",
+				"alarms",
+				"declarativeNetRequestWithHostAccess",
+				"scripting",
+				"userScripts",
+				"offscreen"
+			],
+			"hostPermissions": ["<all_urls>"]
+		}
+	]
+}
