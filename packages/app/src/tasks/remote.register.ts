@@ -116,7 +116,10 @@ let win: BrowserWindow | undefined;
 /** 需远程共享的方法（类型契约见 @ocs-desktop/common contract.ts） */
 const methods: RemoteMethods = {
 	autoLaunch,
-	get: (url: string, config?: AxiosRequestConfig<any> | undefined) => axios.get(url, config).then((res) => res.data),
+	// 默认 15s 超时（可经 config 覆盖）：无超时时 TCP 连接挂起要等 OS 级超时（20s+），
+	// 脚本搜索/信息查询等 UI 链路需要更快失败以进入降级分支
+	get: (url: string, config?: AxiosRequestConfig<any> | undefined) =>
+		axios.get(url, { timeout: 15 * 1000, ...config }).then((res) => res.data),
 	getWithStatus: (url: string, config?: AxiosRequestConfig<any> | undefined) =>
 		axios.get(url, { ...config, validateStatus: () => true }).then((res) => ({ status: res.status, data: res.data })),
 	download: (channel: string, url: string, dest: string) => {
