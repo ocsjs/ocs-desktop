@@ -55,14 +55,20 @@ function listenUpdaterEvents() {
 	});
 
 	autoUpdater.on('update-downloaded', () => {
+		const isLinux = process.platform === 'linux';
 		dialog.showMessageBox({
 			title: 'OCS更新程序',
-			message: '更新完毕，即将重启软件...',
+			// Linux（deb/AppImage）安装需系统提权（pkexec 授权框），且 dpkg 安装期间界面会短暂无响应
+			message: isLinux
+				? '更新包下载完毕，即将开始安装。\n过程中如弹出系统授权框，请输入密码完成安装，安装后软件将自动重启。'
+				: '更新完毕，即将重启软件...',
 			type: 'warning',
 			noLink: true
 		});
 		setTimeout(() => {
-			autoUpdater.quitAndInstall();
+			// isForceRunAfter=true 使 deb/AppImage 安装完成后自动重启
+			// （NSIS 非静默安装会忽略该参数，不影响 Windows 行为）
+			autoUpdater.quitAndInstall(false, isLinux);
 		}, 1000);
 	});
 
