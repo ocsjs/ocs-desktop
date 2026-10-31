@@ -68,6 +68,11 @@ export async function addScriptFromUrl(url: string) {
 		if (metadata === undefined) {
 			Message.error('脚本格式不正确，请选择能够解析的用户脚本。');
 		} else {
+			// 同名检测：防止官方脚本初始化安装后，再从第三方平台重复添加同名脚本
+			if (metadata.name && store.render.scripts.some((s) => s.info?.name === metadata.name)) {
+				Message.warning(`检测到同名脚本「${metadata.name}」已在脚本列表中，已跳过重复添加。`);
+				return false;
+			}
 			const id = Math.round(Math.random() * 10000000000000);
 			store.render.scripts.push({
 				id: id,

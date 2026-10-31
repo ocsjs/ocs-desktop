@@ -71,34 +71,6 @@
 					根据不同配置运行例如：自动登录、自动点击等。
 				</UsageAlertCollapse>
 
-				<!-- 内置自动化程序：仅静态展示，提示浏览器启动时可自动初始化环境，不可移除、不参与 playwright 执行 -->
-				<a-card class="as static-script">
-					<template #title>
-						<div class="d-flex align-items-center gap-2">
-							<SparklesIcon
-								:size="18"
-								class="script-icon-fallback"
-							/>
-							<span> 自动初始化 </span>
-							<a-tag
-								size="small"
-								color="arcoblue"
-							>
-								内置
-							</a-tag>
-						</div>
-					</template>
-					<template #extra>
-						<a-tooltip content="内置自动化程序，仅作展示，不可移除">
-							<LockIcon
-								:size="14"
-								class="text-secondary"
-							/>
-						</a-tooltip>
-					</template>
-					<div class="static-script-desc">启动浏览器时自动执行：安装用户脚本、启用脚本管理器</div>
-				</a-card>
-
 				<div class="mt-2">
 					<AutomationScripts v-model:automation-scripts="instance.automationScripts"></AutomationScripts>
 				</div>
@@ -293,7 +265,7 @@ import { electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
 import UsageAlertCollapse from '../UsageAlertCollapse.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
-import { PlusIcon, Trash2Icon, FolderIcon, SparklesIcon, LockIcon } from 'lucide-vue-next';
+import { PlusIcon, Trash2Icon, FolderIcon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	browser: BrowserOptions;
@@ -380,11 +352,6 @@ async function open(p: string) {
 .script-icon-fallback {
 	width: 18px;
 	height: 18px;
-}
-
-.static-script-desc {
-	font-size: 12px;
-	color: var(--color-text-3);
 }
 
 /* 备注展示文本：保留换行，自动化程序信息构建的备注为多行 */

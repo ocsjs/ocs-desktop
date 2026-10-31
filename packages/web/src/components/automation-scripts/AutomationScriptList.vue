@@ -1,4 +1,35 @@
 <template>
+	<!-- 系统自动化：内置静态流程合并为单项展示（开发者模式/用户脚本权限/拓展验证/脚本安装更新/状态同步），
+	     启动后自动运行，不可删除 -->
+	<a-card class="as">
+		<template #title>
+			<div class="d-flex align-items-center gap-2">
+				<CogIcon
+					:size="18"
+					class="script-icon-fallback"
+				/>
+				<span> 系统自动化 </span>
+				<a-tag
+					size="small"
+					color="gray"
+				>
+					内置
+				</a-tag>
+			</div>
+		</template>
+		<template #extra>
+			<a-tooltip content="内置系统自动化，仅作展示，不可删除">
+				<LockIcon
+					:size="14"
+					class="text-secondary"
+				/>
+			</a-tooltip>
+		</template>
+		<div class="system-automation-desc">
+			开发者模式开启、用户脚本权限、拓展加载验证、脚本安装/更新、脚本状态同步（删除/停用对齐）等系统级流程，浏览器启动后自动运行，不可删除。
+		</div>
+	</a-card>
+
 	<template
 		v-for="(script, index) of automationScripts"
 		:key="index"
@@ -152,7 +183,7 @@ import { RawAutomationScript } from './index';
 import type { Config } from '@ocs-desktop/common/web';
 import { normalizeUrl, validateConfigValue } from '@ocs-desktop/common/web';
 import { iconUrl } from '../../utils';
-import { GlobeIcon, XIcon, LinkIcon, CircleAlertIcon } from 'lucide-vue-next';
+import { GlobeIcon, XIcon, LinkIcon, CircleAlertIcon, CogIcon, LockIcon } from 'lucide-vue-next';
 
 const props = defineProps<{
 	automationScripts: RawAutomationScript[];
@@ -231,6 +262,12 @@ function remove(index: number) {
 <style scoped lang="less">
 .as + .as {
 	margin-top: 8px;
+}
+
+.system-automation-desc {
+	font-size: 12px;
+	color: var(--theme-text-color-secondary);
+	line-height: 1.6;
 }
 
 .script-icon {
