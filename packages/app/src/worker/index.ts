@@ -8,8 +8,9 @@ import {
 import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request, CDPSession } from 'playwright-core';
-import type { AppStore, Config, ScriptWorker as ScriptWorkerContract } from '@ocs-desktop/common';
+import type { AppStore, Config, ScriptWorker as ScriptWorkerContract, SystemScriptContext } from '@ocs-desktop/common';
 import { AutomationScripts, LegacyScriptMappings } from '../scripts/index';
+import { runSystemScripts } from '../scripts/system';
 import _get from 'lodash/get';
 import child_process from 'child_process';
 import http from 'http';
@@ -281,6 +282,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 				browserInfo: this.browserInfo,
 				uid: this.uid,
 				config: this.config,
+				/** AppStore 快照（系统自动化程序使用） */
+				store: this.store,
 				/** 网页下载文件保存目录（软件设置中的"文件下载"目录） */
 				downloadsPath: this.store?.paths.downloadFolder,
 				...options
@@ -1036,6 +1039,7 @@ export async function launchBrowser({
 	uid,
 	config,
 	downloadsPath,
+	store,
 	onLaunch
 }: Required<Pick<LaunchOptions, 'executablePath' | 'headless' | 'args'>> & {
 	/** 用户数据目录 */
@@ -1062,6 +1066,8 @@ export async function launchBrowser({
 	config?: BrowserConfig;
 	/** 网页下载文件保存目录（未传入时回退为本地浏览器下载） */
 	downloadsPath?: string;
+	/** AppStore 快照（系统自动化程序使用，如脚本列表同步） */
+	store?: AppStore;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
 	return new Promise<void>((resolve, reject) => {
@@ -1143,19 +1149,23 @@ export async function launchBrowser({
 					// 显示步骤提示（渲染到导航页，兼容新标签页扩展 iframe）
 					const step = createStepFunction(blankPage, serverPort);
 
-					// 打开开发者模式（MV3 运行脚本必需）
-					await openExtensionDeveloperMode(browser, executablePath.includes('edge'));
-					// Chrome 137+ 的 chrome.userScripts 权限需在详情页单独开启「允许运行用户脚本」
-					// （与开发者模式是两个独立开关），未开启时 ScriptCat 1.5+/Tampermonkey 5.5+
-					// 不注册 .user.js 拦截器（导航只显示源码或跳官方引导页），脚本自动安装失效
-					await enableUserScriptsPermission(browser, executablePath.includes('edge'));
-					// 通过 service worker 验证脚本管理器拓展已加载（按路径推导扩展 ID 精确匹配，间接确认开发者模式开启）；
-					// 两轮检测失败时降级为告警（浏览器本体可用、仅脚本功能缺失），不再中断启动
-					await verifyExtensionsLoaded(browser, extensionPaths, uid);
+					// 系统自动化程序上下文（静态流程统一编排，见 scripts/system/）
+					const sysCtx: SystemScriptContext = {
+						browser,
+						uid,
+						store,
+						send,
+						step,
+						executablePath,
+						extensionPaths,
+						userDataDir,
+						userscripts,
+						enabledScriptCount,
+						closeableExtensionHomepages
+					};
 
-					// 必须先打开开发者模式，才能关闭额外拓展页，否则打开开发者模式可能会重启插件，导致出现新的额外页面
-					// 关闭拓展加载时弹出的首页（并行清理，不阻塞；未出现欢迎页属正常情况）
-					waitAndCloseExtensionHomepage({ browser, closeableExtensionHomepages });
+					// 关键路径系统流程：开发者模式 → 用户脚本权限 → 拓展加载验证（失败中断启动）
+					await runSystemScripts(sysCtx, 'launch');
 
 					// 监听网络请求（注册快且自动化程序依赖，放关键段）
 					// 「软件辅助」开关关闭时不注册路由：脚本不再识别为软件环境，自动化增强不可用
@@ -1171,18 +1181,13 @@ export async function launchBrowser({
 					onLaunch?.(browser);
 					resolve();
 
-					// 后台段：安装用户脚本 → 运行自动化程序（失败不影响浏览器可用状态，仅提示）
+					// 后台段系统流程：脚本安装/更新 → 拓展主页清理 → 脚本列表双向同步；
+					// 随后运行用户自动化程序（失败不影响浏览器可用状态，仅提示）
 					(async () => {
 						try {
-							// 安装用户脚本
-							const { warn, results } = await setupUserScripts({ browser, userscripts, step, enabledScriptCount });
-							// 回传安装结果（供渲染进程按成功情况更新 lastInstalledVersion）
-							send('userscript-install-result', results);
-
-							// 运行自动化程序
+							await runSystemScripts(sysCtx, 'post');
 							await runAutomationScripts({ browser, automationScripts, serverPort, step });
-
-							await step(['浏览器初始化完成。'].concat(warn), { loading: false, warn: !!warn.length });
+							await step(['浏览器初始化完成。'], { loading: false });
 						} catch (err) {
 							// 后台任务异常（如浏览器被用户提前关闭）：仅记录，不再中断启动流程
 							console.warn('后台初始化任务中断：', err instanceof Error ? err.message : String(err));
@@ -1196,184 +1201,6 @@ export async function launchBrowser({
 				reject(err);
 			});
 	});
-}
-
-/**
- * 安装结果
- */
-interface InstallResult {
-	url: string;
-	success: boolean;
-	reason?: string;
-}
-
-/**
- * 安装/更新脚本（逐个安装，精确判定每个脚本的成功/失败）
- */
-async function initScripts(urls: string[], browser: BrowserContext): Promise<InstallResult[]> {
-	console.log('install ', urls);
-	const results: InstallResult[] = [];
-	for (const url of urls) {
-		results.push(await installOneScript(url, browser));
-	}
-	return results;
-}
-
-/**
- * 安装单个脚本：触发安装页 -> 点击安装 -> 等待成功信号
- */
-async function installOneScript(url: string, browser: BrowserContext): Promise<InstallResult> {
-	// 触发前快照已有页面 URL：浏览器常驻的扩展页（如脚本管理器后台页）会命中 /extension:\/\//，
-	// 快照排除后才能正确识别本次新弹出的脚本管理器安装页
-	const existingUrls = new Set(browser.pages().map((p) => p.url()));
-	const trigger = await browser.newPage();
-	try {
-		// 触发拓展拦截 .user.js 并弹出安装页（3s 内未完成则关闭触发页）
-		await Promise.race([
-			trigger.goto(url).catch(() => {}),
-			sleep(3 * 1000).then(() => trigger.close().catch(() => {}))
-		]);
-	} catch {}
-
-	// 等待 extension:// 安装页出现
-	const installPage = await waitForInstallPage(browser, 10 * 1000, existingUrls);
-	if (!installPage) {
-		await trigger.close().catch(() => {});
-		return { url, success: false, reason: '安装页未出现' };
-	}
-
-	try {
-		await installPage.bringToFront();
-		await sleep(1000);
-		const clicked = await clickInstallButton(installPage);
-		if (clicked) {
-			// 点击后稍作停留，让用户看到按钮被触发的过程，避免安装页一闪而过
-			await sleep(500);
-		}
-		const success = await waitForInstallSuccess(installPage, 15 * 1000);
-		if (success) {
-			// 安装成功状态短暂展示后再关闭页面
-			await sleep(800);
-		}
-		return {
-			url,
-			success,
-			reason: success ? undefined : clicked ? '安装未确认' : '未找到安装按钮'
-		};
-	} finally {
-		if (!installPage.isClosed()) {
-			await installPage.close().catch(() => {});
-		}
-		await trigger.close().catch(() => {});
-	}
-}
-
-/**
- * 轮询等待 extension:// 安装页出现
- * @param existingUrls 触发安装前已存在的页面 URL 快照，
- * 用于排除常驻扩展页（如脚本管理器后台页），仅匹配本次新弹出的扩展页面
- */
-async function waitForInstallPage(
-	browser: BrowserContext,
-	timeout: number,
-	existingUrls: Set<string>
-): Promise<Page | undefined> {
-	const end = Date.now() + timeout;
-	while (Date.now() < end) {
-		const candidates = browser.pages().filter((p) => /extension:\/\//.test(p.url()) && !existingUrls.has(p.url()));
-		// 多个候选时优先取 URL 含安装特征的页面（脚本管理器安装页路径含 install；
-		// Tampermonkey 5.5+ 的安装确认页为 ask.html?aid=...；
-		// 且 query 携带 .user.js / userScript 脚本地址），兜底取第一个
-		const page = candidates.find((p) => /install|ask\.html|user\.js|userscript/i.test(p.url())) || candidates[0];
-		if (page) return page;
-		await sleep(500);
-	}
-	return undefined;
-}
-
-/**
- * 点击安装/更新按钮，返回是否点到按钮。
- *
- * 仅使用两个脚本管理器的固定选择器（随拓展版本更迭维护），不做通用通配——
- * 防止误点未知页面的任意按钮：
- * 1. ScriptCat（install.html，React SPA）：固定 data-testid="install-primary"（安装/更新共用；
- *    skill 安装页为 skill-install）；成功标识 install-success-ribbon——拆包 install.js 实测确认；
- * 2. Tampermonkey（ask.html/install.html）：.install_buttons 容器内 input[type=button]，
- *    文案在 value 属性（textContent 为空），安装/更新恒为容器内动作按钮——拆包 extension.js 实测确认。
- *
- * ⚠️ 勿加 button 通配：ScriptCat 页面的首个 button 是脚本启用开关，误点会变成开关脚本而非安装。
- */
-async function clickInstallButton(installPage: Page): Promise<boolean> {
-	// ScriptCat 按钮在脚本代码加载期间为 disabled：存在才等待其可用，避免无此按钮时无谓耗时
-	const scSelector = '[data-testid="install-primary"], [data-testid="skill-install"]';
-	if ((await installPage.locator(scSelector).count()) > 0) {
-		await installPage
-			.waitForFunction(
-				(selector) => {
-					const b = document.querySelector<HTMLButtonElement>(selector);
-					return !!b && !b.disabled;
-				},
-				scSelector,
-				{ timeout: 10 * 1000 }
-			)
-			.catch(() => {});
-	}
-
-	const found = await installPage.evaluate(() => {
-		const findTarget = (): HTMLElement | undefined => {
-			// 1. ScriptCat：固定 data-testid（拆包 install.js 实测）
-			const sc = document.querySelector<HTMLElement>('[data-testid="install-primary"], [data-testid="skill-install"]');
-			if (sc) return sc;
-			// 2. Tampermonkey：.install_buttons 内 input[type=button]，文案在 value 属性（拆包 extension.js 实测）
-			const tmButtons = Array.from(
-				document.querySelectorAll<HTMLInputElement>('.install_buttons input[type="button"]')
-			);
-			const tm = tmButtons.find((el) => /安装|更新|Install|Update|Reinstall/i.test(el.value || '')) || tmButtons[0];
-			if (tm) return tm as unknown as HTMLElement;
-			return undefined;
-		};
-		const btn = findTarget();
-		if (btn) {
-			// 滚动到可视区域再点击，点击过程对用户可见
-			// eslint-disable-next-line no-undef
-			btn.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
-			btn.click();
-			return true;
-		}
-		return false;
-	});
-	return found;
-}
-
-/**
- * 等待安装成功信号（页面关闭 / 跳转离开安装页 / 成功文本 / 按钮禁用）
- */
-async function waitForInstallSuccess(installPage: Page, timeout: number): Promise<boolean> {
-	const end = Date.now() + timeout;
-	while (Date.now() < end) {
-		// 页面已关闭
-		if (installPage.isClosed()) return true;
-		// 页面已跳转离开安装页
-		if (!/extension:\/\//.test(installPage.url())) return true;
-		// 文本/按钮状态
-		const matched = await installPage
-			.evaluate(() => {
-				// ScriptCat：成功色带出现即安装/更新完成（固定 testid，随版本维护，拆包实测）
-				if (document.querySelector('[data-testid="install-success-ribbon"]')) return true;
-				const text = document.body?.innerText || '';
-				if (/已安装|已存在|安装成功|重新安装|Installed|Reinstall/i.test(text)) return true;
-				const btn = document.querySelector<HTMLButtonElement>('[class*="primary"]');
-				if (btn && (btn.disabled || btn.getAttribute('disabled') !== null)) return true;
-				// Tampermonkey（ask.html）：安装按钮为 input[type=button]，点击安装后被禁用视为完成信号
-				const tmBtn = document.querySelector<HTMLInputElement>('.install_buttons input[type="button"]');
-				if (tmBtn && tmBtn.disabled) return true;
-				return false;
-			})
-			.catch(() => false);
-		if (matched) return true;
-		await sleep(500);
-	}
-	return false;
 }
 
 function send(event: string, ...args: any[]) {
@@ -1425,10 +1252,6 @@ async function getPidsMemoryMB(pids: number[]): Promise<number> {
 	return Math.round((parseInt(out.trim(), 10) || 0) / 1024 / 1024);
 }
 
-function sleep(t: number) {
-	return new Promise((resolve, reject) => setTimeout(resolve, t));
-}
-
 /**
  * 将脚本配置转换为可用的对象配置
  * @param configs
@@ -1441,45 +1264,6 @@ function transformScriptConfigToRaw(configs: AS['configs']) {
 		}
 	}
 	return raw;
-}
-
-/**
- * 安装用户脚本
- */
-async function setupUserScripts(opts: {
-	browser: BrowserContext;
-	userscripts: string[];
-	step: StepTips;
-	enabledScriptCount: number;
-}): Promise<{ warn: string[]; results: InstallResult[] }> {
-	const { userscripts, browser, step, enabledScriptCount } = opts;
-
-	const warn: string[] = [];
-	const results: InstallResult[] = [];
-	// 安装用户脚本
-	if (userscripts.length) {
-		await step('正在安装用户脚本...（如长时间未完成请尝试重启浏览器 ）');
-		// 载入本地脚本
-		try {
-			const res = await initScripts(userscripts, browser);
-			results.push(...res);
-			const failed = res.filter((r) => !r.success);
-			if (failed.length) {
-				warn.push(`以下用户脚本安装失败，下次启动将重试：${failed.map((f) => f.url).join('、')}`);
-			}
-		} catch (e) {
-			// @ts-ignore
-			console.error('脚本安装失败：', e.message);
-			// await html('脚本载入失败，请手动更新，或者忽略。' + e.message);
-		}
-	} else {
-		if (enabledScriptCount === 0) {
-			warn.push('检测到您的软件中并未开启任何用户脚本，可能会导致预期脚本不运行。');
-		}
-		// enabledScriptCount > 0 且 userscripts 为空 → 所有脚本均为最新，无需更新，无需提示
-	}
-
-	return { warn, results };
 }
 
 /**
@@ -1540,40 +1324,6 @@ async function runAutomationScripts(opts: {
 			})
 		);
 	}
-}
-
-/**
- * 关闭浏览器拓展主页
- */
-async function waitAndCloseExtensionHomepage(opts: { browser: BrowserContext; closeableExtensionHomepages: string[] }) {
-	return new Promise<void>((resolve) => {
-		const timeout = setTimeout(() => {
-			clearInterval(interval);
-			// 欢迎页未出现属正常情况（拓展已加载过），拓展加载是否成功已由 verifyExtensionsLoaded 检测
-			resolve();
-		}, 20 * 1000);
-		const interval = setInterval(async () => {
-			const includes: Page[] = [];
-			for (const page of opts.browser.pages()) {
-				// 当拓展主页无法访问时，会跳转到chrome-error://chromewebdata/，此时获取的url为chrome-error://chromewebdata/，而不是拓展主页的url，但是title是拓展主页的host
-				const title = page.url() === 'chrome-error://chromewebdata/' ? await page.title() : '';
-				if (
-					opts.closeableExtensionHomepages.some((homepage) =>
-						page.url() === 'chrome-error://chromewebdata/' ? homepage.includes(title) : page.url().includes(homepage)
-					)
-				) {
-					includes.push(page);
-				}
-			}
-			if (includes.length) {
-				clearInterval(interval);
-				clearTimeout(timeout);
-				Promise.all(includes.map(async (page) => page.close()))
-					.then(() => resolve())
-					.catch(() => resolve());
-			}
-		}, 1000);
-	});
 }
 
 /**
@@ -2027,293 +1777,6 @@ function openUrl(url: string) {
 	}
 }
 
-/**
- * 打开浏览器拓展开发者模式（由于 MV3 的限制，运行脚本需要打开开发者模式）。
- * 仅执行开启动作；是否真正开启由后续 verifyExtensionsLoaded 的 service worker 检测间接确认
- * （开发者模式关闭时侧载拓展会被禁用，service worker 不会运行），
- * 不依赖 chrome://extensions/ 的 DOM 回读，避免页面结构变化导致的不稳定。
- */
-async function openExtensionDeveloperMode(browser: BrowserContext, edge: boolean = false) {
-	const page = await browser.newPage();
-	await page.goto('chrome://extensions/');
-
-	try {
-		await page.bringToFront();
-		await page.waitForTimeout(200);
-		if (edge) {
-			const els = await page.$$('[aria-label="扩展 菜单"]');
-			await els[1]?.click();
-			const element = await page.waitForSelector('#developer-mode', {
-				timeout: 5000
-			});
-			if (await element.evaluate<boolean, HTMLInputElement>((el) => el.checked === false)) {
-				await element.click();
-			}
-		} else {
-			// 拓展列表初次渲染期间 #devMode 所在的 toolbar 可能重渲染导致句柄失效，重试 3 次；
-			// justEnabled 标记"本次由关闭点击为开启"，保持仅在刚开启时才重载拓展的原语义
-			let justEnabled = false;
-			let operated = false;
-			for (let attempt = 0; attempt < 3; attempt++) {
-				try {
-					const element = await page.waitForSelector('#devMode', { timeout: 5000 });
-					const pressed = await element.evaluate<boolean, HTMLDivElement>(
-						(el) => el.getAttribute('aria-pressed')?.toString() === 'true'
-					);
-					operated = true;
-					if (pressed) break; // 已开启，无需操作
-					await element.click({ timeout: 2000 });
-					justEnabled = true;
-					break;
-				} catch {
-					// 句柄失效（重渲染），重试
-				}
-			}
-			if (!operated) {
-				throw new Error('开发者模式开关操作失败（页面元素持续重渲染）');
-			}
-			// 仅当本次刚开启开发者模式时才重载拓展（原语义）
-			if (justEnabled) {
-				// 开关切换后等待卡片渲染稳定，重载过程对用户可见
-				await page.waitForTimeout(500);
-				// 仅重载「已停用」的拓展：开发者模式关闭期间侧载拓展被 Chrome 停用，需重载恢复；
-				// 已启用的拓展跳过重载——重载会触发拓展初始化/欢迎页，严重干扰启动。
-				// DOM 侧直接点击（evaluate 内原子完成），规避卡片重渲染导致的句柄失效问题；
-				// 是否真正生效由后续 verifyExtensionsLoaded 的 SW 检测兜底。
-				const reloaded: string[] = await page.evaluate(() => {
-					const items =
-						document
-							.querySelector('extensions-manager')
-							?.shadowRoot?.querySelector('extensions-item-list')
-							?.shadowRoot?.querySelectorAll('extensions-item') || [];
-					const clicked: string[] = [];
-					for (const item of items) {
-						const enable = item.shadowRoot?.querySelector('#enableToggle') as any;
-						const reload = item.shadowRoot?.querySelector('#dev-reload-button') as HTMLElement | null;
-						if (enable?.checked === false && reload) {
-							reload.click();
-							clicked.push(item.id);
-						}
-					}
-					return clicked;
-				});
-				if (reloaded.length > 0) {
-					console.log('已重载被停用的拓展:', reloaded.join(', '));
-					// 等待重载完成（拓展 SW 重启），点击过程对用户可见
-					await page.waitForTimeout(800);
-				}
-			}
-		}
-		console.log('开发者模式已打开');
-	} catch (err) {
-		await page.close().catch(() => {});
-		throw err;
-	}
-	await page.waitForTimeout(500);
-	await page.close();
-}
-
-/**
- * 为全部侧载拓展开启「允许运行用户脚本」开关。
- * Chrome 的 chrome.userScripts 权限要求（与开发者模式独立的详情页开关）：
- * 未开启时脚本管理器不注册 .user.js 拦截，导航只显示脚本源码/跳官方引导页。
- * 实现：chrome://extensions 列表逐卡片取拓展 id → 打开详情页 → 深遍历 shadow DOM
- * 找语义为"用户脚本/user scripts"的 cr-toggle，未勾选则点击。
- * 无此开关的旧内核/未声明 userScripts 权限的拓展静默跳过，单个失败不影响整体。
- */
-async function enableUserScriptsPermission(browser: BrowserContext, edge: boolean = false) {
-	const scheme = edge ? 'edge' : 'chrome';
-	const page = await browser.newPage();
-	try {
-		await page.goto(`${scheme}://extensions/`);
-		await page.waitForTimeout(300);
-		// extensions-item 元素的 id 属性即拓展 id（playwright 不自动穿透 list 内的属性读取，统一深遍历）
-		const ids: string[] = await page.evaluate(() => {
-			const out: string[] = [];
-			// eslint-disable-next-line no-undef
-			const walk = (root: ParentNode) => {
-				for (const el of Array.from(root.querySelectorAll('*'))) {
-					const shadow = (el as HTMLElement).shadowRoot;
-					if (shadow) walk(shadow);
-					if (el.tagName === 'EXTENSIONS-ITEM' && (el as HTMLElement).id) {
-						out.push((el as HTMLElement).id);
-					}
-				}
-			};
-			walk(document);
-			return out;
-		});
-		for (const id of ids) {
-			try {
-				await page.goto(`${scheme}://extensions/?id=${id}`);
-				// 详情页渲染稳定后再操作，过程对用户可见
-				await page.waitForTimeout(500);
-				const result: string = await page.evaluate(() => {
-					const holder: { el: any } = { el: null };
-					// eslint-disable-next-line no-undef
-					const walk = (root: ParentNode) => {
-						if (holder.el) return;
-						for (const el of Array.from(root.querySelectorAll('*'))) {
-							if (holder.el) return;
-							const shadow = (el as HTMLElement).shadowRoot;
-							if (shadow) walk(shadow);
-							if (el.tagName === 'CR-TOGGLE') {
-								// 向上找带文本的容器判定开关语义（开关 id 为通用 crToggle，无语义）
-								let host: any = el;
-								for (let i = 0; i < 6 && host; i++) {
-									const text = String(host.innerText || '').trim();
-									if (/用户脚本|user.?scripts?/i.test(text)) {
-										holder.el = el;
-										return;
-									}
-									host = host.parentElement || host.getRootNode?.()?.host;
-								}
-							}
-						}
-					};
-					walk(document);
-					if (!holder.el) return 'absent';
-					const isOn = holder.el.checked === true || holder.el.getAttribute('aria-pressed') === 'true';
-					if (isOn) return 'already';
-					holder.el.click();
-					return 'clicked';
-				});
-				if (result === 'clicked') {
-					console.log('已开启拓展「允许用户脚本」开关:', id);
-					// 开关切换会重载拓展（SW 重启）；停留片刻让开关状态变化对用户可见
-					await page.waitForTimeout(900);
-				}
-			} catch (e) {
-				console.warn('开启用户脚本开关失败（忽略，不影响其他拓展）:', id, e);
-			}
-		}
-	} finally {
-		await page.close().catch(() => {});
-	}
-}
-
-/** 将 SHA256 摘要前 16 字节按 Chromium 规则映射为扩展 ID（每 4bit nibble -> 'a'-'p'） */
-function hashToExtensionId(hash: Buffer): string {
-	let id = '';
-	for (let i = 0; i < 16; i++) {
-		id += String.fromCharCode('a'.charCodeAt(0) + (hash[i] >> 4));
-		id += String.fromCharCode('a'.charCodeAt(0) + (hash[i] & 0xf));
-	}
-	return id;
-}
-
-/**
- * 计算扩展的所有候选 Chrome Extension ID：
- * 1. manifest.json 含 key（脚本猫/油猴等商店分发包）：ID 由公钥推导 ——
- *    SHA256(base64 解码的 DER 公钥)，与安装路径无关（已经实测验证）。
- * 2. 无 key 的未打包扩展：按路径推导。编码规则随平台（FilePath.value() 的字节形态）：
- *    - Windows：SHA256(路径 UTF-16LE 字节)，Chrome 先把正斜杠规范化为反斜杠、大小写保留
- *      （CfT 137/152 实测验证：utf16le('C:\\...\\scriptcat') 与实际派生 ID 一致）；
- *    - macOS/Linux：SHA256(路径 UTF-8)。
- *    另保留 UTF-8 变体作为候选兜底，覆盖历史版本/特殊环境（符号链接/短路径）差异。
- */
-function computeExtensionIdCandidates(extensionPath: string): string[] {
-	const ids = new Set<string>();
-	try {
-		const manifestPath = path.join(extensionPath, 'manifest.json');
-		if (fs.existsSync(manifestPath)) {
-			const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-			if (typeof manifest.key === 'string' && manifest.key) {
-				ids.add(hashToExtensionId(crypto.createHash('sha256').update(Buffer.from(manifest.key, 'base64')).digest()));
-			}
-		}
-	} catch {
-		// manifest 读取/解析失败：仅使用路径推导
-	}
-	const fwd = extensionPath.replace(/\\/g, '/');
-	// 仅驱动器号小写（新版 Chromium）与全路径小写（旧版）两种规范化，均覆盖正/反斜杠
-	const driveLower = (s: string) => (s.length > 1 && s[1] === ':' ? s[0].toLowerCase() + s.slice(1) : s);
-	if (process.platform === 'win32') {
-		// 主规则：规范化为反斜杠后按 UTF-16LE 字节哈希（大小写保留 + 两种小写变体兜底）
-		const nativePath = fwd.replace(/\//g, '\\');
-		for (const variant of [nativePath, driveLower(nativePath), nativePath.toLowerCase()]) {
-			ids.add(hashToExtensionId(crypto.createHash('sha256').update(Buffer.from(variant, 'utf16le')).digest()));
-		}
-	}
-	// UTF-8 候选兜底（mac/linux 主规则；win32 历史行为/特殊环境兼容）
-	const utf8Variants =
-		process.platform === 'win32'
-			? [driveLower(extensionPath), driveLower(fwd), extensionPath.toLowerCase(), fwd.toLowerCase()]
-			: [extensionPath, fwd];
-	for (const variant of utf8Variants) {
-		ids.add(hashToExtensionId(crypto.createHash('sha256').update(variant, 'utf8').digest()));
-	}
-	return [...ids];
-}
-
-/**
- * 验证脚本管理器拓展（油猴/脚本猫等应用中心扩展）已加载。
- * 通过检测拓展的 service worker 是否运行来判断（MV3 拓展必有 service worker），
- * 且 SW 的扩展 ID 必须匹配按路径推导的本次加载扩展之一——
- * 避免任意其他带 SW 的扩展让检查"假通过"。
- * 不读取 chrome://extensions/ 的 DOM--其页面结构随 Chrome 版本频繁变化，不稳定；
- * service worker 检测不依赖页面结构，更长久可靠。
- * 注意：开发者模式关闭时，通过 --load-extension 侧载的拓展会被 Chrome 禁用，
- * 其 service worker 不会运行，因此 service worker 存在也间接确认了开发者模式已开启。
- */
-async function verifyExtensionsLoaded(browser: BrowserContext, extensionPaths: string[], uid: string) {
-	// 期望 ID（候选集：manifest key 公钥推导 + 路径推导各规范化变体）-> 扩展路径，用于匹配 SW 并输出可读日志
-	const expectedIds = new Map<string, string>();
-	for (const p of extensionPaths) {
-		for (const id of computeExtensionIdCandidates(p)) {
-			expectedIds.set(id, p);
-		}
-	}
-
-	const findSw = () => {
-		const all = browser.serviceWorkers().filter((s) => /chrome-extension:\/\//.test(s.url()));
-		const matched = all.find((s) => expectedIds.has(new URL(s.url()).host));
-		return { all, matched };
-	};
-
-	// 拓展 service worker 可能在启动后短暂延迟才注册，轮询等待
-	const poll = async (timeoutMs: number) => {
-		const end = Date.now() + timeoutMs;
-		let { all, matched } = findSw();
-		while (!matched && Date.now() < end) {
-			await sleep(500);
-			({ all, matched } = findSw());
-		}
-		return { all, matched };
-	};
-
-	let { all, matched } = await poll(15 * 1000);
-
-	if (!matched) {
-		// 首轮未匹配不立即判定失败：弱机/杀软扫描可能拖慢 service worker 注册，重试一轮
-		console.warn('脚本管理器拓展首轮检测未通过，等待重试（service worker 注册可能被拖慢）...');
-		({ all, matched } = await poll(15 * 1000));
-	}
-
-	if (matched) {
-		const id = new URL(matched.url()).host;
-		console.log(
-			'脚本管理器拓展加载检测通过（service worker）：',
-			path.basename(expectedIds.get(id) || ''),
-			matched.url()
-		);
-		return;
-	}
-
-	if (all.length > 0) {
-		// 存在其他扩展 SW 但未匹配到脚本管理器拓展：特殊环境下 ID 推导可能不一致（符号链接/短路径）。
-		// 不再静默放行：通知渲染端提示用户脚本功能可能失效
-		const urls = all.map((s) => s.url());
-		console.warn('检测到扩展 service worker，但未能匹配脚本管理器拓展：', urls.join('、'));
-		send('extension-verify-degraded', uid, urls);
-		return;
-	}
-
-	// 两轮检测均未发现任何扩展 service worker：降级为告警而非中断启动——
-	// 浏览器本体仍可用，仅脚本功能缺失（用户可重启浏览器或在应用中心重装脚本管理器）
-	console.error('脚本管理器拓展 service worker 未检测到（两轮共 30s），浏览器将继续启动，脚本功能不可用');
-	send('extension-verify-failed', uid);
-}
 function getExtensionName(filepath: string) {
 	return filepath.toLocaleLowerCase().includes('tampermonkey')
 		? '油猴'

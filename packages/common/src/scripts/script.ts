@@ -72,3 +72,59 @@ export class AutomationScript<
 	C extends Record<string, Config> = Record<string, Config>,
 	RF extends AutomationScriptRunFunction<C> = AutomationScriptRunFunction<C>
 > extends ConfigsRequiredAutomationScript<C, RF, BaseAutomationEvents> {}
+
+/** 步骤提示函数（worker 导航页进度渲染） */
+export type SystemScriptStep = (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
+
+/** 系统自动化程序执行阶段：launch=关键路径（失败中断启动）；post=后台段（失败仅告警） */
+export type SystemScriptPhase = 'launch' | 'post';
+
+/**
+ * 系统自动化程序运行上下文（由 worker 注入）。
+ * 与用户自动化程序的区别：拿到的是整个 BrowserContext（而非单个 Page），
+ * 且带有 worker 通信与导航页提示通道。
+ */
+export interface SystemScriptContext {
+	browser: import('playwright-core').BrowserContext;
+	uid: string;
+	/** AppStore 快照（启动时传入；import type 避免与 contract 循环依赖） */
+	store: import('../contract').AppStore | undefined;
+	/** worker→渲染端事件上报 */
+	send: (event: string, ...args: any[]) => void;
+	step: SystemScriptStep;
+	/** 浏览器可执行文件路径（用于 Edge 判定等） */
+	executablePath: string;
+	/** 本次加载的拓展路径列表 */
+	extensionPaths: string[];
+	/** 浏览器 profile 目录（缓存目录） */
+	userDataDir: string;
+	/** 本次待安装的用户脚本 URL 列表（已由渲染端预下载/构造） */
+	userscripts: string[];
+	/** 启用的用户脚本总数（区分"无脚本"与"无需更新"） */
+	enabledScriptCount: number;
+	/** 需自动关闭的拓展主页 host 列表 */
+	closeableExtensionHomepages: string[];
+}
+
+/**
+ * 系统自动化程序：软件内置的静态自动化流程（开发者模式、用户脚本权限、脚本安装、状态同步等）。
+ * 与用户自动化程序同基类（共享事件/日志设施），但由系统注册表统一编排：
+ * 不可在 UI 删除/停用，浏览器启动后按 order 自动运行。
+ */
+export class SystemAutomationScript extends BaseAutomationScript<(ctx: SystemScriptContext) => void | Promise<void>> {
+	/** 执行顺序（同阶段内越小越早） */
+	order: number;
+	/** 执行阶段 */
+	phase: SystemScriptPhase;
+
+	constructor(
+		opts: ScriptOptions<(ctx: SystemScriptContext) => void | Promise<void>> & {
+			order: number;
+			phase: SystemScriptPhase;
+		}
+	) {
+		super(opts);
+		this.order = opts.order;
+		this.phase = opts.phase;
+	}
+}
