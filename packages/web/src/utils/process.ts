@@ -474,7 +474,7 @@ export class Process extends EventEmitter {
 			}
 
 			// 接收 worker 回传的安装结果，按成功情况更新 lastInstalledVersion
-			this.once('userscript-install-result', (results: InstallResult[]) => {
+			this.once('userscript-install-result', async (results: InstallResult[]) => {
 				let allSucceeded = (results || []).length > 0;
 				for (const r of results || []) {
 					const item = urlToItem.get(r.url);
@@ -489,6 +489,29 @@ export class Process extends EventEmitter {
 							'install-fail-' + r.url,
 							{ duration: 60 * 1000, type: 'warning', copy: true }
 						);
+					}
+				}
+				// 受管脚本清单：记录安装成功的真实脚本名（脚本列表同步的删除资格依据，
+				// 用户手动在浏览器内安装的脚本不在清单内，永不误删）
+				const succeededNames = (results || [])
+					.filter((r) => r.success)
+					.map((r) => urlToItem.get(r.url)?.script.info?.name as string | undefined)
+					.filter((n): n is string => !!n);
+				if (succeededNames.length) {
+					const managedPath = await remote.path.call('join', this.browser.cachePath, '.ocs-scripts-managed.json');
+					try {
+						let existing: string[] = [];
+						if (await remote.fs.call('existsSync', managedPath)) {
+							const data = JSON.parse(String(await remote.fs.call('readFileSync', managedPath, 'utf-8')));
+							existing = Array.isArray(data.names) ? data.names : [];
+						}
+						await remote.fs.call(
+							'writeFileSync',
+							managedPath,
+							JSON.stringify({ names: [...new Set([...existing, ...succeededNames])] })
+						);
+					} catch (e) {
+						console.warn('[process] 写入受管脚本清单失败：', e);
 					}
 				}
 				// 本次请求的脚本全部安装成功 → 写入 profile 安装标记；
