@@ -179,26 +179,6 @@
 				/>
 			</Description>
 
-			<Description>
-				<template #label>
-					EasyUs 脚本
-					<a-popover>
-						<template #content>
-							<div style="max-width: 320px">
-								<div>测试/调试用途：覆盖 EasyUs 脚本的加载地址（如本地开发构建产物）。</div>
-								<div>留空则使用默认线上地址，对之后加载的浏览器生效。</div>
-							</div>
-						</template>
-						<CircleHelpIcon class="label-help-icon" />
-					</a-popover>
-				</template>
-				<a-input
-					v-model="store.scriptResources.easyUs"
-					:placeholder="'默认：' + OCS_SCRIPT_RESOURCES.easyUs"
-					allow-clear
-				/>
-			</Description>
-
 			<a-divider orientation="left"> 服务调试 </a-divider>
 
 			<Description label="本地服务器端口">

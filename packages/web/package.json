@@ -16,7 +16,7 @@
 		"chalk": "catalog:",
 		"colorpicker-v3": "^2.10.2",
 		"dayjs": "catalog:",
-		"easy-us": "^0.0.56",
+		"easy-us": "^1.1.1",
 		"events": "^3.3.0",
 		"highlight.js": "^11.11.1",
 		"lodash": "^4.17.21",

@@ -56,9 +56,7 @@ export const OriginalAppStore: AppStore = {
 	/** 脚本资源覆盖（开发者设置-脚本调试，留空使用默认线上地址） */
 	scriptResources: {
 		/** OCS index 脚本地址 */
-		index: '',
-		/** EasyUs 脚本地址 */
-		easyUs: ''
+		index: ''
 	},
 	/** 渲染进程数据 */
 	render: {} as { [x: string]: any }

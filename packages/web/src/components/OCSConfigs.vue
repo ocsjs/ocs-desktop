@@ -74,12 +74,24 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick, onActivated, reactive, watch, ref, computed, WatchStopHandle, onDeactivated } from 'vue';
+import {
+	onMounted,
+	nextTick,
+	onActivated,
+	reactive,
+	watch,
+	ref,
+	computed,
+	markRaw,
+	WatchStopHandle,
+	onDeactivated
+} from 'vue';
 import { remote } from '../utils/remote';
 import { store as Store } from '../store/index';
 import { t } from '../utils/langs';
 import { themeState } from '../utils';
 import { OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
+import * as EasyUS from 'easy-us';
 import type { Project } from 'easy-us';
 
 const props = defineProps<{
@@ -273,26 +285,65 @@ function mountShadowWrapper() {
 	wrapper.classList.toggle('ocs-dark', themeState.dark);
 }
 
+/**
+ * OCS/EUS 脚本执行：executeJavaScript 会等待脚本完成值（async IIFE 场景可能永久 pending），
+ * 施加独立超时防止面板永久卡在「正在获取最新OCS配置」；
+ * 超时后脚本顶层同步代码已执行（UMD 全局对象已挂载），不影响后续初始化。
+ */
+async function executeScript(code: string, name: string) {
+	await Promise.race([
+		remote.webContents.call('executeJavaScript', code),
+		new Promise((resolve, reject) => setTimeout(() => reject(new Error(`${name} 执行超时（15s）`)), 15 * 1000))
+	]);
+}
+
+/**
+ * 加载期间清扫误入 document.body 的 .modal-wrapper 全屏遮罩：
+ * OCS/EUS 脚本执行期间若在 $elements.root 指派前触发弹窗（公告/提示等），
+ * 遮罩（position:fixed 全屏半透明）会挂到 body，导致界面可见但完全无法点击。
+ */
+function watchStrayModalMasks() {
+	const remove = () => document.querySelectorAll('.modal-wrapper').forEach((el) => el.remove());
+	const observer = new MutationObserver(remove);
+	observer.observe(document.body, { childList: true, subtree: false });
+	remove();
+	return () => {
+		remove();
+		observer.disconnect();
+	};
+}
+
+/**
+ * 挂载 easy-us 到全局：固定版本经 package.json 依赖随包分发（不再远程加载），
+ * OCS 脚本（UMD）与面板均经 global.EUS 访问；展开为普通对象，允许 OCS 脚本向其写入属性。
+ */
+function mountEasyUsGlobal() {
+	// @ts-ignore
+	if (global.EUS === undefined) {
+		// @ts-ignore
+		global.EUS = { ...EasyUS };
+	}
+}
+
 async function loadOCS() {
 	state.loading = true;
 	emits('loading');
+	const stopMaskWatch = watchStrayModalMasks();
 	try {
+		// easy-us 为本地依赖，先行挂载供 OCS 脚本执行时引用
+		mountEasyUsGlobal();
+
 		// @ts-ignore
 		if (global.OCS === undefined) {
 			// 加载 OCS（开发者设置中可自定义脚本地址，留空用默认线上地址）
+			console.log('[OCSConfigs] 加载 OCS 脚本...');
 			const code = await remote.methods.call('get', Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
-			await remote.webContents.call('executeJavaScript', code);
-		}
-
-		// @ts-ignore
-		if (global.EUS === undefined) {
-			// 加载 EUS（开发者设置中可自定义脚本地址，留空用默认线上地址）
-			const code = await remote.methods.call('get', Store.scriptResources.easyUs || OCS_SCRIPT_RESOURCES.easyUs);
-			await remote.webContents.call('executeJavaScript', code);
+			await executeScript(code, 'OCS 脚本');
 		}
 
 		if (state.css === '') {
 			// 加载样式
+			console.log('[OCSConfigs] 加载样式...');
 			state.css = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.style);
 		}
 
@@ -301,7 +352,7 @@ async function loadOCS() {
 		// @ts-ignore
 		const EUS = global.EUS as typeof import('easy-us');
 
-		const { MemoryStoreProvider, $elements, definedCustomElements, h, $ } = EUS;
+		const { MemoryStoreProvider, $elements, definedCustomElements, h } = EUS;
 
 		wrapper = wrapper || h('div');
 		root = root || wrapper.attachShadow({ mode: 'closed' });
@@ -316,23 +367,23 @@ async function loadOCS() {
 			root.append(h('style', ['modal-element { !important; max-width: 800px !important; }'].join('\n')));
 		}
 
+		console.log('[OCSConfigs] 初始化配置面板...');
 		loadCustomElements(definedCustomElements as any[]);
 
 		/** 双向绑定数据 */
 		MemoryStoreProvider._source.store = store.value;
 
-		state.projects = OCS.definedProjects();
+		// markRaw：easy-us 1.1.2 的配置代理在 get 时回写 script.cfg（存储优化），
+		// 若项目对象被 Vue 深度响应式包裹，回写会触发重渲染 → 渲染再读触发再写 → 无限循环冻结界面。
+		// 项目对象由 easy-us 自行渲染管理，无需 Vue 响应式；ocs.store 保持响应式以维持持久化链路。
+		state.projects = markRaw(OCS.definedProjects());
 		emits('update:project', state.projects as Project[]);
 
-		/** 为对象添加响应式特性，在设置值的时候同步到本地存储中 */
-		for (const project of state.projects) {
-			for (const key in project.scripts) {
-				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
-					const script = project.scripts[key];
-					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
-				}
-			}
-		}
+		// 不为面板脚本创建 createConfigProxy：easy-us 1.1.2 的代理在 get 时回写 script.cfg，
+		// 与 Vue 响应式叠加会导致界面冻结。
+		// 持久化不受影响：config-element 的值读写直接走 $store（namespaceKey → MemoryStoreProvider
+		// → 本组件注入的 Vue 响应式 store → App 深度监听落盘），不经过 script.cfg 代理；
+		// 代理仅服务于浏览器内脚本运行时的 cfg 便捷读取（浏览器侧由 OCS 脚本自行初始化）。
 
 		if (state.projects.length) {
 			// 打开界面时默认选中 pin_projects（如「通用」），找不到则回退到首个项目
@@ -343,6 +394,8 @@ async function loadOCS() {
 		state.err = String(err);
 		console.error(err);
 		emits('error', String(err));
+	} finally {
+		stopMaskWatch();
 	}
 
 	state.loading = false;

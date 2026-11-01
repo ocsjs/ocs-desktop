@@ -58,8 +58,6 @@ export interface AppStore {
 	scriptResources: {
 		/** OCS index 脚本地址 */
 		index: string;
-		/** EasyUs 脚本地址 */
-		easyUs: string;
 	};
 	/** 渲染进程数据（磁盘上可能为加密后的字符串，由主进程解密） */
 	render: { [x: string]: any };

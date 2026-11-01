@@ -228,7 +228,7 @@ const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-st
 	// 补齐更新/调试配置（旧版本用户的磁盘 store 无此字段）
 	updater: { feedUrl: '', infosUrl: '', allowDowngrade: false, chromeSource: '' },
 	// 补齐脚本资源覆盖配置
-	scriptResources: { index: '', easyUs: '' }
+	scriptResources: { index: '' }
 });
 
 // 解密数据（兼容新旧加密格式）
