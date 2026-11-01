@@ -9,6 +9,9 @@ html,
 	max-height: 100%;
 	min-width: 500px;
 	min-height: 300px;
+	/* 布局为 100vh + 内部滚动容器，body 不允许滚动：
+	   否则右键菜单等挂载在 body 下的绝对定位弹层会撑高文档，产生外层滚动条并挤压整个渲染区域 */
+	overflow: hidden;
 	--title-height: 32px;
 }
 

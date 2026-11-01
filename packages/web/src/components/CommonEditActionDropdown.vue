@@ -4,6 +4,7 @@
 		class="tittle-dropdown"
 		v-bind="$attrs"
 		:popup-max-height="false"
+		auto-fit-position
 		@select="onSelect"
 		@popup-visible-change="onPopupVisibleChange"
 	>
