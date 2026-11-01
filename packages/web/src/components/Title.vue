@@ -132,6 +132,9 @@
 			</template>
 		</a-trigger>
 
+		<!-- 当前界面标题：居中展示（不响应鼠标，不遮挡拖拽与菜单） -->
+		<span class="title-text">{{ store.render.state.title }}</span>
+
 		<!-- 窗口置顶按钮：绝对定位避让系统 traffic light 控制区域（mac 在左侧，其余在右上角） -->
 		<PinButton />
 	</div>
@@ -460,6 +463,21 @@ async function showVersionLogs() {
 	z-index: 999999;
 	position: relative;
 	background-color: white;
+
+	/* 界面标题文本：绝对居中，不响应鼠标（避让拖拽区与左右菜单/按钮） */
+	.title-text {
+		position: absolute;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 12px;
+		color: #86909c;
+		pointer-events: none;
+		user-select: none;
+		max-width: 50%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
 
 	.title-item {
 		-webkit-app-region: no-drag;

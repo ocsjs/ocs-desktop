@@ -182,8 +182,9 @@ onMounted(async () => {
 		}
 	});
 
-	/** 初始化标题 */
-	remote.win.call('setTitle', `OCS - 首页`);
+	/** 初始化标题（store.title 供标题栏居中显示，原生标题用于任务栏等系统位置） */
+	store.render.state.title = 'OCS桌面版 - 首页';
+	remote.win.call('setTitle', `OCS桌面版 - 首页`);
 
 	/** 初始化 store */
 	remote.logger.call('info', 'render store init');

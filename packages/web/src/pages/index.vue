@@ -66,6 +66,7 @@ import { ref, reactive } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import { routes, CustomRouteType, router } from '../route';
 import { remote } from '../utils/remote';
+import { store } from '../store';
 import { ListIcon, CodeIcon, SettingsIcon } from 'lucide-vue-next';
 import { Tooltip } from '@arco-design/web-vue';
 import CommonEditActionDropdown from '../components/CommonEditActionDropdown.vue';
@@ -94,7 +95,8 @@ remote.app.call('getVersion').then((v) => {
 
 function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 	router.push(route.path);
-	remote.win.call('setTitle', `OCS - ${route.meta.title}`);
+	store.render.state.title = `OCS桌面版 - ${route.meta.title}`;
+	remote.win.call('setTitle', `OCS桌面版 - ${route.meta.title}`);
 }
 </script>
 

@@ -115,6 +115,8 @@ export type WebStore = {
 		mini: boolean;
 		responsive: 'mini' | 'small';
 		height: number;
+		/** 当前界面标题（标题栏居中显示文本，路由切换时赋值） */
+		title: string;
 		/** 已读的提示记录 */
 		read_record: {
 			user_script_usage: boolean;
@@ -208,6 +210,7 @@ export const DEFAULT_RENDER = {
 		mini: false,
 		responsive: 'small',
 		height: document.documentElement.clientHeight,
+		title: 'OCS桌面版 - 首页',
 		read_record: {
 			user_script_usage: false,
 			browser_usage: false,
