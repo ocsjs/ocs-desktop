@@ -1281,8 +1281,9 @@ async function runAutomationScripts(opts: {
 		await step(`正在执行自动化程序 - ${automationScripts.map((ps) => ps.name).join('、')} ...`);
 
 		// 多平台脚本互不依赖，并行执行（各开各的 page），弱网下整体耗时从「串行累加」降为「最慢单个」；
-		// 单脚本 45s 总超时：超时关闭其页面终止后续操作，避免单脚本挂起拖垮整体初始化
-		const SCRIPT_TIMEOUT = 45 * 1000;
+		// 超时按脚本声明（script.timeout），未声明默认 1 分钟；含大量操作/OCR 识别流程的脚本声明 3 分钟。
+		// 超时关闭其页面终止后续操作，避免单脚本挂起拖垮整体初始化
+		const DEFAULT_SCRIPT_TIMEOUT = 60 * 1000;
 		await Promise.allSettled(
 			automationScripts.map(async (ps) => {
 				let configs = transformScriptConfigToRaw(ps.configs);
@@ -1297,6 +1298,7 @@ async function runAutomationScripts(opts: {
 					console.error('自动化程序错误：', ...msg.map((m) => ScriptWorker.getTransformedErrorMessage(m)))
 				);
 
+				const scriptTimeout = script.timeout ?? DEFAULT_SCRIPT_TIMEOUT;
 				const page = await browser.newPage();
 				const runPromise = script.run(page, configs, {
 					ocrApiUrl: `http://localhost:${serverPort}/ocr`,
@@ -1307,10 +1309,10 @@ async function runAutomationScripts(opts: {
 				try {
 					const result = await Promise.race([
 						runPromise.then(() => 'done' as const),
-						new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), SCRIPT_TIMEOUT))
+						new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), scriptTimeout))
 					]);
 					if (result === 'timeout') {
-						console.error(`自动化程序执行超时（${SCRIPT_TIMEOUT / 1000}s）：${ps.name}，已终止，可稍后手动重试`);
+						console.error(`自动化程序执行超时（${scriptTimeout / 1000}s）：${ps.name}，已终止，可稍后手动重试`);
 						// 关闭页面使脚本内 pending 的 Playwright 调用立即 reject，终止后续操作
 						await page.close().catch(() => {});
 						await runPromise.catch(() => {});

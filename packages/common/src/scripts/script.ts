@@ -13,6 +13,11 @@ export interface ScriptOptions<Run extends RunFunction = RunFunction> {
 	 * 声明后启动浏览器前会先做环境检测：未安装 OCR 模块则终止启动并引导用户下载。
 	 */
 	needOCR?: boolean;
+	/**
+	 * 执行超时时间（毫秒），未声明时默认 1 分钟。
+	 * 包含大量操作或 OCR 识别流程的脚本建议声明为 3 分钟。
+	 */
+	timeout?: number;
 }
 
 export abstract class Script<Run extends RunFunction = RunFunction, E extends EventsRecord = EventsRecord>
@@ -23,6 +28,7 @@ export abstract class Script<Run extends RunFunction = RunFunction, E extends Ev
 	run: Run;
 	icon?: string;
 	needOCR?: boolean;
+	timeout?: number;
 
 	constructor(opts: ScriptOptions<Run>) {
 		super();
@@ -30,6 +36,7 @@ export abstract class Script<Run extends RunFunction = RunFunction, E extends Ev
 		this.run = opts.run;
 		this.icon = opts.icon;
 		this.needOCR = opts.needOCR;
+		this.timeout = opts.timeout;
 	}
 }
 

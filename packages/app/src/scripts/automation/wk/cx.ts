@@ -52,6 +52,7 @@ export const CXLoginScript = new AutomationScript(
 		icon: 'https://www.chaoxing.com/',
 		// 登录流程含验证码破解（breakVerifyCode/breakSliderVerify），依赖 OCR 识别模块
 		needOCR: true,
+		timeout: 3 * 60 * 1000,
 		async run(
 			page,
 			configs,
