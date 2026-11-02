@@ -219,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onActivated, watch, nextTick } from 'vue';
+import { reactive, computed, onMounted, onActivated, watch, nextTick } from 'vue';
 import Tags from '../Tags.vue';
 import BrowserOperators from './BrowserOperators.vue';
 import { store } from '../../store';
