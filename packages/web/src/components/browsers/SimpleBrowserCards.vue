@@ -138,19 +138,7 @@
 										>
 											<a-space size="mini"
 												><GlobeIcon />
-												<!-- 重命名状态 -->
-												<template v-if="getBrowserInstance(browser.uid)?.renaming">
-													<a-input
-														v-model="renameValue"
-														size="mini"
-														@click.stop
-														@blur="handleRenameFinish(browser)"
-														@keyup.enter="handleRenameFinish(browser)"
-													/>
-												</template>
-												<template v-else>
-													{{ browser.name }}
-												</template>
+												{{ browser.name }}
 											</a-space>
 										</div>
 									</template>
@@ -236,7 +224,6 @@ import Tags from '../Tags.vue';
 import BrowserOperators from './BrowserOperators.vue';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
-import { Browser } from '../../fs/browser';
 import { Process, processes, closedPreviews, restoreClosedPreviews } from '../../utils/process';
 import { useScreencastVisibility } from '../../composables/useScreencastVisibility';
 import { BrowserOptions } from '../../fs/interface';
@@ -258,11 +245,6 @@ import {
 const allBrowsers = computed(() => {
 	return root().findAll((e) => e.type === 'browser') as BrowserOptions[];
 });
-
-/** 获取浏览器实例 */
-function getBrowserInstance(uid: string): Browser | undefined {
-	return Browser.from(uid);
-}
 
 /** 浏览器是否已启动（仍在运行且状态为 launched） */
 function isLaunched(uid: string): boolean {
@@ -363,34 +345,6 @@ const cardGridMinWidth = computed(() => {
 	if (cols === 3) return '960px';
 	return '0px';
 });
-
-/** 重命名临时值 */
-const renameValue = ref('');
-
-/** 处理重命名完成 */
-function handleRenameFinish(browser: BrowserOptions) {
-	const instance = Browser.from(browser.uid);
-	if (instance) {
-		instance.rename(renameValue.value || browser.name);
-	}
-}
-
-/** 监听重命名状态，初始化值并自动聚焦输入框 */
-watch(
-	() => allBrowsers.value.find((b) => getBrowserInstance(b.uid)?.renaming),
-	(renamingBrowser) => {
-		if (renamingBrowser) {
-			renameValue.value = renamingBrowser.name;
-			nextTick(() => {
-				const input = document.querySelector('.browser-card .arco-input') as HTMLInputElement;
-				if (input) {
-					input.focus();
-					input.select();
-				}
-			});
-		}
-	}
-);
 
 /** 卡片可见性驱动 Page.startScreencast 启停（仅可见卡片推流，滚出视口自动停止） */
 const { refresh: refreshScreencast, syncAll: syncAllScreencast } = useScreencastVisibility({

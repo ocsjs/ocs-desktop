@@ -161,6 +161,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { remote } from '../utils/remote';
+import { store } from '../store';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
 import { BrowserOptions, FolderType, FolderOptions } from '../fs/interface';
@@ -191,6 +192,8 @@ function hasPermission(p: Permission): boolean {
 	const isBrowser = contextEntity.value.type === 'browser';
 
 	if (isBrowser) {
+		// 简洁模式无多级文件夹概念，隐藏「跳转到文件所在位置」（仅专业模式展示）
+		if (store.render.setting.mode === 'simple' && p === 'location') return false;
 		return ['edit', 'rename', 'remove', 'location'].includes(p);
 	} else {
 		if (currentSearchedEntities.value !== undefined) {
@@ -280,7 +283,14 @@ function onSelect(value: string | number | Record<string, unknown> | undefined) 
 			instance.select();
 			break;
 		case 'rename':
-			instance.renaming = true;
+			if (store.render.setting.mode === 'simple') {
+				// 简洁模式：卡片截图封面会遮挡内联重命名输入框，
+				// 改为打开浏览器操作面板（抽屉），由面板消费 renaming 标志自动进入重命名
+				instance.select();
+				instance.renaming = true;
+			} else {
+				instance.renaming = true;
+			}
 			break;
 		case 'remove':
 			instance.remove();

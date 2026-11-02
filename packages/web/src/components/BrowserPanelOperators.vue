@@ -136,7 +136,8 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { store } from '../store';
 import { Browser } from '../fs/browser';
 import BrowserOperators from './browsers/BrowserOperators.vue';
 import { GlobeIcon, Trash2Icon, PencilIcon, XIcon, NotebookPenIcon, TagIcon } from 'lucide-vue-next';
@@ -170,6 +171,23 @@ function rename() {
 		renameRef.value?.focus();
 	});
 }
+
+/**
+ * 消费简洁模式右键「重命名」标志：简洁模式下卡片封面会遮挡内联输入框，
+ * 右键菜单改为打开本面板并置 browser.renaming，此处检测到后自动进入重命名。
+ * 仅简洁模式消费，专业模式的内联重命名（Entity 组件）继续使用该标志。
+ */
+function consumeRenameFlag() {
+	if (store.render.setting.mode === 'simple' && props.browser.renaming) {
+		// 不直接修改 prop：通过 Browser.from 取实例复位标志（与 prop 是同一响应式对象）
+		const instance = Browser.from(props.browser.uid);
+		if (instance) instance.renaming = false;
+		rename();
+	}
+}
+
+onMounted(consumeRenameFlag);
+watch(() => props.browser.renaming, consumeRenameFlag);
 
 function onBlur() {
 	props.browser?.rename(name.value);
