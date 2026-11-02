@@ -10,9 +10,20 @@ import crypto from 'crypto';
 import { getValidBrowsers } from '@ocs-desktop/common/node';
 import { store } from '../store';
 import { exportExcel } from '../utils/index';
+import {
+	cachedHttpGet,
+	readHttpCache,
+	writeHttpCache,
+	httpCacheStats,
+	httpCacheStatsBySite,
+	clearHttpCache,
+	initHttpCache
+} from '../utils/http-cache';
+import { siteOfUrl } from '@ocs-desktop/common';
 import { readdir, stat } from 'fs/promises';
 import { updateApp, updater } from './updater';
 import { AutomationScripts } from '../scripts';
+import { SystemScripts } from '../scripts/system';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { installBuiltinChrome } from './init.chrome';
 import { ensureExtensionsIntegrity, installBundledExtension, getBundledExtensions } from '../extensions/bundled';
@@ -27,6 +38,7 @@ import {
 } from '../crypto';
 import { hideToTray, quitApp, cancelQuit, destroyTray } from '../tray';
 import { getServerToken } from './server.auth';
+import { iconCacheStats, clearIconCache } from './startup.server';
 import { canOCR } from '../utils/ocr';
 
 /**
@@ -114,12 +126,43 @@ function registerRemoteEvent(name: string, target: any) {
 let win: BrowserWindow | undefined;
 
 /** 需远程共享的方法（类型契约见 @ocs-desktop/common contract.ts） */
+/** 网络缓存加速开关判定：全局开关 + 站点级开关（缺省均视为开启） */
+function isNetworkCacheEnabled(url?: string) {
+	const browserSetting = store.store.render?.setting?.browser;
+	if (browserSetting?.networkCache === false) return false;
+	if (url) {
+		const site = siteOfUrl(url);
+		if (site && browserSetting?.networkCacheSites?.[site.id] === false) return false;
+	}
+	return true;
+}
+
 const methods: RemoteMethods = {
 	autoLaunch,
 	// 默认 15s 超时（可经 config 覆盖）：无超时时 TCP 连接挂起要等 OS 级超时（20s+），
 	// 脚本搜索/信息查询等 UI 链路需要更快失败以进入降级分支
 	get: (url: string, config?: AxiosRequestConfig<any> | undefined) =>
 		axios.get(url, { timeout: 15 * 1000, ...config }).then((res) => res.data),
+	/**
+	 * 带磁盘缓存的 GET（脚本猫/GreasyFork 等速度不稳定站点加速）：
+	 * TTL 内直接命中缓存；请求失败时回退过期缓存（弱网兜底）。
+	 * 「网络缓存加速」设置关闭时恢复原始实时加载（不读写缓存）。
+	 */
+	cachedGet: (url: string, ttlMs: number) => {
+		if (!isNetworkCacheEnabled(url)) {
+			return axios.get(url, { timeout: 15 * 1000 }).then((res) => res.data);
+		}
+		return cachedHttpGet(url, ttlMs, async () => {
+			const res = await axios.get(url, { timeout: 15 * 1000, responseType: 'text' });
+			return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+		}).then((text) => {
+			try {
+				return JSON.parse(text);
+			} catch {
+				return text;
+			}
+		});
+	},
 	getWithStatus: (url: string, config?: AxiosRequestConfig<any> | undefined) =>
 		axios.get(url, { ...config, validateStatus: () => true }).then((res) => ({ status: res.status, data: res.data })),
 	download: (channel: string, url: string, dest: string) => {
@@ -136,6 +179,8 @@ const methods: RemoteMethods = {
 	ensureBuiltinExtensionsIntegrity: ensureExtensionsIntegrity,
 	installBundledExtension: installBundledExtension,
 	getBundledExtensions: getBundledExtensions,
+	/** 系统自动化程序清单（开发者设置-自动化程序管理展示） */
+	getSystemScripts: () => SystemScripts.map((s) => ({ name: s.name, label: s.label, phase: s.phase, order: s.order })),
 	/**
 	 * 下载并安装内置浏览器（供前端「环境修复」复用多源下载，不重启应用）。
 	 * 进度通过 webContents.send('builtin-chrome-install-progress', progress) 推送。
@@ -211,6 +256,16 @@ const methods: RemoteMethods = {
 		}
 		return env;
 	},
+	/** HTTP 磁盘缓存统计（网络缓存加速的缓存检测） */
+	httpCacheStats: () => httpCacheStats(),
+	/** HTTP 磁盘缓存统计（按站点分组） */
+	httpCacheStatsBySite: () => httpCacheStatsBySite(),
+	/** 清空 HTTP 磁盘缓存（siteId 为空时清空全部） */
+	clearHttpCache: (siteId?: string) => clearHttpCache(siteId),
+	/** 网站图标缓存统计（条数 + 总字节数） */
+	iconCacheStats: () => iconCacheStats(),
+	/** 清空网站图标缓存（内存 + 磁盘） */
+	clearIconCache: () => clearIconCache(),
 	isDirectory: (path: string) => fs.statSync(path).isDirectory(),
 	getRawScripts: () => JSON.parse(JSON.stringify(AutomationScripts)) as RawAutomationScript[],
 	encryptRenderString,
@@ -293,7 +348,21 @@ const methods: RemoteMethods = {
 
 		return Promise.all(
 			urls.map(async (url) => {
+				// 脚本下载磁盘缓存：TTL 内直接复用（官方站点速度不稳定加速），网络失败回退过期缓存；
+				// 「网络缓存加速」设置关闭时不读不写缓存，恢复原始实时加载
+				const cacheEnabled = isNetworkCacheEnabled(url);
+				const SCRIPT_CACHE_TTL = 30 * 60 * 1000;
+				const writeTmp = async (body: string) => {
+					const hash = crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
+					const filePath = path.join(tmpDir, `${hash}.user.js`);
+					await fs.promises.writeFile(filePath, body, 'utf-8');
+					return filePath;
+				};
 				try {
+					const cached = cacheEnabled ? readHttpCache(url) : undefined;
+					if (cached && Date.now() - cached.time < SCRIPT_CACHE_TTL) {
+						return { url, path: await writeTmp(cached.body), success: true };
+					}
 					// URL 归一化：脚本托管地址可能含中文/空格等未转义字符
 					// （如 ScriptCat 托管脚本），Node 网络栈（axios）会直接抛 ERR_UNESCAPED_CHARACTERS，
 					// 统一经 URL 构造器百分号编码后再请求
@@ -311,13 +380,18 @@ const methods: RemoteMethods = {
 						}
 					}
 					if (result.error) {
+						// 网络失败回退过期缓存（弱网兜底，安装旧版本优于安装失败）
+						if (cached) {
+							logger.error('用户脚本预下载失败，回退过期缓存', { url, error: result.error });
+							return { url, path: await writeTmp(cached.body), success: true };
+						}
 						logger.error('用户脚本预下载失败', { url, error: result.error });
 						return { url, path: '', success: false, error: result.error };
 					}
-					const hash = crypto.createHash('md5').update(url).digest('hex').slice(0, 12);
-					const filePath = path.join(tmpDir, `${hash}.user.js`);
-					await fs.promises.writeFile(filePath, result.data!, 'utf-8');
-					return { url, path: filePath, success: true };
+					if (cacheEnabled) {
+						writeHttpCache(url, result.data!);
+					}
+					return { url, path: await writeTmp(result.data!), success: true };
 				} catch (e: any) {
 					const reason = e?.message || String(e);
 					logger.error('用户脚本预下载异常', { url, error: reason });
@@ -333,6 +407,8 @@ const methods: RemoteMethods = {
  */
 export function remoteRegister(_win: BrowserWindow) {
 	win = _win;
+	// HTTP 磁盘缓存根目录（主进程）：userData/cache/http
+	initHttpCache(store.store.paths['user-data-path']);
 	registerRemoteEvent('electron-store', store);
 	registerRemoteEvent('fs', fs);
 	registerRemoteEvent('os', os);

@@ -117,6 +117,31 @@
 				</a-tooltip>
 			</Description>
 
+			<Description label="网络缓存加速">
+				<a-button
+					size="small"
+					@click="openCacheManager"
+				>
+					缓存管理
+				</a-button>
+				<a-tooltip
+					content="为脚本猫/GreasyFork/智慧树/超星等速度不稳定站点启用磁盘缓存（脚本下载/搜索 API/图片字体CSS资源），网络失败时回退过期缓存；关闭后恢复原始实时加载"
+				>
+					<a-switch
+						v-model="store.render.setting.browser.networkCache"
+						class="ms-2"
+					/>
+				</a-tooltip>
+			</Description>
+
+			<Description label="验证码手动模式">
+				<a-tooltip
+					content="开启后：未安装验证码识别模块时不再报错与提示安装，检测到验证码时提示人工干预（模块已安装时仍自动识别）"
+				>
+					<a-switch v-model="store.render.setting.browser.ocrManual" />
+				</a-tooltip>
+			</Description>
+
 			<Description label="原生弹窗">
 				<a-tooltip content="启用后，浏览器中的原版弹窗可能会影响脚本运行">
 					<a-switch v-model="store.render.setting.browser.enableDialog" />
@@ -197,7 +222,7 @@
 					<a-popover>
 						<template #content>
 							<div>当前浏览器缓存总大小超过此数字时则会弹出警告弹窗。</div>
-							<div>也可在左上角工具中找到 "清除浏览器缓存" 功能</div>
+							<div>可点击右侧按钮清除浏览器缓存。</div>
 						</template>
 						<CircleHelpIcon class="label-help-icon" />
 					</a-popover>
@@ -208,6 +233,13 @@
 				>
 					<template #append> GB </template>
 				</a-input-number>
+				<a-button
+					size="small"
+					class="ms-2"
+					@click="checkBrowserCaches"
+				>
+					清除浏览器缓存
+				</a-button>
 			</Description>
 
 			<Description label="自定义导航页">
@@ -314,6 +346,87 @@
 				</div>
 			</div>
 		</a-modal>
+
+		<!-- 网络缓存管理弹窗：站点级开关/统计/清空 -->
+		<a-modal
+			v-model:visible="cacheManagerVisible"
+			title="网络缓存管理"
+			:footer="false"
+			:width="560"
+		>
+			<div class="d-flex align-items-center gap-2 mb-2">
+				<span
+					class="text-secondary"
+					style="font-size: 13px"
+					>{{ cacheTotalText }}</span
+				>
+				<div class="ms-auto">
+					<a-button
+						size="small"
+						@click="detectHttpCache"
+					>
+						缓存检测
+					</a-button>
+					<a-popconfirm
+						content="确定清空全部 HTTP 缓存（脚本下载/搜索缓存/静态资源）吗？"
+						@ok="clearHttpCache"
+					>
+						<a-button
+							size="small"
+							status="danger"
+							class="ms-2"
+						>
+							清空全部
+						</a-button>
+					</a-popconfirm>
+				</div>
+			</div>
+			<a-divider class="mt-1 mb-2" />
+			<div class="site-cache-list">
+				<div
+					v-for="site of cacheableSites"
+					:key="site.id"
+					class="site-cache-item"
+				>
+					<a-switch
+						size="small"
+						:model-value="siteCacheEnabled(site.id)"
+						@change="(v) => setSiteCacheEnabled(site.id, !!v)"
+					/>
+					<span class="site-name">{{ site.name }}</span>
+					<span class="site-stats">{{ siteStatsText(site.id) }}</span>
+					<a-popconfirm
+						:content="`确定清空「${site.name}」的缓存吗？`"
+						@ok="clearSiteCache(site.id, site.name)"
+					>
+						<a-button
+							size="mini"
+							type="text"
+							status="danger"
+						>
+							清空
+						</a-button>
+					</a-popconfirm>
+				</div>
+				<!-- 网站图标：本地资源缓存（不参与网络加速开关） -->
+				<div class="site-cache-item">
+					<span class="site-name">网站图标（本地资源缓存）</span>
+					<span class="site-stats">{{ iconStatsText }}</span>
+					<a-popconfirm
+						content="确定清空全部网站图标缓存吗？"
+						@ok="clearIcons"
+					>
+						<a-button
+							size="mini"
+							type="text"
+							status="danger"
+						>
+							清空
+						</a-button>
+					</a-popconfirm>
+				</div>
+			</div>
+		</a-modal>
 	</div>
 </template>
 
@@ -323,7 +436,10 @@ import Description from './Description.vue';
 import { store } from '../store';
 import { t } from '../utils/langs';
 import BrowserPath from './setting/BrowserPath.vue';
-import { changeTheme } from '../utils';
+import { changeTheme, size } from '../utils';
+import { checkBrowserCaches } from '../utils/browser';
+import { remote } from '../utils/remote';
+import { CACHEABLE_SITES } from '@ocs-desktop/common/web';
 import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon } from 'lucide-vue-next';
 import { Message } from '@arco-design/web-vue';
 
@@ -362,6 +478,79 @@ const currentThemeModeOption = computed(
 const currentThemeColorOption = computed(
 	() => themeColors.find((o) => o.value === store.render.setting.theme.color) ?? themeColors[0]
 );
+
+/** HTTP 缓存检测（网络缓存加速的磁盘缓存统计，同时刷新站点级统计展示） */
+const siteCacheStats = ref<Record<string, { count: number; bytes: number }>>({});
+/** 网站图标缓存统计 */
+const iconStats = ref<{ count: number; bytes: number } | undefined>(undefined);
+/** 缓存管理弹窗显示状态 */
+const cacheManagerVisible = ref(false);
+
+/** 打开缓存管理弹窗（同时加载站点与图标统计） */
+async function openCacheManager() {
+	cacheManagerVisible.value = true;
+	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
+	iconStats.value = await remote.methods.call('iconCacheStats');
+}
+
+/** 图标缓存统计展示文本（未检测时不显示） */
+const iconStatsText = computed(() =>
+	iconStats.value ? `${iconStats.value.count} 条 / ${size(iconStats.value.bytes)}` : ''
+);
+
+/** 清空网站图标缓存 */
+async function clearIcons() {
+	await remote.methods.call('clearIconCache');
+	iconStats.value = { count: 0, bytes: 0 };
+	Message.success('网站图标缓存已清空');
+}
+
+/** 缓存总计文本（弹窗顶部展示） */
+const cacheTotalText = computed(() => {
+	const total = Object.values(siteCacheStats.value).reduce(
+		(sum, s) => ({ count: sum.count + s.count, bytes: sum.bytes + s.bytes }),
+		{
+			count: 0,
+			bytes: 0
+		}
+	);
+	return `共 ${total.count} 条缓存，占用 ${size(total.bytes)}`;
+});
+
+async function detectHttpCache() {
+	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
+	iconStats.value = await remote.methods.call('iconCacheStats');
+	Message.success('缓存统计已刷新');
+}
+
+/** 清空 HTTP 磁盘缓存（脚本下载/搜索缓存） */
+async function clearHttpCache() {
+	await remote.methods.call('clearHttpCache');
+	siteCacheStats.value = {};
+	Message.success('HTTP 缓存已清空');
+}
+
+/** 站点级缓存开关（缺省视为开启） */
+const cacheableSites = CACHEABLE_SITES;
+function siteCacheEnabled(id: string) {
+	return store.render.setting.browser.networkCacheSites[id] !== false;
+}
+function setSiteCacheEnabled(id: string, enabled: boolean) {
+	store.render.setting.browser.networkCacheSites[id] = enabled;
+}
+
+/** 站点缓存统计展示文本（未检测时不显示） */
+function siteStatsText(id: string) {
+	const s = siteCacheStats.value[id];
+	return s ? `${s.count} 条 / ${size(s.bytes)}` : '';
+}
+
+/** 清空指定站点的缓存 */
+async function clearSiteCache(id: string, name: string) {
+	await remote.methods.call('clearHttpCache', id);
+	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
+	Message.success(`已清空 ${name} 的缓存`);
+}
 
 /** 自定义导航页网站管理 */
 const customSiteModalVisible = ref(false);
@@ -522,5 +711,31 @@ function removeCustomSite(index: number) {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+}
+
+/** 站点级缓存管理列表 */
+.site-cache-list {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.site-cache-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+}
+
+.site-cache-item .site-name {
+	color: var(--theme-text-color-secondary, #4e5969);
+}
+
+.site-cache-item .site-stats {
+	margin-left: auto;
+	color: var(--theme-text-color-secondary, #86909c);
+	font-size: 12px;
+	margin-right: 4px;
 }
 </style>

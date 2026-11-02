@@ -40,13 +40,6 @@
 							style="width: 200px"
 						>
 						</a-doption>
-						<a-doption
-							uninject-context
-							class="border-bottom"
-							@click="checkBrowserCaches"
-						>
-							<a-space size="mini"><Trash2Icon />清除浏览器缓存</a-space>
-						</a-doption>
 
 						<a-doption
 							uninject-context
@@ -156,10 +149,8 @@ import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities
 import { Folder, root } from '../fs/folder';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
-import { checkBrowserCaches } from '../utils/browser';
 import PinButton from './PinButton.vue';
 import {
-	Trash2Icon,
 	SaveIcon,
 	UploadIcon,
 	RefreshCwIcon,

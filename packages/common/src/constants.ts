@@ -37,6 +37,32 @@ export const OCS_SCRIPT_RESOURCES = {
 /** 本地服务器默认端口（各处 || 15319 兜底统一引用此常量） */
 export const DEFAULT_SERVER_PORT = 15319;
 
+/** 可缓存加速的站点（网络缓存加速功能按站点独立开关/清理） */
+export interface CacheableSite {
+	id: string;
+	name: string;
+	/** 匹配的域名（子串匹配，含子域名） */
+	hosts: string[];
+}
+
+/**
+ * 缓存加速站点清单：
+ * - 脚本托管平台（脚本猫/油猴/油叉）：App 主进程脚本下载与搜索 API 缓存；
+ * - 网课平台（智慧树/超星）：浏览器内静态资源（js/css/图片/媒体）经 Playwright 路由缓存。
+ */
+export const CACHEABLE_SITES: CacheableSite[] = [
+	{ id: 'scriptcat', name: 'ScriptCat 脚本猫', hosts: ['scriptcat.org'] },
+	{ id: 'tampermonkey', name: 'Tampermonkey 油猴', hosts: ['tampermonkey.net'] },
+	{ id: 'greasyfork', name: 'GreasyFork 油叉', hosts: ['greasyfork.org'] },
+	{ id: 'zhihuishu', name: '智慧树', hosts: ['zhihuishu.com'] },
+	{ id: 'chaoxing', name: '超星', hosts: ['chaoxing.com'] }
+];
+
+/** 按 URL 匹配可缓存站点（未命中返回 undefined） */
+export function siteOfUrl(url: string): CacheableSite | undefined {
+	return CACHEABLE_SITES.find((s) => s.hosts.some((h) => url.includes(h)));
+}
+
 /** 受支持的浏览器最高主版本号（超出则无法自动加载脚本管理器拓展）。
  *  web 端环境检测（utils/environment.ts）与 worker 启动校验（worker/index.ts）共用此阈值 */
 export const SUPPORTED_BROWSER_MAX_MAJOR = 137;

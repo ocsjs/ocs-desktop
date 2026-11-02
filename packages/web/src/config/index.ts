@@ -107,14 +107,16 @@ export const config = reactive({
 				name: 'ScriptCat - 脚本猫',
 				homepage: 'https://scriptcat.org',
 				search: async (keyword: string, page: number, size: number) => {
+					// 带磁盘缓存（5min）：脚本猫站点速度不稳定，弱网时回退过期缓存
 					const data = await remote.methods.call(
-						'get',
+						'cachedGet',
 						'https://scriptcat.org/api/v2/scripts?' +
 							new URLSearchParams({
 								count: size.toString(),
 								page: page <= 0 ? '1' : page.toString(),
 								keyword
-							})
+							}),
+						5 * 60 * 1000
 					);
 
 					let list = data.data.list as ScriptCatUserScript[];
@@ -132,12 +134,17 @@ export const config = reactive({
 					});
 				},
 				infoGetter: async (script: CommonUserScript) => {
-					return (await remote.methods.call('get', `https://scriptcat.org/api/v2/scripts/${script.id}`))
-						.data as ScriptCatUserScript;
+					return (
+						await remote.methods.call('cachedGet', `https://scriptcat.org/api/v2/scripts/${script.id}`, 10 * 60 * 1000)
+					).data as ScriptCatUserScript;
 				},
 				transformToCommonByInfo,
 				versionProvider: async (script: StoreUserScript) => {
-					const data = await remote.methods.call('get', `https://scriptcat.org/api/v2/scripts/${script.id}/versions`);
+					const data = await remote.methods.call(
+						'cachedGet',
+						`https://scriptcat.org/api/v2/scripts/${script.id}/versions`,
+						10 * 60 * 1000
+					);
 
 					const list: any[] = data.data.list;
 
@@ -179,14 +186,15 @@ export const config = reactive({
 				name: 'GreasyFork-油叉',
 				homepage: 'https://greasyfork.org',
 				search: async (keyword: string, page: number, size: number) => {
+					// 带磁盘缓存（5min）：GreasyFork 站点速度不稳定，弱网时回退过期缓存
 					const data = await remote.methods.call(
-						'get',
+						'cachedGet',
 						'https://greasyfork.org/zh-CN/scripts.json?' +
 							new URLSearchParams({
 								q: keyword,
 								page: page <= 0 ? '1' : page.toString()
 							}),
-						{}
+						5 * 60 * 1000
 					);
 
 					let list = data as GreasyForkUserScript[];
@@ -204,14 +212,20 @@ export const config = reactive({
 					});
 				},
 				async infoGetter(script: CommonUserScript) {
-					return (await remote.methods.call('get', `https://greasyfork.org/zh-CN/scripts/${script.id}.json`))
-						.data as GreasyForkUserScript;
+					return (
+						await remote.methods.call(
+							'cachedGet',
+							`https://greasyfork.org/zh-CN/scripts/${script.id}.json`,
+							10 * 60 * 1000
+						)
+					).data as GreasyForkUserScript;
 				},
 				transformToCommonByInfo,
 				versionProvider: async (script: StoreUserScript) => {
 					const data: any[] = await remote.methods.call(
-						'get',
-						`https://greasyfork.org/zh-CN/scripts/${script.id}/versions.json`
+						'cachedGet',
+						`https://greasyfork.org/zh-CN/scripts/${script.id}/versions.json`,
+						10 * 60 * 1000
 					);
 					return data.map((item) => ({
 						version: item.version,

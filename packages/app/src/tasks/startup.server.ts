@@ -23,8 +23,8 @@ const ICON_CACHE_MAX = 200;
 /** 同一 URL 的并发请求合并（in-flight 去重），避免缓存未命中时同一图标重复打外网 */
 const iconInflight = new Map<string, Promise<{ data: Buffer; contentType: string }>>();
 
-/** 图标磁盘缓存目录（userData/icons，应用重启后仍有效） */
-const ICON_DISK_DIR = path.join(electronApp.getPath('userData'), 'icons');
+/** 图标磁盘缓存目录（userData/cache/icons，应用重启后仍有效；与 HTTP 缓存统一归口 userData/cache/） */
+const ICON_DISK_DIR = path.join(electronApp.getPath('userData'), 'cache', 'icons');
 /** 正常图标磁盘缓存有效期：7 天 */
 const ICON_DISK_TTL = 7 * 24 * 60 * 60 * 1000;
 /** 兜底图标磁盘缓存有效期：6 小时（弱网恢复后允许重新尝试获取真实图标） */
@@ -87,6 +87,40 @@ const FALLBACK_ICON = {
 	),
 	contentType: 'image/svg+xml'
 };
+
+/** 旧版图标缓存目录一次性迁移（userData/icons → userData/cache/icons） */
+function migrateLegacyIconDir() {
+	const legacy = path.join(electronApp.getPath('userData'), 'icons');
+	try {
+		if (!fs.existsSync(ICON_DISK_DIR) && fs.existsSync(legacy)) {
+			fs.mkdirSync(path.dirname(ICON_DISK_DIR), { recursive: true });
+			fs.renameSync(legacy, ICON_DISK_DIR);
+		}
+	} catch {}
+}
+migrateLegacyIconDir();
+
+/** 图标缓存统计（条数 + 总字节数），供缓存管理展示 */
+export function iconCacheStats(): { count: number; bytes: number } {
+	let count = 0;
+	let bytes = 0;
+	try {
+		for (const name of fs.readdirSync(ICON_DISK_DIR)) {
+			if (!name.endsWith('.bin')) continue;
+			try {
+				count++;
+				bytes += fs.statSync(path.join(ICON_DISK_DIR, name)).size;
+			} catch {}
+		}
+	} catch {}
+	return { count, bytes };
+}
+
+/** 清空图标缓存（内存 + 磁盘） */
+export function clearIconCache() {
+	iconCache.clear();
+	fs.rmSync(ICON_DISK_DIR, { recursive: true, force: true });
+}
 
 /**
  * 校验 buffer 是否为可解析的图片数据。
@@ -375,7 +409,6 @@ export async function startupServer() {
 
 	// /proxy（请求转发）已移除：ocsjs 与内置自动化脚本均无消费方，且存在开放代理/SSRF 风险。
 	// 若未来恢复，必须同步恢复 isPrivateTarget 私网拦截（见 git 历史与 utils/server.security.ts）。
-
 	app.get(/\/ocs-action_.+/, (req, res) => {
 		res.send('正在执行脚本 : ' + req.path + ' 请勿操作。');
 	});

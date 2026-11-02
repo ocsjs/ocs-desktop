@@ -102,6 +102,8 @@ export interface DownloadUserscriptResult {
 export interface RemoteMethods {
 	autoLaunch: () => void;
 	get: (url: string, config?: AxiosRequestConfig<any> | undefined) => Promise<any>;
+	/** 带磁盘缓存的 GET（脚本猫/GreasyFork 等速度不稳定站点加速）：TTL 内命中缓存，失败回退过期缓存 */
+	cachedGet: (url: string, ttlMs: number) => Promise<any>;
 	getWithStatus: (url: string, config?: AxiosRequestConfig<any> | undefined) => Promise<{ status: number; data: any }>;
 	download: (channel: string, url: string, dest: string) => Promise<string>;
 	unzip: (input: string, output: string) => Promise<void>;
@@ -127,6 +129,8 @@ export interface RemoteMethods {
 		sourceUrl: string;
 		homepage: string;
 	}[];
+	/** 系统自动化程序清单（开发者设置-自动化程序管理展示） */
+	getSystemScripts: () => { name: string; label?: string; phase: string; order: number }[];
 	/** 下载并安装内置浏览器，返回安装完成后的可执行文件路径 */
 	installBuiltinChrome: () => Promise<string>;
 	exportExcel: (excel: { sheetName: string; list: any[] }[], filename: string) => void;
@@ -152,6 +156,16 @@ export interface RemoteMethods {
 	getStorageBackend: () => string | undefined;
 	/** 获取主进程真实显示环境变量（Linux 沙箱会清理渲染进程 env 导致 DISPLAY 丢失，fork worker 前需取回） */
 	getDisplayEnv: () => Record<string, string>;
+	/** HTTP 磁盘缓存统计（网络缓存加速的缓存检测）：条数 + 总字节数 */
+	httpCacheStats: () => { count: number; bytes: number };
+	/** HTTP 磁盘缓存统计（按站点分组，含 unknown） */
+	httpCacheStatsBySite: () => Record<string, { count: number; bytes: number }>;
+	/** 清空 HTTP 磁盘缓存（siteId 为空时清空全部） */
+	clearHttpCache: (siteId?: string) => void;
+	/** 网站图标缓存统计（条数 + 总字节数） */
+	iconCacheStats: () => { count: number; bytes: number };
+	/** 清空网站图标缓存（内存 + 磁盘） */
+	clearIconCache: () => void;
 	isDirectory: (path: string) => boolean;
 	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
 	canOCR: () => boolean;
