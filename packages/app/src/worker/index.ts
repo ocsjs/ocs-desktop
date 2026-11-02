@@ -11,6 +11,7 @@ import { chromium, BrowserContext, Page, LaunchOptions, Response, Request, CDPSe
 import type { AppStore, Config, ScriptWorker as ScriptWorkerContract, SystemScriptContext } from '@ocs-desktop/common';
 import { AutomationScripts, LegacyScriptMappings } from '../scripts/index';
 import { runSystemScripts } from '../scripts/system';
+import { initHttpCache } from '../utils/http-cache';
 import _get from 'lodash/get';
 import child_process from 'child_process';
 import http from 'http';
@@ -140,6 +141,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 			(store as AppStore & { render?: any }).render?.setting?.browser?.bookmarkPage?.enable !== false;
 		// 拓展文件夹路径
 		this.extensionPaths = getExtensionPaths(store.paths.extensionsFolder);
+		// HTTP 磁盘缓存根目录（worker 纯 Node 进程，与主进程共享 userData/cache/http）
+		initHttpCache(store.paths['user-data-path']);
 		// 导航页由 worker 启动后直接导航初始页展示（见 launchBrowser 的 startPage）
 
 		// 自动化程序
@@ -1127,16 +1130,31 @@ export async function launchBrowser({
 				const nativeDownloadRestored =
 					config?.download_optimization === false ? false : await restoreNativeDownloadBehavior(browser);
 
-				// 处理浏览器初始（下载处理：http(s) 链接交给本地默认浏览器；blob/data 经本地代理转发）
-				handleBrowserInit(browser, {
-					enable_dialog: config?.enable_dialog,
-					userDataDir,
-					downloadsPath,
-					nativeDownloadRestored
-				});
+				// 浏览器初始化：反检测注入 / 无页面自动关闭 / 关闭事件处理
+				injectAntiDetection(browser);
+				watchNoPagesAutoClose(browser);
+				handleBrowserClose(browser);
 
-				// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）
-				watchDownloadFolder(uid, downloadsPath);
+				// 每个页面（含后续新建）的弹窗与下载处理
+				const pageHandle = (page: Page) => {
+					handlePageDialogs(page, config?.enable_dialog);
+					handlePageDownload(page, {
+						downloadsPath,
+						nativeDownloadRestored,
+						download_optimization: config?.download_optimization,
+						uid
+					});
+				};
+				for (const page of browser.pages()) {
+					pageHandle(page);
+				}
+				browser.on('page', pageHandle);
+
+				// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）；
+				// 仅「文件下载优化」开启时启用（关闭后下载流程完全由 Playwright 托管，不监听目录）
+				if (config?.download_optimization !== false) {
+					watchDownloadFolder(uid, downloadsPath);
+				}
 
 				// 浏览器增强：注入静音音频保活脚本（防休眠/防冻结，未开启时内部直接跳过）
 				await injectEnhancementKeepalive(browser, config);
@@ -1186,7 +1204,14 @@ export async function launchBrowser({
 					(async () => {
 						try {
 							await runSystemScripts(sysCtx, 'post');
-							await runAutomationScripts({ browser, automationScripts, serverPort, step });
+							await runAutomationScripts({
+								browser,
+								automationScripts,
+								serverPort,
+								step,
+								uid,
+								ocrManual: !!(store as any)?.render?.setting?.browser?.ocrManual
+							});
 							await step(['浏览器初始化完成。'], { loading: false });
 						} catch (err) {
 							// 后台任务异常（如浏览器被用户提前关闭）：仅记录，不再中断启动流程
@@ -1274,8 +1299,19 @@ async function runAutomationScripts(opts: {
 	serverPort: number;
 	automationScripts: AS[];
 	step: StepTips;
+	uid: string;
+	/** OCR 手动模式（未安装识别模块时不报错，改为提示人工干预） */
+	ocrManual: boolean;
 }) {
-	const { automationScripts, browser, serverPort, step } = opts;
+	const { automationScripts, browser, serverPort, step, uid, ocrManual } = opts;
+	// 人工干预提示节流（15s）：验证码重试循环可能高频触发
+	let lastManualNotice = 0;
+	const onManualCaptcha = () => {
+		const now = Date.now();
+		if (now - lastManualNotice < 15 * 1000) return;
+		lastManualNotice = now;
+		send('ocr-manual-captcha', uid);
+	};
 
 	if (automationScripts.length) {
 		await step(`正在执行自动化程序 - ${automationScripts.map((ps) => ps.name).join('、')} ...`);
@@ -1304,7 +1340,9 @@ async function runAutomationScripts(opts: {
 					ocrApiUrl: `http://localhost:${serverPort}/ocr`,
 					ocrApiImageKey: 'image',
 					detBackgroundKey: 'det_bg',
-					detTargetKey: 'det_target'
+					detTargetKey: 'det_target',
+					ocrManual,
+					onManualCaptcha
 				});
 				try {
 					const result = await Promise.race([
@@ -1496,52 +1534,77 @@ function browserNetworkRoute(authToken: string, browser: BrowserContext) {
 	});
 }
 
-function handleBrowserInit(
-	browser: BrowserContext,
-	config: { enable_dialog?: boolean; userDataDir: string; downloadsPath?: string; nativeDownloadRestored?: boolean }
-) {
+/** 下载处理配置（page 级 download 事件） */
+interface DownloadHandlerConfig {
+	downloadsPath?: string;
+	nativeDownloadRestored?: boolean;
+	download_optimization?: boolean;
+	/** 拓展安装代理：CRX 解压目标（拓展目录），空则不代理 */
+	uid: string;
+}
+
+/** 反检测：隐藏 webdriver 特征（每个页面加载前注入） */
+function injectAntiDetection(browser: BrowserContext) {
 	browser.addInitScript({
 		content: 'Object.defineProperty(navigator, "webdriver", { get: () => false });console.log(navigator)'
 	});
+}
 
-	// 关闭检测
+/** 无页面自动关闭：100ms 轮询，全部页面关闭后关闭浏览器 */
+function watchNoPagesAutoClose(browser: BrowserContext) {
 	const interval = setInterval(async () => {
 		if (browser.pages().length === 0) {
 			clearInterval(interval);
-
-			await browser.close({
-				reason: 'no pages'
-			});
+			await browser.close({ reason: 'no pages' });
 		}
 	}, 100);
+}
 
+/** 浏览器关闭时通知渲染端并退出 worker 进程 */
+function handleBrowserClose(browser: BrowserContext) {
 	browser.once('close', () => {
 		send('browser-closed');
 		process.exit();
 	});
+}
 
-	const pageHandle = (page: Page) => {
-		// 按照文档的说法，如果不进行任何处理，则动作会和原版浏览器一致
-		// 如果不进行监听 page.on('dialog') playwright 会自动处理弹窗
-		page.on('dialog', async (dialog) => {
-			if (config?.enable_dialog) {
-				// 不进行任何处理
-			} else {
-				await dialog.accept(dialog.defaultValue());
-			}
-		});
+/** 页面弹窗处理：默认自动接受（防脚本被弹窗卡住）；enable_dialog 开启时保持原生弹窗 */
+function handlePageDialogs(page: Page, enableDialog?: boolean) {
+	// 按照文档的说法，如果不进行任何处理，则动作会和原版浏览器一致
+	// 如果不进行监听 page.on('dialog') playwright 会自动处理弹窗
+	page.on('dialog', async (dialog) => {
+		if (enableDialog) {
+			// 不进行任何处理
+		} else {
+			await dialog.accept(dialog.defaultValue());
+		}
+	});
+}
 
-		// 下载处理（原生下载行为已由 restoreNativeDownloadBehavior 恢复：气泡显示真实文件名，
-		// 文件原生落盘到"文件下载"目录；此处进一步把下载转发到系统默认浏览器）：
-		// 1. http(s) 链接 → 取消浏览器内下载并交给用户本地默认浏览器（取消失败时原生落盘兜底）；
-		//    注意需要登录态 Cookie 的链接在本地浏览器可能无会话而失败（与早期 OCS 行为一致）。
-		// 2. blob:/data: → 读出内容经本地 HTTP 代理交给系统默认浏览器；读取失败（blob 已被页面
-		//    回收）时：原生行为下由浏览器自行落盘，否则 saveAs 到"文件下载"目录。
-		page.on('download', async (download) => {
-			const url = download.url();
-			// 不处理脚本安装
-			if (url.endsWith('.user.js')) return;
+/**
+ * 页面下载处理（原生下载行为已由 restoreNativeDownloadBehavior 恢复：气泡显示真实文件名，
+ * 文件原生落盘到"文件下载"目录；此处进一步把下载转发到系统默认浏览器）：
+ * 1. http(s) 链接 → 取消浏览器内下载并交给用户本地默认浏览器（取消失败时原生落盘兜底）；
+ *    注意需要登录态 Cookie 的链接在本地浏览器可能无会话而失败（与早期 OCS 行为一致）。
+ * 2. blob:/data: → 读出内容经本地 HTTP 代理交给系统默认浏览器；读取失败（blob 已被页面
+ *    回收）时：原生行为下由浏览器自行落盘，否则 saveAs 到"文件下载"目录。
+ * 3. 「文件下载优化」关闭时：上述转发全部跳过，下载由 Playwright 托管（saveAs 兜底落盘）。
+ */
+function handlePageDownload(page: Page, config: DownloadHandlerConfig) {
+	page.on('download', async (download) => {
+		const url = download.url();
+		// 不处理脚本安装：.user.js 由脚本管理器接管
+		if (url.endsWith('.user.js')) return;
+		// CRX 拓展安装包：自动化浏览器无法直接安装（Safe Browsing 拦截/系统代理差异等链路问题），
+		// 检测到后仅提示用户手动处理，不做自动安装。应用商店 CRX 走 update2 接口 URL 无后缀，按建议文件名判定
+		const filename = download.suggestedFilename();
+		if (/\.crx$/i.test(filename)) {
+			send('crx-detected', config.uid, filename);
+			return;
+		}
 
+		// 「文件下载优化」开启时才执行转发逻辑；关闭时下载完全由 Playwright 托管（saveAs 兜底落盘）
+		if (config.download_optimization !== false) {
 			// http(s) 链接：取消浏览器内下载并交给本地默认浏览器（取消失败时原生落盘兜底）
 			if (/^https?:\/\//.test(url)) {
 				await download.cancel().catch(() => {});
@@ -1561,26 +1624,22 @@ function handleBrowserInit(
 
 			// 代理失败兜底：原生行为下浏览器会以真实文件名自行落盘（目录监听会通知），无需处理
 			if (config.nativeDownloadRestored) return;
+		}
 
-			if (config.downloadsPath) {
-				try {
-					fs.mkdirSync(config.downloadsPath, { recursive: true });
-					const target = resolveDownloadTarget(config.downloadsPath, download.suggestedFilename());
-					await download.saveAs(target);
-					console.log('文件已下载：', target);
-					return;
-				} catch (err) {
-					console.error('文件下载失败：', String(err));
-				}
+		if (config.downloadsPath) {
+			try {
+				fs.mkdirSync(config.downloadsPath, { recursive: true });
+				const target = resolveDownloadTarget(config.downloadsPath, download.suggestedFilename());
+				await download.saveAs(target);
+				console.log('文件已下载：', target);
+				return;
+			} catch (err) {
+				console.error('文件下载失败：', String(err));
 			}
+		}
 
-			await download.cancel().catch(() => {});
-		});
-	};
-	for (const page of browser.pages()) {
-		pageHandle(page);
-	}
-	browser.on('page', pageHandle);
+		await download.cancel().catch(() => {});
+	});
 }
 
 /**

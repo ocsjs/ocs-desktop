@@ -5,7 +5,7 @@ import { resolveExtensionId } from '../extension-verify';
 import type { ScriptManagerAdapter } from './adapters/types';
 import { scriptcatAdapter } from './adapters/scriptcat';
 import { tampermonkeyAdapter } from './adapters/tampermonkey';
-import { sleep } from '../utils';
+import { stay } from '../utils';
 
 const ADAPTERS: ScriptManagerAdapter[] = [scriptcatAdapter, tampermonkeyAdapter];
 
@@ -45,6 +45,7 @@ function writeManagedScripts(userDataDir: string, names: string[]) {
  */
 export const userscriptSyncScript = new SystemAutomationScript({
 	name: 'system:userscript-sync',
+	label: '用户脚本双向同步',
 	order: 30,
 	phase: 'post',
 	async run(ctx) {
@@ -61,10 +62,12 @@ export const userscriptSyncScript = new SystemAutomationScript({
 			return;
 		}
 
+		const t0 = Date.now();
 		const page = await browser.newPage();
 		try {
 			await page.goto(`chrome-extension://${extId}/${adapter.pagePath}`);
-			await page.waitForTimeout(1500);
+			// 等待列表渲染就绪（替代固定等待：零脚本时按布局容器判定）
+			await adapter.waitReady(page);
 			// 页面准备（如关闭首次进入的欢迎/导览弹窗，避免阻挡后续列表操作）
 			await adapter.preparePage?.(page);
 
@@ -81,8 +84,8 @@ export const userscriptSyncScript = new SystemAutomationScript({
 			const toDelete = managed.filter((name) => managerNames.has(name) && !softwareNames.has(name));
 			for (const name of toDelete) {
 				try {
+					// 适配器内部已等待删除生效（行消失），无需额外固定等待
 					await adapter.remove(page, name);
-					await sleep(500);
 					console.log(`[system:userscript-sync] 已删除脚本：${name}`);
 				} catch (e) {
 					console.warn(`[system:userscript-sync] 删除脚本失败（忽略）：${name}`, e);
@@ -100,8 +103,8 @@ export const userscriptSyncScript = new SystemAutomationScript({
 				const inManager = managerScripts.find((m) => m.name === s.name);
 				if (!inManager || inManager.enabled === s.enable) continue;
 				try {
+					// 适配器内部已等待状态翻转生效，无需额外固定等待
 					await adapter.setEnabled(page, s.name!, s.enable);
-					await sleep(300);
 					console.log(`[system:userscript-sync] 已${s.enable ? '启用' : '停用'}脚本：${s.name}`);
 				} catch (e) {
 					console.warn(`[system:userscript-sync] 状态对齐失败（忽略）：${s.name}`, e);
@@ -110,6 +113,8 @@ export const userscriptSyncScript = new SystemAutomationScript({
 		} catch (e) {
 			console.warn('[system:userscript-sync] 同步失败（忽略，不影响浏览器使用）：', e);
 		} finally {
+			// 页面最短停留 1s：防止操作过快界面一闪而过
+			await stay(t0);
 			await page.close().catch(() => {});
 		}
 	}

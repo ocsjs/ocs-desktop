@@ -260,11 +260,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch, nextTick } from 'vue';
 import { ResourceFile } from '@ocs-desktop/common/web';
 import { resourceLoader } from '../utils/resources.loader';
 import UsageAlertCollapse from './UsageAlertCollapse.vue';
-import { store } from '../store/index';
+import { store, uiSession } from '../store/index';
 import { t } from '../utils/langs';
 import { Message } from '@arco-design/web-vue';
 import { child_process, electron } from '../utils/node';
@@ -287,6 +287,19 @@ const {
 // 卡片内容根节点，用作可见性监听目标
 const contentRef = ref<HTMLElement | null>(null);
 const otherExtensionsAddVisible = ref(false);
+
+// 会话级跳转请求（如 CRX 检测通知的「如何加载其他拓展？」按钮）：自动打开教程弹窗并复位标记。
+// watch 覆盖两种场景：标记先于挂载置位（immediate）与已挂载后再次触发
+watch(
+	() => uiSession.appCenterGuide,
+	(v) => {
+		if (v) {
+			uiSession.appCenterGuide = false;
+			otherExtensionsAddVisible.value = true;
+		}
+	},
+	{ immediate: true }
+);
 
 // ======== 脚本管理器单选 ========
 const selectedExtensionUrl = ref('');
@@ -384,6 +397,20 @@ onBeforeUnmount(() => {
 	intersectionObserver?.disconnect();
 	intersectionObserver = null;
 });
+
+watch(
+	() => uiSession.appCenterGuide,
+	() => {
+		console.log('uiSession.appCenterGuide', uiSession.appCenterGuide);
+		nextTick(() => {
+			// 会话级跳转请求（如 CRX 检测通知的「如何加载其他拓展？」按钮）：自动打开教程弹窗并复位标记
+			if (uiSession.appCenterGuide) {
+				uiSession.appCenterGuide = false;
+				otherExtensionsAddVisible.value = true;
+			}
+		});
+	}
+);
 
 /** 切换脚本管理器时自动安装（先卸载已有的） */
 watch(selectedExtensionUrl, async (newUrl, oldUrl) => {

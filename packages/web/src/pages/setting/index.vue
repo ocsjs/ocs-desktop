@@ -32,9 +32,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { SettingsIcon, CodeIcon, Grid3x3Icon, WrenchIcon } from 'lucide-vue-next';
-import { devSession } from '../../store';
+import { devSession, uiSession } from '../../store';
 
 /** 子设置界面（异步组件，切换到对应菜单时才加载与渲染） */
 const panels = {
@@ -58,6 +58,16 @@ const settingMenus = computed(() => allMenus.filter((m) => m.key !== 'developer'
 
 /** 当前子菜单：默认显示通用设置 */
 const activeMenu = ref<MenuKey>('general');
+
+// 会话级跳转请求：切到「应用中心」（「如何加载其他拓展？」通知按钮触发，弹窗由 ResourcesCard 打开）；
+// immediate：标记可能在设置页挂载前已置位（先 push 后挂载的场景），需立即检查一次
+watch(
+	() => uiSession.appCenterGuide,
+	(v) => {
+		if (v) activeMenu.value = 'app-center';
+	},
+	{ immediate: true }
+);
 
 const activePanel = computed(() => panels[activeMenu.value]);
 </script>

@@ -1,19 +1,20 @@
 import { ChildProcess } from 'child_process';
 import { remote } from './remote';
-import { store } from '../store';
+import { store, uiSession } from '../store';
+import { router } from '../route';
 import { t } from './langs';
 import { LaunchOptions } from 'playwright-core';
 import { reactive, h } from 'vue';
 import type { ScriptWorker, ScreencastPageInfo, ScreencastPagesChangedPayload } from '@ocs-desktop/common/web';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { Browser } from '../fs/browser';
-import { Message, Button } from '@arco-design/web-vue';
+import { Message, Button, Notification } from '@arco-design/web-vue';
 import EventEmitter from 'events';
 import { child_process, electron } from './node';
 import { notify } from './notify';
 import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
-import { notifyOcrMissingAfterLaunch } from './ocr';
+import { notifyOcrMissingAfterLaunch, promptOcrChoiceBeforeLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
 
 /** 用户脚本安装结果（由 worker 回传） */
@@ -260,6 +261,42 @@ export class Process extends EventEmitter {
 					this.cpuPercent = typeof payload.cpuPercent === 'number' ? payload.cpuPercent : 0;
 				}
 			},
+			/** 检测到 CRX 拓展安装包：自动化浏览器无法直接安装，引导前往应用中心查看加载方法 */
+			'crx-detected': (_uid: string, filename: string) => {
+				notify(
+					'检测到拓展安装包',
+					`${this.browser.name}：自动化浏览器无法直接安装拓展（${filename}），需通过其他方式加载。`,
+					'crx-detected-' + filename,
+					{
+						duration: 30 * 1000,
+						type: 'warning',
+						btn: h(
+							Button,
+							{
+								type: 'primary',
+								size: 'small',
+								onClick: () => {
+									Notification.remove('crx-detected-' + filename);
+									router.push('/setting');
+									setTimeout(() => {
+										uiSession.appCenterGuide = true;
+									}, 200);
+								}
+							},
+							'如何加载其他拓展？'
+						)
+					}
+				);
+			},
+			/** OCR 手动模式：检测到验证码时提示人工干预（worker 已节流 15s） */
+			'ocr-manual-captcha': () => {
+				notify(
+					'检测到验证码',
+					`${this.browser.name}：检测到验证码，请人工干预（手动模式已开启，不再自动识别）。`,
+					'ocr-manual-' + this.uid,
+					{ duration: 10 * 1000, type: 'warning' }
+				);
+			},
 			/** 脚本管理器拓展验证失败（两轮检测均无 SW）：浏览器可用但脚本功能缺失，提示用户 */
 			'extension-verify-failed': () => {
 				notify(
@@ -378,6 +415,9 @@ export class Process extends EventEmitter {
 				Message.error('浏览器路径不存在，请在软件设置中修改');
 				return;
 			}
+
+			// OCR 三选一（同步阻塞）：needOCR 自动化程序且未安装识别模块时，等待用户选择后继续
+			await promptOcrChoiceBeforeLaunch(this.browser.automationScripts);
 
 			// 脚本检查
 			Status.loading('正在检查本地脚本...');

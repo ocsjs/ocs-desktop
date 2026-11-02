@@ -17,6 +17,8 @@ export interface ScriptManagerAdapter {
 	pagePath: string;
 	/** 页面打开后的准备钩子（如关闭首次进入的欢迎/导览弹窗，避免阻挡后续操作） */
 	preparePage?(page: Page): Promise<void>;
+	/** 等待脚本列表渲染就绪（零脚本时也需按布局容器判定；超时静默返回） */
+	waitReady(page: Page): Promise<void>;
 	/** 列出管理器内全部脚本 */
 	listScripts(page: Page): Promise<ManagerScriptInfo[]>;
 	/** 按名称设置启用/停用（状态一致时不点击） */
