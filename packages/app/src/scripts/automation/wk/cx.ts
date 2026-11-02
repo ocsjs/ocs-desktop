@@ -1,5 +1,6 @@
 import type { Page } from 'playwright-core';
-import { breakSliderVerify, breakVerifyCode, ensureWideViewport, getBase64, slowType } from '../../utils';
+import { breakSliderVerify, breakVerifyCode, ensureWideViewport, getBase64, slowType, visualClick } from '../../utils';
+import type { OcrManualOption } from '../../utils';
 import { AutomationScript } from '@ocs-desktop/common';
 
 export const CXLoginScript = new AutomationScript(
@@ -61,7 +62,7 @@ export const CXLoginScript = new AutomationScript(
 				ocrApiImageKey?: string;
 				detTargetKey?: string;
 				detBackgroundKey?: string;
-			}
+			} & OcrManualOption
 		) {
 			try {
 				// 登录页为固定宽度桌面布局，窄视口下元素会被裁出可视区，先确保窗口足够宽再导航
@@ -71,14 +72,14 @@ export const CXLoginScript = new AutomationScript(
 						/** 其他登录（domcontentloaded + 显式 15s 超时：networkidle 默认 30s 且弱网/长连接页面几乎必然等满） */
 						await Promise.all([
 							page.waitForLoadState('domcontentloaded', { timeout: 15 * 1000 }).catch(() => {}),
-							page.click('#otherlogin')
+							visualClick(page, '#otherlogin')
 						]);
 						await page.waitForTimeout(3000);
 						/** 输入机构名, 并等待搜索结果 */
 						await slowType(page, '#inputunitname', configs.unit);
 						await page.waitForTimeout(2000);
 						/** 点击第一个结果 */
-						await page.click('.filter-list > ul > li');
+						await visualClick(page, '.filter-list > ul > li');
 						await page.fill('#uname', configs.id);
 						await page.fill('#password', configs.password);
 
@@ -104,7 +105,7 @@ function login(
 		ocrApiImageKey?: string;
 		detTargetKey?: string;
 		detBackgroundKey?: string;
-	}
+	} & OcrManualOption
 ) {
 	return new Promise<void>((resolve, reject) => {
 		// 监听登录状态
@@ -134,12 +135,14 @@ function login(
 				if (opts?.ocrApiUrl && opts?.ocrApiImageKey && area) {
 					await breakVerifyCode(page, area, codeInput, {
 						ocrApiUrl: opts.ocrApiUrl,
-						ocrApiImageKey: opts.ocrApiImageKey
+						ocrApiImageKey: opts.ocrApiImageKey,
+						ocrManual: opts.ocrManual,
+						onManualCaptcha: opts.onManualCaptcha
 					});
 				}
 
 				// 点击登录
-				await page.click('#loginBtn');
+				await visualClick(page, '#loginBtn');
 				await page.waitForTimeout(3000);
 			}
 
@@ -148,7 +151,7 @@ function login(
 			if (captchaEl) {
 				// 先登录才会出现验证码
 				if (tryCount === 4) {
-					await page.click('#loginBtn');
+					await visualClick(page, '#loginBtn');
 					await page.waitForTimeout(3000);
 				}
 
@@ -181,7 +184,9 @@ function login(
 								ocrApiUrl: opts.ocrApiUrl,
 								detTargetKey: opts.detTargetKey,
 								detBackgroundKey: opts.detBackgroundKey,
-								offset: 25
+								offset: 25,
+								ocrManual: opts.ocrManual,
+								onManualCaptcha: opts.onManualCaptcha
 							});
 						}
 

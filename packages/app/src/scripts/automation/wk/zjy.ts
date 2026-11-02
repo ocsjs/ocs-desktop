@@ -1,7 +1,8 @@
 import { Page } from 'playwright-core';
 import axios from 'axios';
 import { AutomationScript } from '@ocs-desktop/common';
-import { ensureWideViewport, getBase64 } from '../../utils';
+import { ensureWideViewport, getBase64, handleOcrMissing, visualClick } from '../../utils';
+import type { OcrManualOption } from '../../utils';
 
 /**
  * 职教云（zjy2.icve.com.cn）登录地址。
@@ -41,7 +42,7 @@ const CAPTCHA_READY_TEXT = '拖动滑块完成拼图';
 /** 拼图图形在 shadow.png 内的左边距（与 icve 同源 SDK，恒约 2px；跨域/DataURL 图无法 canvas 分析，故用常量） */
 const PIECE_PAD = 2;
 
-export interface OCROptions {
+export interface OCROptions extends OcrManualOption {
 	ocrApiUrl?: string;
 	detTargetKey?: string;
 	detBackgroundKey?: string;
@@ -85,13 +86,15 @@ export const ZJYLoginScript = new AutomationScript(
 				await checkAgreement(page);
 
 				// 点击登录，弹出阿里云滑块验证码（或直接提交成功）
-				await page.click(SEL.submit);
+				await visualClick(page, SEL.submit);
 
 				if (options?.ocrApiUrl && options?.detTargetKey && options?.detBackgroundKey) {
 					await loopVerify(page, {
 						ocrApiUrl: options.ocrApiUrl,
 						detTargetKey: options.detTargetKey,
-						detBackgroundKey: options.detBackgroundKey
+						detBackgroundKey: options.detBackgroundKey,
+						ocrManual: options.ocrManual,
+						onManualCaptcha: options.onManualCaptcha
 					});
 				} else {
 					const err = await waitForLoginResult(page);
@@ -122,7 +125,7 @@ async function switchToPasswordTab(page: Page): Promise<void> {
 		.isVisible()
 		.catch(() => false);
 	if (visible) return;
-	await page.click(SEL.tabPassword);
+	await visualClick(page, SEL.tabPassword);
 	await page.waitForSelector(SEL.username, { timeout: 5000 }).catch(() => {});
 }
 
@@ -136,7 +139,7 @@ async function checkAgreement(page: Page): Promise<void> {
 		.first()
 		.evaluate((el) => el.classList.contains('is-checked'))
 		.catch(() => false);
-	if (!checked) await page.click(SEL.agreement);
+	if (!checked) await visualClick(page, SEL.agreement);
 }
 
 /**
@@ -146,7 +149,7 @@ async function checkAgreement(page: Page): Promise<void> {
  */
 async function loopVerify(
 	page: Page,
-	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>>
+	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>> & OcrManualOption
 ) {
 	let count = 5;
 	let first = true;
@@ -162,7 +165,7 @@ async function loopVerify(
 				await tryRefreshCaptcha(page);
 			} else {
 				// 弹窗被关闭：重新点击登录触发新验证码
-				await page.click(SEL.submit).catch(() => {});
+				await visualClick(page, SEL.submit).catch(() => {});
 				await waitForCaptcha(page);
 			}
 			await verify(page, opts);
@@ -201,12 +204,12 @@ async function tryRefreshCaptcha(page: Page): Promise<void> {
 	const getBgSrc = () =>
 		page.evaluate(() => (document.getElementById('aliyunCaptcha-img') as HTMLImageElement | null)?.src || '');
 	const before = await getBgSrc();
-	await page.click(SEL.captchaRefresh).catch(() => {});
+	await visualClick(page, SEL.captchaRefresh).catch(() => {});
 	await page.waitForTimeout(800);
 	if ((await getBgSrc()) === before) {
-		await page.click(SEL.captchaClose).catch(() => {});
+		await visualClick(page, SEL.captchaClose).catch(() => {});
 		await page.waitForTimeout(300);
-		await page.click(SEL.submit).catch(() => {});
+		await visualClick(page, SEL.submit).catch(() => {});
 		await waitForCaptcha(page);
 	}
 }
@@ -218,7 +221,10 @@ async function tryRefreshCaptcha(page: Page): Promise<void> {
  * 3. 扣除拼图图形左边距（固定常量 PIECE_PAD），得到拼图目标位移
  * 4. 闭环伺服拖动：以拼图实际位置为反馈逐步逼近（阿里云联动是非线性曲线，不能按固定比例换算）
  */
-async function verify(page: Page, opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>>) {
+async function verify(
+	page: Page,
+	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>> & OcrManualOption
+) {
 	const bgEl = await page.$(SEL.captchaBg);
 	const pzEl = await page.$(SEL.captchaPiece);
 	const sliderEl = await page.$(SEL.captchaSlider);
@@ -241,6 +247,8 @@ async function verify(page: Page, opts: Required<Pick<OCROptions, 'ocrApiUrl' | 
 
 	if (data?.error) throw new Error(getErrorMessage(data.error));
 	if (!data?.canOCR) {
+		// 手动模式：提示人工干预并跳过（等待用户手动完成），不再报错
+		if (handleOcrMissing(opts)) return;
 		throw new Error('未检测到图片验证码识别模块，请手动输入验证码，或在软件左侧应用中心安装识别模块后重启浏览器。');
 	}
 	const targetX = Number(data?.det?.target?.[0]);

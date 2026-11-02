@@ -1,7 +1,8 @@
 import { Frame, Page } from 'playwright-core';
 import axios from 'axios';
 import { AutomationScript } from '@ocs-desktop/common';
-import { ensureWideViewport, getBase64 } from '../../utils';
+import { ensureWideViewport, getBase64, handleOcrMissing, visualClick } from '../../utils';
+import type { OcrManualOption } from '../../utils';
 
 /** 中国大学MOOC 首页 */
 const HOME_URL = 'https://www.icourse163.org/';
@@ -51,7 +52,7 @@ const PIECE_PAD = 0;
 /** 易盾滑块行程：轨道 250 - 滑块 40 */
 const MAX_SLIDER = 210;
 
-export interface OCROptions {
+export interface OCROptions extends OcrManualOption {
 	ocrApiUrl?: string;
 	detTargetKey?: string;
 	detBackgroundKey?: string;
@@ -111,13 +112,15 @@ export const ICourseLoginScript = new AutomationScript(
 				await frame.fill(pwdSel, configs.password);
 
 				// 点击登录，触发网易易盾滑块验证（或直接提交成功）
-				await frame.click(SEL.submit);
+				await visualClick(frame, SEL.submit);
 
 				if (options?.ocrApiUrl && options?.detTargetKey && options?.detBackgroundKey) {
 					await loopVerify(page, frame, {
 						ocrApiUrl: options.ocrApiUrl,
 						detTargetKey: options.detTargetKey,
-						detBackgroundKey: options.detBackgroundKey
+						detBackgroundKey: options.detBackgroundKey,
+						ocrManual: options.ocrManual,
+						onManualCaptcha: options.onManualCaptcha
 					});
 				} else {
 					const err = await waitForLoginResult(page, frame);
@@ -184,7 +187,7 @@ async function openLoginModal(page: Page): Promise<void> {
 			.first()
 			.waitFor({ state: 'attached', timeout: 5000 })
 			.catch(() => {});
-		await page.click(SEL.loginBtn, { timeout: 5000, force: true }).catch(() => {});
+		await visualClick(page, SEL.loginBtn, { timeout: 5000, force: true }).catch(() => {});
 	}
 	// 轮询登录表单 iframe 出现（最多 10s）。
 	// 用 page.$ + boundingBox 快速失败检查：locator.evaluate 会先等元素 attached（默认 30s），
@@ -210,7 +213,7 @@ async function switchTab(page: Page, tab: 'phone' | 'mail'): Promise<void> {
 		.evaluate((el) => el.classList.contains('z-sel'), undefined, { timeout: 500 })
 		.catch(() => false);
 	if (!active) {
-		await page.click(sel);
+		await visualClick(page, sel);
 		await page.waitForTimeout(1200);
 	}
 }
@@ -240,7 +243,7 @@ async function getLoginFrame(page: Page, tab: 'phone' | 'mail'): Promise<Frame |
 async function loopVerify(
 	page: Page,
 	frame: Frame,
-	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>>
+	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>> & OcrManualOption
 ) {
 	let count = 5;
 	let first = true;
@@ -256,7 +259,7 @@ async function loopVerify(
 				await tryRefreshCaptcha(page, frame);
 			} else {
 				// 弹窗被关闭：重新点击登录触发新验证码
-				await frame.click(SEL.submit, { force: true }).catch(() => {});
+				await visualClick(frame, SEL.submit, { force: true }).catch(() => {});
 				await waitForCaptcha(frame);
 			}
 			await verify(page, frame, opts);
@@ -299,12 +302,12 @@ async function tryRefreshCaptcha(page: Page, frame: Frame): Promise<void> {
 			.catch(() => '');
 	const before = await getBgSrc();
 	// click 默认 30s 等待：刷新/关闭按钮不存在时必须快速失败
-	await frame.click(SEL.captchaRefresh, { timeout: 1500 }).catch(() => {});
+	await visualClick(frame, SEL.captchaRefresh, { timeout: 1500 }).catch(() => {});
 	await frame.waitForTimeout(1000);
 	if ((await getBgSrc()) === before) {
-		await frame.click(SEL.captchaClose, { timeout: 1500 }).catch(() => {});
+		await visualClick(frame, SEL.captchaClose, { timeout: 1500 }).catch(() => {});
 		await frame.waitForTimeout(400);
-		await frame.click(SEL.submit, { force: true, timeout: 1500 }).catch(() => {});
+		await visualClick(frame, SEL.submit, { force: true, timeout: 1500 }).catch(() => {});
 		await waitForCaptcha(frame);
 	}
 }
@@ -319,7 +322,7 @@ async function tryRefreshCaptcha(page: Page, frame: Frame): Promise<void> {
 async function verify(
 	page: Page,
 	frame: Frame,
-	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>>
+	opts: Required<Pick<OCROptions, 'ocrApiUrl' | 'detTargetKey' | 'detBackgroundKey'>> & OcrManualOption
 ) {
 	const bgEl = await frame.$(SEL.captchaBg);
 	const pzEl = await frame.$(SEL.captchaPiece);
@@ -341,6 +344,8 @@ async function verify(
 
 	if (data?.error) throw new Error(getErrorMessage(data.error));
 	if (!data?.canOCR) {
+		// 手动模式：提示人工干预并跳过（等待用户手动完成），不再报错
+		if (handleOcrMissing(opts)) return;
 		throw new Error('未检测到图片验证码识别模块，请手动输入验证码，或在软件左侧应用中心安装识别模块后重启浏览器。');
 	}
 	const targetX = Number(data?.det?.target?.[0]);

@@ -1,6 +1,7 @@
 import { Page } from 'playwright-core';
 import axios from 'axios';
-import { ensureWideViewport, getBase64, slowType } from '../../utils';
+import { ensureWideViewport, getBase64, handleOcrMissing, slowType, visualClick } from '../../utils';
+import type { OcrManualOption } from '../../utils';
 import { AutomationScript } from '@ocs-desktop/common';
 
 /**
@@ -68,7 +69,7 @@ export const ZHSLoginScript = new AutomationScript(
 				ocrApiUrl?: string;
 				detTargetKey?: string;
 				detBackgroundKey?: string;
-			}
+			} & OcrManualOption
 		) {
 			try {
 				// 登录页为固定宽度桌面布局，窄视口下元素会被裁出可视区，先确保窗口足够宽再导航
@@ -76,18 +77,18 @@ export const ZHSLoginScript = new AutomationScript(
 				if (await isNotLogin(page)) {
 					if (configs.loginType === 'unit') {
 						// 切换到 学号登录 标签页
-						await page.click('div[role="tab"]:has-text("学号登录")');
+						await visualClick(page, 'div[role="tab"]:has-text("学号登录")');
 						await page.waitForTimeout(1000);
 
 						// 输入学校名称，过滤下拉列表
 						const schoolInput = 'input.el-select__input:visible';
-						await page.click(schoolInput);
+						await visualClick(page, schoolInput);
 						await slowType(page, schoolInput, configs.schoolname);
 						// 等待远程学校列表加载完成（下拉框挂载在 body 下，需匹配可见的那个）
 						await page.waitForSelector('.el-select-dropdown__item:visible', { timeout: 10_000 });
 						await page.waitForTimeout(500);
 						// 单击第一个匹配的学校
-						await page.click('.el-select-dropdown__item:visible');
+						await visualClick(page, '.el-select-dropdown__item:visible');
 
 						await page.fill('input[name="unid"]', configs.id);
 						await page.fill('input[type="password"]:visible', configs.password);
@@ -96,10 +97,10 @@ export const ZHSLoginScript = new AutomationScript(
 
 						// 点击登录按钮
 						await page.waitForTimeout(1000);
-						await page.click('.btn-block__grandient_login');
+						await visualClick(page, '.btn-block__grandient_login');
 					} else {
 						// 切换到 账号登录 标签页（默认选中，此处确保状态正确）
-						await page.click('div[role="tab"]:has-text("账号登录")');
+						await visualClick(page, 'div[role="tab"]:has-text("账号登录")');
 						await page.waitForTimeout(1000);
 
 						await page.fill('input[name="mobile"]', configs.phone);
@@ -107,14 +108,16 @@ export const ZHSLoginScript = new AutomationScript(
 						// 勾选用户协议，否则无法登录
 						await checkAgreement(page);
 						await page.waitForTimeout(1000);
-						await page.click('.btn-block__grandient_login');
+						await visualClick(page, '.btn-block__grandient_login');
 					}
 
 					if (options?.ocrApiUrl && options?.detTargetKey && options?.detBackgroundKey) {
 						await loopVerify(page, {
 							ocrApiUrl: options.ocrApiUrl,
 							detTargetKey: options.detTargetKey,
-							detBackgroundKey: options.detBackgroundKey
+							detBackgroundKey: options.detBackgroundKey,
+							ocrManual: options.ocrManual,
+							onManualCaptcha: options.onManualCaptcha
 						});
 					}
 				}
@@ -162,7 +165,7 @@ async function checkAgreement(page: Page) {
 
 	// 仍未勾选：退回点击整个 label，并关闭随之弹出的 /protocal 标签
 	const popupPromise = page.waitForEvent('popup', { timeout: 2000 }).catch(() => null);
-	await page.click('label.privacy-checkbox');
+	await visualClick(page, 'label.privacy-checkbox');
 	const popup = await popupPromise;
 	if (popup) {
 		await popup.close().catch(() => {});
@@ -178,14 +181,17 @@ async function checkAgreement(page: Page) {
 }
 
 /** 循环进行滑块验证，直至登录成功 */
-async function loopVerify(page: Page, opts: { ocrApiUrl: string; detTargetKey: string; detBackgroundKey: string }) {
+async function loopVerify(
+	page: Page,
+	opts: { ocrApiUrl: string; detTargetKey: string; detBackgroundKey: string } & OcrManualOption
+) {
 	let count = 5;
 	while (await isNotVerified(page)) {
 		if (count > 0) {
 			count--;
 			// 滑块弹窗未弹出（或已被关闭）时，重新点击登录按钮触发验证码
 			if (!(await isYidunPopupVisible(page))) {
-				await page.click('.btn-block__grandient_login');
+				await visualClick(page, '.btn-block__grandient_login');
 				await page.waitForTimeout(1000);
 			}
 			await verify(page, opts);
@@ -211,7 +217,10 @@ async function isYidunPopupVisible(page: Page) {
  * ddddocr 返回的 target[0] 是背景图「自然像素」坐标，乘 bgScale 换算为渲染位移，
  * 再扣掉拼图在 img 内的左边距，最后用闭环伺服（实测拼图位移反馈）逼近目标。
  */
-async function verify(page: Page, opts: { ocrApiUrl: string; detTargetKey: string; detBackgroundKey: string }) {
+async function verify(
+	page: Page,
+	opts: { ocrApiUrl: string; detTargetKey: string; detBackgroundKey: string } & OcrManualOption
+) {
 	// 删除yidun遮挡
 	await page.evaluate(() =>
 		document.querySelectorAll('.yidun_cover-frame,.yidun_popup__mask').forEach((el) => el.remove())
@@ -244,6 +253,8 @@ async function verify(page: Page, opts: { ocrApiUrl: string; detTargetKey: strin
 		throw new Error(msg);
 	}
 	if (!data?.canOCR) {
+		// 手动模式：提示人工干预并跳过（等待用户手动完成），不再报错
+		if (handleOcrMissing(opts)) return;
 		throw new Error('未检测到图片验证码识别模块, 请手动输入验证码，或在软件左侧应用中心安装识别模块后重启浏览器。。');
 	}
 	const targetX = Number(data?.det?.target?.[0]);
@@ -376,7 +387,7 @@ async function isNotLogin(page: Page) {
 	);
 	if (loginBtnNotDisplay) {
 		// 点击 登录/注册 入口，跳转到登录中心
-		await page.click('#notLogin a');
+		await visualClick(page, '#notLogin a');
 		try {
 			await page.waitForURL(/login\.zhihuishu\.com/, { timeout: 10_000 });
 		} catch {

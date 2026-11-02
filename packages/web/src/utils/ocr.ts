@@ -1,6 +1,7 @@
 import { h, ref } from 'vue';
-import { Button, Modal, Message, Notification } from '@arco-design/web-vue';
+import { Button, Modal, Message, Notification, Space } from '@arco-design/web-vue';
 import type { RawAutomationScript } from '@ocs-desktop/common/web';
+import { store } from '../store';
 import { remote } from './remote';
 import { electron } from './node';
 import { resourceLoader } from './resources.loader';
@@ -30,6 +31,50 @@ export async function isOcrSupported(): Promise<boolean> {
 }
 
 /**
+ * 浏览器启动前的 OCR 三选一弹窗（同步阻塞，等待用户选择后继续启动）。
+ *
+ * 自动化程序声明 needOCR 且本地未安装 OCR 识别模块时弹出，三选一：
+ * 1. 暂不安装：一切照旧，OCR 缺失报错正常显示；
+ * 2. 切换为手动操作：持久化 ocrManual——不再提示安装与报错，检测到验证码时提示人工干预
+ *    （模块已安装时仍走 OCR 识别逻辑）；
+ * 3. 安装模块：走原有下载安装流程。
+ */
+export async function promptOcrChoiceBeforeLaunch(scripts?: RawAutomationScript[]): Promise<void> {
+	if (!scripts?.some((s) => s.needOCR)) return;
+	// 已开启手动模式：不再提示
+	if (store.render.setting.browser.ocrManual) return;
+	if (await remote.methods.call('canOCR')) return;
+	// 平台不支持（无安装入口）：不弹三选，沿用启动后通知的手动输入提示
+	if (!(await isOcrSupported())) return;
+
+	await new Promise<void>((resolve) => {
+		const modal = Modal.info({
+			title: '验证码识别模块未安装',
+			content:
+				'当前浏览器的自动化程序需要破解登录验证码。OCR 识别模块未安装（免费但需要识别时间），可能无法进行验证码自动识别，但依旧可以手动操作。',
+			closable: false,
+			maskClosable: false,
+			footer: () => [
+				h(Space, [
+					h(Button, { onClick: () => close('skip') }, '暂不安装'),
+					h(Button, { status: 'warning', onClick: () => close('manual') }, '切换为手动操作')
+				]),
+				h(Button, { class: 'mt-3', type: 'primary', onClick: () => close('install') }, '安装模块')
+			]
+		});
+		async function close(action: 'skip' | 'manual' | 'install') {
+			modal.close();
+			if (action === 'manual') {
+				store.render.setting.browser.ocrManual = true;
+			} else if (action === 'install') {
+				await installOcrWithProgress();
+			}
+			resolve();
+		}
+	});
+}
+
+/**
  * 浏览器启动后的 OCR 依赖提示（非阻塞，不阻止浏览器使用）。
  *
  * 自动化程序声明 needOCR（登录流程需破解验证码）且本地未安装 OCR 识别模块时，
@@ -38,6 +83,8 @@ export async function isOcrSupported(): Promise<boolean> {
  */
 export async function notifyOcrMissingAfterLaunch(scripts?: RawAutomationScript[]): Promise<void> {
 	if (!scripts?.some((s) => s.needOCR)) return;
+	// 手动模式：不再提示安装
+	if (store.render.setting.browser.ocrManual) return;
 	if (await remote.methods.call('canOCR')) return;
 
 	// 平台不支持（如 Linux 无对应包）：不提供安装入口，只提示手动输入验证码，
