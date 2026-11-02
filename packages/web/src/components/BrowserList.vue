@@ -120,7 +120,7 @@
 
 		<template v-if="entities.length === 0">
 			<div class="h-100 d-flex justify-content-center flex-wrap align-items-center">
-				<EmptyBrowserCard />
+				<EmptyBrowserCard class="mt-3" />
 			</div>
 		</template>
 	</div>

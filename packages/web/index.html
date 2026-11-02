@@ -16,6 +16,54 @@
 
 	<body>
 		<div id="app"></div>
+		<script>
+			/**
+			 * 白屏兜底：模块加载/初始化阶段的致命错误（如循环依赖 TDZ）会导致 Vue 无法挂载、
+			 * 整页白屏且无反馈。此处以纯 JS 监听未捕获错误，渲染错误信息 + 关闭软件按钮。
+			 * Vue 挂载成功（window.__ocsMounted 由 main.ts 置位）后不再介入。
+			 */
+			(function () {
+				function showFatal(message) {
+					if (window.__ocsMounted || document.getElementById('ocs-fatal')) return;
+					var box = document.createElement('div');
+					box.id = 'ocs-fatal';
+					box.style.cssText =
+						'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;' +
+						'align-items:center;justify-content:center;gap:16px;font-family:system-ui,sans-serif;color:#333;padding:24px;';
+					var title = document.createElement('div');
+					title.style.cssText = 'font-size:18px;font-weight:600;';
+					title.textContent = '软件界面加载失败';
+					var detail = document.createElement('pre');
+					detail.style.cssText =
+						'max-width:80%;white-space:pre-wrap;word-break:break-all;font-size:12px;color:#999;' +
+						'background:#f5f5f5;padding:12px;border-radius:8px;max-height:40vh;overflow:auto;';
+					detail.textContent = message;
+					var btn = document.createElement('button');
+					btn.textContent = '关闭软件';
+					btn.style.cssText =
+						'padding:8px 24px;font-size:14px;border:none;border-radius:6px;background:#165dff;color:#fff;cursor:pointer;';
+					btn.onclick = function () {
+						// 主进程直连退出通道（nodeIntegration 开启时可用）：
+						// 渲染层致命错误时 window.close() 与标题栏按钮均被 close 流程拦截，走 IPC 强制退出
+						try {
+							require('electron').ipcRenderer.send('ocs-quit-app');
+						} catch (err) {
+							window.close();
+						}
+					};
+					box.appendChild(title);
+					box.appendChild(detail);
+					box.appendChild(btn);
+					document.body.appendChild(box);
+				}
+				window.addEventListener('error', function (e) {
+					if (!window.__ocsMounted) showFatal(e.message || String(e.error || e));
+				});
+				window.addEventListener('unhandledrejection', function (e) {
+					if (!window.__ocsMounted) showFatal(String((e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+				});
+			})();
+		</script>
 		<script
 			type="module"
 			src="/src/main.ts"

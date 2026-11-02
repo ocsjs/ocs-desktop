@@ -383,6 +383,9 @@ export function setAlwaysOnTop() {
 	remote.win.call('setAlwaysOnTop', store.window.alwaysOnTop);
 }
 
+// 再导出保持既有导入路径可用（实现位于零依赖的 errors.ts，防 index ↔ remote 循环依赖）
+export { isTransientNetworkError } from './errors';
+
 export function size(num: number) {
 	return (
 		(
@@ -396,7 +399,7 @@ export function size(num: number) {
 			.map((i) => [i[0], Math.floor(num / i[1])])
 			.find((i) => parseFloat(i[1].toString()) > 0)
 			// @ts-ignore
-			?.reduce((pre, cur) => cur + pre)
+			?.reduce((pre, cur) => cur + pre) ?? '0 B'
 	);
 }
 

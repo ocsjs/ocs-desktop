@@ -93,7 +93,6 @@
 				@finish="
 					() => {
 						store.render.state.newBrowserSetup = false;
-						Message.success('新建浏览器成功');
 					}
 				"
 			></Setup>
@@ -131,7 +130,7 @@ import { activeIpcRenderListener } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
 import { notify } from './utils/notify';
 import { currentBrowser } from './fs';
-import { Modal, Message } from '@arco-design/web-vue';
+import { Modal } from '@arco-design/web-vue';
 import zhCN from '@arco-design/web-vue/es/locale/lang/zh-cn';
 import debounce from 'lodash/debounce';
 import Title from './components/Title.vue';

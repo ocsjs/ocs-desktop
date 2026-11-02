@@ -378,6 +378,7 @@ import ScriptList from '../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../types/user.script';
 import CommonSelector from '../components/CommonSelector.vue';
 import { remote } from '../utils/remote';
+import { isTransientNetworkError } from '../utils/errors';
 import { Status } from '../utils/statusBar';
 import UsageAlertCollapse from '../components/UsageAlertCollapse.vue';
 import AddNetworkScriptModal from '../components/AddNetworkScriptModal.vue';
@@ -436,28 +437,6 @@ const paginatedScripts = computed(() => {
 	const end = start + state.pageSize;
 	return store.render.scripts.slice(start, end);
 });
-
-/**
- * 瞬时网络错误判定：超时/连接失败/域名解析失败等（静默，仅在 UI 显示错误态）。
- * 覆盖 axios（ECONNABORTED）与 Chromium 网络栈（ERR_*）及 Node TCP 错误。
- */
-function isTransientNetworkError(err: unknown): boolean {
-	const text = err instanceof Error ? `${err.name} ${err.message} ${(err as any).code || ''}` : String(err);
-	const features = [
-		'timeout',
-		'ETIMEDOUT',
-		'ECONNABORTED',
-		'ECONNRESET',
-		'ECONNREFUSED',
-		'ENOTFOUND',
-		'ENETUNREACH',
-		'EHOSTUNREACH',
-		'ERR_',
-		'Network Error',
-		'fetch failed'
-	];
-	return new RegExp(features.join('|'), 'i').test(text);
-}
 
 onMounted(() => {
 	updateAllInfo();

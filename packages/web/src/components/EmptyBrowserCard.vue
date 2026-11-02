@@ -1,31 +1,27 @@
 <template>
-	<div class="m-3 ps-5 pe-5">
-		<a-result
-			class="p-3 m-auto text-center"
-			status="404"
-		>
-			<a-alert>请先创建浏览器，然后启动即可~</a-alert>
-		</a-result>
+	<div class="m-0 ps-5 pe-5">
+		<a-empty class="p-0 mb-3 m-auto text-center"> 暂无浏览器 ~ </a-empty>
 
-		<div>
+		<a-alert class="mb-3">请先 “新建浏览器” ，启动浏览器后即可自动安装拓展、运行脚本、开启脚本之旅~</a-alert>
+
+		<div class="mb-2 d-flex align-items-center justify-content-center flex-wrap">
 			<a-button
-				type="text"
+				type="primary"
 				@click="newBrowserOrInit()"
 			>
-				<a-space size="mini"><GlobeIcon />新建浏览器</a-space>
+				<a-space size="mini"> <PlusIcon /> 新建浏览器</a-space>
 			</a-button>
 		</div>
-
-		<div>
+		<div class="mb-2 d-flex align-items-center justify-content-center flex-wrap">
 			<a-button
 				type="text"
 				@click="about"
 			>
-				<a-space size="mini"><BookIcon />使用教程</a-space>
+				<a-space size="mini"><CircleQuestionMarkIcon /> 使用教程</a-space>
 			</a-button>
 		</div>
 
-		<div>
+		<div class="mb-2 d-flex align-items-center justify-content-center flex-wrap">
 			<a-button
 				type="text"
 				@click="goto(OCS_WEBSITE)"
@@ -40,7 +36,7 @@
 import { about, goto } from '../utils';
 import { newBrowserOrInit } from '../utils/browser';
 import { OCS_WEBSITE } from '@ocs-desktop/common/web';
-import { GlobeIcon, BookIcon, HouseIcon } from 'lucide-vue-next';
+import { CircleQuestionMarkIcon, HouseIcon, PlusIcon } from 'lucide-vue-next';
 </script>
 
 <style scoped></style>

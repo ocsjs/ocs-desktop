@@ -1,10 +1,10 @@
-import { app } from 'electron';
+import { app, ipcMain } from 'electron';
 import path from 'path';
 import { remoteRegister } from './src/tasks/remote.register';
 import { initStore } from './src/tasks/init.store';
 import { autoLaunch } from './src/tasks/auto.launch';
 import { createWindow } from './src/window';
-import { createTray, isAppQuitting } from './src/tray';
+import { createTray, isAppQuitting, quitApp } from './src/tray';
 import { globalListenerRegister } from './src/tasks/global.listener';
 import { isLinuxSandboxUnavailable, task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
@@ -111,8 +111,24 @@ function bootstrap() {
 					// 用户点击关闭按钮 -> 'close'：交由渲染层按「后台运行」开关决定隐藏到托盘或退出
 					// 销毁保护（2.x 4634090 移植）
 					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
-						window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+						const quitting = isAppQuitting();
+						window.webContents.send(quitting ? 'quit' : 'close');
+						if (!quitting) {
+							// 渲染层无响应兜底（白屏/主线程阻塞导致 close 消息无人处理）：
+							// 3s 后窗口仍可见说明渲染层未能接管（既未隐藏托盘也未退出），强制销毁防僵尸窗口
+							setTimeout(() => {
+								if (!window.isDestroyed() && window.isVisible()) {
+									console.warn('[window] 渲染层未响应关闭请求，强制销毁窗口');
+									window.destroy();
+								}
+							}, 3000);
+						}
 					}
+				});
+
+				// 白屏兜底页「关闭软件」按钮：渲染层致命错误时窗口 close 流程无人响应，直连强制退出
+				ipcMain.on('ocs-quit-app', () => {
+					quitApp(0);
 				});
 
 				window.webContents.once('did-finish-load', () => {

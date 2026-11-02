@@ -81,9 +81,9 @@
 				<div class="cards-area entities">
 					<!-- 无任何浏览器：新建引导卡片 -->
 					<template v-if="allBrowsers.length === 0">
-						<a-card class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
+						<div class="h-100 d-flex justify-content-center flex-wrap align-items-center pb-5">
 							<EmptyBrowserCard />
-						</a-card>
+						</div>
 					</template>
 					<!-- 有浏览器但「仅显示运行中」筛选后为空 -->
 					<template v-else-if="gridBrowsers.length === 0">

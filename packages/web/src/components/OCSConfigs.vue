@@ -352,7 +352,7 @@ async function loadOCS() {
 		// @ts-ignore
 		const EUS = global.EUS as typeof import('easy-us');
 
-		const { MemoryStoreProvider, $elements, definedCustomElements, h } = EUS;
+		const { MemoryStoreProvider, $elements, definedCustomElements, h, $ } = EUS;
 
 		wrapper = wrapper || h('div');
 		root = root || wrapper.attachShadow({ mode: 'closed' });
@@ -379,11 +379,17 @@ async function loadOCS() {
 		state.projects = markRaw(OCS.definedProjects());
 		emits('update:project', state.projects as Project[]);
 
-		// 不为面板脚本创建 createConfigProxy：easy-us 1.1.2 的代理在 get 时回写 script.cfg，
-		// 与 Vue 响应式叠加会导致界面冻结。
-		// 持久化不受影响：config-element 的值读写直接走 $store（namespaceKey → MemoryStoreProvider
-		// → 本组件注入的 Vue 响应式 store → App 深度监听落盘），不经过 script.cfg 代理；
-		// 代理仅服务于浏览器内脚本运行时的 cfg 便捷读取（浏览器侧由 OCS 脚本自行初始化）。
+		// 为脚本创建配置代理（cfg 读写与 $store 双向同步，支撑 notes/slot 等 cfg 联动）。
+		// easy-us ≥1.1.2 已修复代理回声重入循环（监听器直写 rawCfg，不再经 set 陷阱重入）与
+		// notes 监听累积泄漏，此处恢复启用；面板对象仍 markRaw 阻断 Vue 响应式干扰。
+		for (const project of state.projects) {
+			for (const key in project.scripts) {
+				if (Object.prototype.hasOwnProperty.call(project.scripts, key)) {
+					const script = project.scripts[key];
+					script.cfg = Object.keys(script.cfg).length === 0 ? $.createConfigProxy(script) : script.cfg;
+				}
+			}
+		}
 
 		if (state.projects.length) {
 			// 打开界面时默认选中 pin_projects（如「通用」），找不到则回退到首个项目

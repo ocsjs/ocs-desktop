@@ -1,5 +1,7 @@
 import { BrowserWindow, App, Dialog, WebContents } from 'electron';
 import { notify } from './notify';
+// 注意：必须从零依赖的 errors.ts 导入（utils/index.ts 反向引用本模块，直接导入会形成循环依赖 TDZ）
+import { isTransientNetworkError } from './errors';
 import type { RemoteMethods, LoggerCore } from '@ocs-desktop/common/web';
 import type fs from 'fs';
 import type os from 'os';
@@ -147,6 +149,12 @@ export const remote = {
 function errorFilter(message: string) {
 	//  operation not permitted, stat xxxxx CrashpadMetrics.pma ， 这个是 playwright 问题，暂时无需处理
 	if (String(message).includes('CrashpadMetrics')) {
+		return true;
+	}
+	// 外部站点的瞬时网络错误（超时/连接失败/解析失败）：UI 层已有降级展示（错误标记/条目态），
+	// 无需全局「remote 模块错误」通知刷屏；
+	// 本地回环地址（127.0.0.1/localhost）的连接失败意味着本地服务故障，属重要错误，保留通知
+	if (isTransientNetworkError(message) && !/127\.0\.0\.1|localhost|\[::1\]/.test(message)) {
 		return true;
 	}
 	return false;
