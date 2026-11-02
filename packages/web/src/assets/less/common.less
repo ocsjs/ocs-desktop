@@ -9,10 +9,16 @@ html,
 	max-height: 100%;
 	min-width: 500px;
 	min-height: 300px;
-	/* 布局为 100vh + 内部滚动容器，body 不允许滚动：
-	   否则右键菜单等挂载在 body 下的绝对定位弹层会撑高文档，产生外层滚动条并挤压整个渲染区域 */
-	overflow: hidden;
 	--title-height: 32px;
+}
+
+/* 仅桌面端禁止 body 滚动：布局为 100vh + 内部滚动容器，
+   防止右键菜单等挂载在 body 下的绝对定位弹层撑高文档，产生外层滚动条并挤压整个渲染区域。
+   浏览器环境（html.in-browser，如快捷导航页）依赖文档流滚动，必须排除 */
+html:not(.in-browser),
+html:not(.in-browser) body,
+html:not(.in-browser) #app {
+	overflow: hidden;
 }
 
 html.window-frame {

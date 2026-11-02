@@ -61,6 +61,9 @@ function errorFilter(str: string) {
 	 * 区分浏览器环境和electron渲染进程环境
 	 */
 	if (inBrowser) {
+		// 浏览器环境标记：common.css 中 body 禁滚规则仅作用于桌面端，
+		// 导航页等在浏览器内运行的页面依赖文档流滚动，必须排除
+		document.documentElement.classList.add('in-browser');
 		createApp(AppInBrowser)
 			.use(router)
 			.use(ArcoVue)
@@ -70,6 +73,8 @@ function errorFilter(str: string) {
 				}
 			})
 			.mount('#app');
+		// 标记 Vue 已挂载：index.html 白屏兜底监听据此停止介入
+		(window as any).__ocsMounted = true;
 		return;
 	}
 
@@ -82,4 +87,6 @@ function errorFilter(str: string) {
 			}
 		})
 		.mount('#app');
+	// 标记 Vue 已挂载：index.html 白屏兜底监听据此停止介入
+	(window as any).__ocsMounted = true;
 })();
