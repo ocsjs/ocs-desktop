@@ -303,47 +303,67 @@
 					v-if="pageSettings.enableQuickAccess"
 					class="bookmarks-grid"
 				>
-					<div
-						v-for="(item, groupIndex) of bookmarks"
-						:key="item?.group + groupIndex"
-					>
+					<!-- 快捷访问加载中：骨架屏占位（加载完成或 10s 超时后替换为真实分组） -->
+					<template v-if="bookmarksLoading">
 						<div
-							v-if="item && item.values && item.values.length > 0"
-							class="bookmark-group"
-							:style="{ '--group-index': groupIndex }"
+							v-for="i in 2"
+							:key="i"
+							class="skeleton-group"
 						>
-							<div class="group-header">
-								<h2 class="group-title">{{ item.group }}</h2>
-								<span class="group-count">{{ item.values.filter(Boolean).length }} 个网站</span>
-							</div>
-							<div class="group-items">
-								<a
-									v-for="(bookmark, idx) of item.values"
-									v-show="bookmark && bookmark.name"
-									:key="idx"
-									:href="bookmark?.url"
-									target="_blank"
-									class="bookmark-item"
-									:style="{ '--item-index': idx }"
+							<a-skeleton :animation="true">
+								<a-space
+									direction="vertical"
+									:style="{ width: '100%' }"
+									size="large"
 								>
-									<img
-										:data-img-src="bookmark?.icon || ''"
-										class="icon"
-										loading="lazy"
-										:src="iconUrl(bookmark?.icon)"
-									/>
-									<span class="bookmark-name">{{ bookmark?.name }}</span>
-									<a-tooltip
-										background-color="rgba(20, 20, 30, 0.95)"
-										:content="bookmark?.description || '暂无描述'"
-										position="top"
+									<a-skeleton-line :rows="3" />
+								</a-space>
+							</a-skeleton>
+						</div>
+					</template>
+					<template v-else>
+						<div
+							v-for="(item, groupIndex) of bookmarks"
+							:key="item?.group + groupIndex"
+						>
+							<div
+								v-if="item && item.values && item.values.length > 0"
+								class="bookmark-group"
+								:style="{ '--group-index': groupIndex }"
+							>
+								<div class="group-header">
+									<h2 class="group-title">{{ item.group }}</h2>
+									<span class="group-count">{{ item.values.filter(Boolean).length }} 个网站</span>
+								</div>
+								<div class="group-items">
+									<a
+										v-for="(bookmark, idx) of item.values"
+										v-show="bookmark && bookmark.name"
+										:key="idx"
+										:href="bookmark?.url"
+										target="_blank"
+										class="bookmark-item"
+										:style="{ '--item-index': idx }"
 									>
-										<div class="bookmark-tooltip-trigger"></div>
-									</a-tooltip>
-								</a>
+										<img
+											:data-img-src="bookmark?.icon || ''"
+											class="icon"
+											loading="lazy"
+											:src="iconUrl(bookmark?.icon)"
+										/>
+										<span class="bookmark-name">{{ bookmark?.name }}</span>
+										<a-tooltip
+											background-color="rgba(20, 20, 30, 0.95)"
+											:content="bookmark?.description || '暂无描述'"
+											position="top"
+										>
+											<div class="bookmark-tooltip-trigger"></div>
+										</a-tooltip>
+									</a>
+								</div>
 							</div>
 						</div>
-					</div>
+					</template>
 				</div>
 			</div>
 		</a-spin>
@@ -355,11 +375,44 @@ import { onMounted, ref, reactive, computed } from 'vue';
 import { Message, Modal } from '@arco-design/web-vue';
 import { BookmarkResource } from '@ocs-desktop/common/web';
 import { iconUrl, getRemoteInfos } from '../utils/index';
+import { isTransientNetworkError } from '../utils/errors';
+
 import { InfoIcon } from 'lucide-vue-next';
+
+/**
+ * 带重试的远程书签获取：瞬时网络错误（超时/连接失败等）按 2s/4s/8s 指数退避重试 3 次，
+ * 防止弱网下 CDN 一次超时导致书签分组整屏空白（getRemoteInfos 仅缓存成功结果，重试会重新请求）。
+ */
+async function fetchBookmarkInfosWithRetry(maxRetries = 3) {
+	for (let attempt = 0; attempt <= maxRetries; attempt++) {
+		try {
+			return await getRemoteInfos();
+		} catch (e) {
+			if (attempt === maxRetries || !isTransientNetworkError(e)) throw e;
+			console.warn(`获取书签数据失败，${2 ** (attempt + 1)}s 后重试（${attempt + 1}/${maxRetries}）...`);
+			await new Promise((resolve) => setTimeout(resolve, 2 ** (attempt + 1) * 1000));
+		}
+	}
+	throw new Error('unreachable');
+}
 
 type BookMark = BookmarkResource;
 
 const bookmarks = ref<BookMark[]>([]);
+
+/** 快捷访问列表是否加载中（骨架屏占位） */
+const bookmarksLoading = ref(true);
+
+/** 快捷访问列表加载超时（含重试总耗时）：防止弱网下请求长时间挂起 */
+const BOOKMARKS_LOAD_TIMEOUT = 10 * 1000;
+
+/** 超时包装：超过 ms 直接 reject，中断方负责兜底为加载完成 */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	return Promise.race([
+		promise,
+		new Promise<T>((resolve, reject) => setTimeout(() => reject(new Error(`加载超时（${ms / 1000}s）`)), ms))
+	]);
+}
 
 /** 搜索引擎配置，默认百度（icon 为站点地址，经本地图标服务取 favicon） */
 const searchEngines = [
@@ -554,10 +607,11 @@ onMounted(async () => {
 	// 三个数据源并行加载：CDN 书签分组（复用会话缓存，失败不阻塞其余内容）、
 	// 本地浏览器信息、本地导航页设置。原串行 await 在弱网下首屏最长被 CDN 15s 阻塞。
 	await Promise.all([
-		// 官方书签分组（CDN，复用 getRemoteInfos 会话级缓存）
+		// 官方书签分组（CDN，复用 getRemoteInfos 会话级缓存；网络失败按 2s/4s/8s 退避重试 3 次，
+		// 整体 10s 超时兜底，防止弱网下长时间挂起骨架屏）
 		(async () => {
 			try {
-				const infos = await getRemoteInfos();
+				const infos = await withTimeout(fetchBookmarkInfosWithRetry(), BOOKMARKS_LOAD_TIMEOUT);
 				for (let i = 0; i < infos.bookmark.length; i++) {
 					const bookmark = infos.bookmark[i] as BookMark;
 					bookmarks.value[i] = {
@@ -567,6 +621,8 @@ onMounted(async () => {
 				}
 			} catch (e) {
 				console.error('获取书签数据失败', e);
+			} finally {
+				bookmarksLoading.value = false;
 			}
 		})(),
 		// 主动通过本地 API 获取浏览器信息
@@ -1208,6 +1264,18 @@ function openInApp() {
 	margin: 0 auto;
 }
 
+// 快捷访问骨架屏：与书签分组卡片同尺寸占位，骨架颜色适配暗色背景
+.skeleton-group {
+	background: @card-bg;
+	border: 1px solid @card-border;
+	border-radius: 16px;
+	padding: 24px;
+
+	:deep(.arco-skeleton-line-row) {
+		background-color: rgba(255, 255, 255, 0.08);
+	}
+}
+
 // 自定义网站小卡片（位于快捷访问上方，直接渲染不使用分组卡片布局）
 .custom-sites {
 	display: flex;
@@ -1472,6 +1540,15 @@ body:not([arco-theme='dark']) & {
 	.bookmark-group {
 		background: @light-card;
 		border-color: rgba(0, 0, 0, 0.06);
+	}
+
+	.skeleton-group {
+		background: @light-card;
+		border-color: rgba(0, 0, 0, 0.06);
+
+		:deep(.arco-skeleton-line-row) {
+			background-color: rgba(0, 0, 0, 0.06);
+		}
 	}
 
 	.bookmark-group:hover {
