@@ -125,7 +125,8 @@ export class Browser extends Entity implements BrowserOptions {
 			'--no-default-browser-check',
 			`--user-data-dir="${this.cachePath}"`
 		]
-			.concat(formatExtensionArguments(extensionPaths))
+			// shell 字符串拼接：路径含空格（如「OCS 网课助手」目录）时必须加引号防参数截断
+			.concat(formatExtensionArguments(extensionPaths, { shellQuote: true }))
 			.join(' ')} "${startPage}"`;
 		console.log(cmd);
 		child_process.exec(cmd);
@@ -194,7 +195,7 @@ export class Browser extends Entity implements BrowserOptions {
 			// 目录句柄可能数秒后才释放——渐进退避重试（累计最长约 7s），
 			// 仍失败则提示手动删除（浏览器已从列表移除，不影响功能）
 			let lastErr: unknown;
-			for (const wait of [0, 1000, 2000, 3000]) {
+			for (const wait of [1000, 2000, 3000]) {
 				if (wait) await sleep(wait);
 				try {
 					await remote.fs.call('rmSync', this.cachePath, { recursive: true, force: true });
