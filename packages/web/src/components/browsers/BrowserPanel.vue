@@ -30,6 +30,20 @@
 			</a-descriptions-item>
 		</a-descriptions>
 
+		<!-- 缩略图推流（仅专业模式 + 开启预览 + 浏览器运行中）：打开面板开始推流，关闭面板停止。
+		     简洁模式不添加：卡片网格中已有缩略图显示 -->
+		<div
+			v-if="showPanelPreview"
+			ref="previewRef"
+			class="panel-preview mb-2"
+		>
+			<BrowserPreview
+				:browser="instance"
+				:dismissed="emptyDismissed"
+				@resync-screencast="syncPanelScreencast(true)"
+			/>
+		</div>
+
 		<a-card
 			:bordered="false"
 			title="自动化程序"
@@ -257,10 +271,13 @@ import Tags from '../Tags.vue';
 import { BrowserOptions, Tag } from '../../fs/interface';
 import { Folder } from '../../fs/folder';
 import { currentBrowser } from '../../fs/index';
-import { reactive, onMounted, nextTick, ref, computed } from 'vue';
+import { reactive, onMounted, onUnmounted, nextTick, ref, computed, watch } from 'vue';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScripts from '../automation-scripts/AutomationScriptList.vue';
 import XTerm from '../XTerm.vue';
+import BrowserPreview from './BrowserPreview.vue';
+import { Process } from '../../utils/process';
+import { FRAMERATE_TO_NTH_FRAME, QUALITY_TO_PARAMS } from '../../composables/useScreencastVisibility';
 import { electron } from '../../utils/node';
 import { remote } from '../../utils/remote';
 import UsageAlertCollapse from '../UsageAlertCollapse.vue';
@@ -288,6 +305,65 @@ const tagsRef = ref<InstanceType<typeof Tags>>();
 
 defineExpose({
 	openAddTagModal: () => tagsRef.value?.openAddModal()
+});
+
+/** 面板缩略图推流：运行进程（仅仍在运行时返回） */
+const panelProcess = computed(() => Process.from(props.browser.uid));
+
+/** 是否展示面板缩略图推流：仅专业模式（简洁模式卡片网格已有缩略图）+ 开启截图预览 + 浏览器运行中 */
+const showPanelPreview = computed(
+	() =>
+		store.render.setting.mode === 'professional' &&
+		store.render.setting.browser.screenshotPreview &&
+		!!panelProcess.value
+);
+
+/** 预览区元素引用：帧尺寸按显示宽度 × DPR 计算（16:9），封顶用户画质档位 */
+const previewRef = ref<HTMLElement>();
+
+/** BrowserPreview 的 dismissed 参数：面板仅展示运行中推流，不涉及关闭后预览图，传空集合 */
+const emptyDismissed = reactive(new Map<string, string>());
+
+/** 按面板预览区显示宽度计算推流帧参数（对齐卡片 resolveFrameParams 逻辑） */
+function resolvePanelFrameParams() {
+	const everyNthFrame =
+		FRAMERATE_TO_NTH_FRAME[store.render.setting.browser.screenshotFramerate] ?? FRAMERATE_TO_NTH_FRAME.medium;
+	const cap = QUALITY_TO_PARAMS[store.render.setting.browser.screenshotQuality] ?? QUALITY_TO_PARAMS.medium;
+	let { maxWidth, maxHeight } = cap;
+	const displayW = previewRef.value?.getBoundingClientRect().width;
+	if (displayW && displayW > 0) {
+		const dpr = window.devicePixelRatio || 1;
+		const w = Math.round(displayW * dpr);
+		maxWidth = Math.min(w, cap.maxWidth);
+		maxHeight = Math.min(Math.round((w * 9) / 16), cap.maxHeight);
+	}
+	return { everyNthFrame, maxWidth, maxHeight, quality: cap.quality };
+}
+
+/** 面板推流开关：active=true 按面板参数启动，false 停止释放资源 */
+function syncPanelScreencast(active: boolean) {
+	const p = panelProcess.value;
+	if (!p || p.status !== 'launched') return;
+	if (active && showPanelPreview.value) {
+		p.setScreencastActive(true, resolvePanelFrameParams());
+	} else {
+		p.setScreencastActive(false);
+	}
+}
+
+// 打开面板时浏览器可能仍在启动中，状态变为 launched 后启动推流
+watch(
+	() => panelProcess.value?.status,
+	(status) => {
+		if (status === 'launched') {
+			nextTick(() => syncPanelScreencast(true));
+		}
+	}
+);
+
+onUnmounted(() => {
+	// 关闭浏览器菜单（面板卸载）时停止推流
+	syncPanelScreencast(false);
 });
 
 function createTag(tag: Tag) {
@@ -326,6 +402,8 @@ function clearHistory() {
 onMounted(() => {
 	nextTick(async () => {
 		state.cachePathExists = await remote.fs.call('existsSync', props.browser.cachePath);
+		// 打开面板即开始缩略图推流（浏览器已在运行时；启动中的由 status watch 接管）
+		syncPanelScreencast(true);
 	});
 });
 
