@@ -123,15 +123,19 @@ export class SystemAutomationScript extends BaseAutomationScript<(ctx: SystemScr
 	order: number;
 	/** 执行阶段 */
 	phase: SystemScriptPhase;
+	/** 中文展示名（开发者设置-自动化程序管理列表展示） */
+	label?: string;
 
 	constructor(
 		opts: ScriptOptions<(ctx: SystemScriptContext) => void | Promise<void>> & {
 			order: number;
 			phase: SystemScriptPhase;
+			label?: string;
 		}
 	) {
 		super(opts);
 		this.order = opts.order;
 		this.phase = opts.phase;
+		this.label = opts.label;
 	}
 }

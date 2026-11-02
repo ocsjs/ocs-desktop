@@ -73,6 +73,12 @@ export type WebStore = {
 			browserEnhancement: boolean;
 			/** CPU/内存启动预检测：启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动；关闭后忽略警告直接启动 */
 			memoryCheck: boolean;
+			/** 网络缓存加速：脚本猫/GreasyFork 等站点的脚本下载与搜索 API 磁盘缓存；关闭后恢复原始实时加载 */
+			networkCache: boolean;
+			/** 站点级缓存开关（键为 CACHEABLE_SITES 的 id；缺省视为开启） */
+			networkCacheSites: Record<string, boolean>;
+			/** 验证码手动模式：未安装 OCR 识别模块时不报错不提示安装，检测到验证码时提示人工干预 */
+			ocrManual: boolean;
 			/** 导航页设置 */
 			bookmarkPage: {
 				/** 是否启用自定义导航页（关闭后不更改浏览器新建页面，显示默认空白导航页） */
@@ -102,6 +108,11 @@ export type WebStore = {
 			downloadOptimization: boolean;
 			/** 数据加密：关闭后配置数据按明文存储于 config.json（不执行加密） */
 			dataEncryption: boolean;
+			/**
+			 * 系统自动化程序开关（键为脚本名 system:xxx；缺省视为启用）。
+			 * 开发者调试用：可单独停用某个系统自动化程序，仅对之后启动的浏览器生效。
+			 */
+			systemScripts: Record<string, boolean>;
 		};
 	};
 
@@ -189,6 +200,9 @@ export const DEFAULT_RENDER = {
 			screenshotQuality: 'medium' as const,
 			browserEnhancement: false,
 			memoryCheck: true,
+			networkCache: true,
+			networkCacheSites: {},
+			ocrManual: false,
 			bookmarkPage: {
 				enable: true,
 				enableSearch: true,
@@ -200,7 +214,8 @@ export const DEFAULT_RENDER = {
 		dev: {
 			scriptAssistance: true,
 			downloadOptimization: true,
-			dataEncryption: true
+			dataEncryption: true,
+			systemScripts: {}
 		}
 	},
 	langs: {},
@@ -285,6 +300,12 @@ export const store: AppStore & { render: WebStore } = reactive(_store);
 export const devSession = reactive({
 	/** 是否显示设置页的「开发者设置」卡片 */
 	enabled: false
+});
+
+/** 会话级 UI 跳转请求（跨组件触发，不持久化，消费方读后复位） */
+export const uiSession = reactive({
+	/** 请求设置页切换到「应用中心」并自动打开「其他拓展加载方法」弹窗 */
+	appCenterGuide: false
 });
 
 console.log('store', store);

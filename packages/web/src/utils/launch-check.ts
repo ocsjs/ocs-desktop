@@ -2,6 +2,7 @@ import { Message } from '@arco-design/web-vue';
 import { remote } from './remote';
 import { processes } from './process';
 import { store } from '../store';
+import { Status } from './statusBar';
 
 /** 单个浏览器实例预估内存占用（MB）：Chromium 主进程 + 渲染进程 + 拓展的保守估计 */
 const PER_BROWSER_MEMORY_MB = 500;
@@ -67,17 +68,47 @@ export async function checkLaunchCapacity(): Promise<LaunchGuardResult> {
 						: `可用内存不足：当前约 ${freeMB} MB（单个浏览器预估占用约 ${PER_BROWSER_MEMORY_MB} MB）`
 			};
 		}
-		const cpu = await sampleCpuUsage();
-		if (cpu > CPU_BUSY_THRESHOLD) {
-			return {
-				pass: false,
-				reason: `CPU 负载过高：当前使用率约 ${Math.round(cpu * 100)}%`
-			};
+		const cpu = await waitForCpuIdle();
+		if (!cpu.pass) {
+			return cpu;
 		}
 		return { pass: true };
 	} catch (e) {
 		console.warn('[launch-check] 预检测异常，放行启动：', e);
 		return { pass: true };
+	}
+}
+
+/** CPU 等待空闲的最长窗口（超时判定为持续高负载，拦截启动） */
+const CPU_WAIT_TIMEOUT_MS = 30 * 1000;
+/** 等待期间的采样间隔 */
+const CPU_WAIT_POLL_MS = 2 * 1000;
+
+/**
+ * CPU 负载检测：瞬时峰值不误拦——超过阈值时进入等待重试，
+ * 采样回落到阈值以下即放行；持续高负载超过 30s 才拦截。
+ * 等待期间状态栏显示实时负载，用户可感知。
+ */
+async function waitForCpuIdle(): Promise<LaunchGuardResult> {
+	const deadline = Date.now() + CPU_WAIT_TIMEOUT_MS;
+	let lastCpu = 0;
+	let waited = false;
+	for (;;) {
+		lastCpu = await sampleCpuUsage();
+		if (lastCpu <= CPU_BUSY_THRESHOLD) {
+			if (waited) Status.clear();
+			return { pass: true };
+		}
+		if (Date.now() >= deadline) {
+			if (waited) Status.clear();
+			return {
+				pass: false,
+				reason: `CPU 持续高负载（使用率约 ${Math.round(lastCpu * 100)}%），请稍后重试或关闭部分程序`
+			};
+		}
+		waited = true;
+		Status.loading(`CPU 负载较高（${Math.round(lastCpu * 100)}%），等待空闲后自动启动...`);
+		await new Promise((resolve) => setTimeout(resolve, CPU_WAIT_POLL_MS));
 	}
 }
 

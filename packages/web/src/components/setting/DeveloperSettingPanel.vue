@@ -92,6 +92,60 @@
 				已关闭：配置数据将以明文保存，存在泄露风险。
 			</a-alert>
 
+			<Description>
+				<template #label>
+					自动化程序管理
+					<a-popover>
+						<template #content>
+							<div style="max-width: 320px">
+								<div>查看并单独启停全部系统自动化程序（脚本安装/开发者模式/脚本同步等）。</div>
+								<div>调试用：停用后对应自动化流程不再执行；仅对之后启动的浏览器生效。</div>
+							</div>
+						</template>
+						<CircleHelpIcon class="label-help-icon" />
+					</a-popover>
+				</template>
+				<a-button
+					size="small"
+					@click="openSystemScriptsModal"
+				>
+					管理自动化程序
+				</a-button>
+			</Description>
+
+			<!-- 系统自动化程序管理弹窗：单独启停每个系统自动化程序（调试用） -->
+			<a-modal
+				v-model:visible="systemScriptsModalVisible"
+				title="自动化程序管理"
+				:footer="false"
+				:width="520"
+			>
+				<a-alert
+					type="info"
+					style="margin-bottom: 12px"
+				>
+					停用的自动化程序在之后启动的浏览器中不再执行（调试用，请谨慎操作）。
+				</a-alert>
+				<div
+					v-for="script of systemScripts"
+					:key="script.name"
+					class="d-flex align-items-center py-1"
+				>
+					<a-switch
+						size="small"
+						:model-value="systemScriptEnabled(script.name)"
+						@change="(v) => setSystemScriptEnabled(script.name, !!v)"
+					/>
+					<span class="ms-2">{{ script.label || script.name }}</span>
+					<span
+						class="ms-auto text-secondary"
+						style="font-size: 12px"
+					>
+						{{ script.phase === 'launch' ? '启动阶段' : '启动后' }} · order {{ script.order }}
+					</span>
+				</div>
+			</a-modal>
+
 			<a-divider orientation="left"> 更新调试 </a-divider>
 
 			<Description label="当前版本">
@@ -264,6 +318,23 @@ import { forceClearBrowserCache } from '../../utils/browser';
 import { Folder } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 import { restartAppGuarded } from '../../utils/restart';
+
+/** 系统自动化程序管理（开发者调试：单独启停每个系统自动化程序） */
+const systemScriptsModalVisible = ref(false);
+const systemScripts = ref<{ name: string; label?: string; phase: string; order: number }[]>([]);
+
+async function openSystemScriptsModal() {
+	systemScriptsModalVisible.value = true;
+	systemScripts.value = await remote.methods.call('getSystemScripts');
+}
+
+/** 缺省视为启用，显式 false 才停用 */
+function systemScriptEnabled(name: string) {
+	return store.render.setting.dev.systemScripts[name] !== false;
+}
+function setSystemScriptEnabled(name: string, enabled: boolean) {
+	store.render.setting.dev.systemScripts[name] = enabled;
+}
 
 /** 重置设置 */
 async function reset() {

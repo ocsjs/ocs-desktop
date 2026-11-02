@@ -5,6 +5,7 @@ import { extensionVerifyScript } from './extension-verify';
 import { userscriptInstallerScript } from './userscript-installer';
 import { extensionHomepageScript } from './extension-homepage';
 import { userscriptSyncScript } from './userscript-sync';
+import { siteCacheScript } from './site-cache';
 
 /**
  * 系统自动化程序注册表（软件内置的静态自动化流程）。
@@ -21,13 +22,20 @@ export const SystemScripts: SystemAutomationScript[] = [
 	extensionVerifyScript,
 	userscriptInstallerScript,
 	extensionHomepageScript,
-	userscriptSyncScript
+	userscriptSyncScript,
+	siteCacheScript
 ];
 
 /** 按阶段依序执行系统自动化程序；launch 阶段失败向上抛出（保持原关键路径语义），post 阶段失败仅记录 */
 export async function runSystemScripts(ctx: SystemScriptContext, phase: SystemScriptPhase) {
 	const scripts = SystemScripts.filter((s) => s.phase === phase).sort((a, b) => a.order - b.order);
+	// 开发者设置-自动化程序管理的停用开关（显式 false 才停用，缺省启用）
+	const flags = (ctx.store?.render as any)?.setting?.dev?.systemScripts as Record<string, boolean> | undefined;
 	for (const script of scripts) {
+		if (flags?.[script.name] === false) {
+			console.log(`[${script.name}] 已被开发者设置停用，跳过`);
+			continue;
+		}
 		try {
 			await script.run(ctx);
 		} catch (e) {
