@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.8.0](https://github.com/ocsjs/ocs-desktop/compare/v3.7.0...v3.8.0) (2026-10-31)
+
+
+### ✨ 新功能
+
+* **setting:** 脚本配置界面改为侧边栏 + 手风琴左右布局 ([743c136](https://github.com/ocsjs/ocs-desktop/commit/743c1363f042a0ff90b5e13cb44688647ea837c3))
+* **web:** 浏览器面板改为抽屉并优化布局 ([ca2024a](https://github.com/ocsjs/ocs-desktop/commit/ca2024a954d98effe1305f2961da2d36366be5ad))
+* 内置拓展随包分发体系（钉值构建 + asar 释放 + 完整性校验 + 下载兜底） ([aed2e93](https://github.com/ocsjs/ocs-desktop/commit/aed2e9356a184570182299fa36eaf9af1054c8e7))
+* 拓展启动链路加固与脚本安装页精确定位 ([dbb3609](https://github.com/ocsjs/ocs-desktop/commit/dbb360976eb214b0166d6545a85edd2bcaf0d1bf))
+* 系统自动化程序框架与静态流程迁移 ([e75def0](https://github.com/ocsjs/ocs-desktop/commit/e75def0b65cc923f2487924e4a8a871812f98395))
+* 脚本列表前端优化（启用状态语义 / 同名检测 / 同步提示） ([895e8fe](https://github.com/ocsjs/ocs-desktop/commit/895e8fec7a06ae42e6c576af1053013b61bd9a83))
+* 脚本列表双向同步（删除/停用状态对齐脚本管理器） ([b460b80](https://github.com/ocsjs/ocs-desktop/commit/b460b805d5ee1b6a7ddbba3df6b19665931c2453))
+* 资源监控浮层 tooltip 数值明细，设置项简化 ([1013c0b](https://github.com/ocsjs/ocs-desktop/commit/1013c0b200ed9e80e72a2385289eb3eb8f6e04b1))
+
+
+### 🐛 问题修复
+
+* **linux:** deb 依赖兼容 t64 变体，更新提示与自动重启适配 ([531a615](https://github.com/ocsjs/ocs-desktop/commit/531a6159f7942707421e836982c25ecc09b9f887))
+* 脚本下载与安装链路修复（URL 归一化 / 离线降级 / 损坏条目修复） ([4a1b9b9](https://github.com/ocsjs/ocs-desktop/commit/4a1b9b9e5590a84b2d9826e799f6aba272354b06))
+* 远程请求默认 15s 超时，避免 TCP 挂起等待系统级超时 ([07a7f5a](https://github.com/ocsjs/ocs-desktop/commit/07a7f5a7fb966c1d7b856cb7e4880293ac8c71d0))
+* 适配脚本猫 API 结构变更，修复脚本搜索安装全部失效 ([f0d3dec](https://github.com/ocsjs/ocs-desktop/commit/f0d3decab7657754953ad8e067be10bafbbab46d))
+
 ## [3.7.0](https://github.com/ocsjs/ocs-desktop/compare/v3.6.0...v3.7.0) (2026-10-30)
 
 
