@@ -1,4 +1,6 @@
 import { SystemAutomationScript } from '@ocs-desktop/common';
+import { stay } from './utils';
+import { visualClickElement } from '../utils';
 
 /**
  * 系统自动化：打开浏览器拓展开发者模式（MV3 侧载运行脚本必需）。
@@ -8,10 +10,12 @@ import { SystemAutomationScript } from '@ocs-desktop/common';
  */
 export const extensionDevModeScript = new SystemAutomationScript({
 	name: 'system:extension-dev-mode',
+	label: '开启开发者模式',
 	order: 10,
 	phase: 'launch',
 	async run({ browser, executablePath }) {
 		const edge = executablePath.includes('edge');
+		const t0 = Date.now();
 		const page = await browser.newPage();
 		await page.goto('chrome://extensions/');
 
@@ -20,12 +24,12 @@ export const extensionDevModeScript = new SystemAutomationScript({
 			await page.waitForTimeout(200);
 			if (edge) {
 				const els = await page.$$('[aria-label="扩展 菜单"]');
-				await els[1]?.click();
+				if (els[1]) await visualClickElement(page, els[1]);
 				const element = await page.waitForSelector('#developer-mode', {
 					timeout: 5000
 				});
 				if (await element.evaluate<boolean, HTMLInputElement>((el) => el.checked === false)) {
-					await element.click();
+					await visualClickElement(page, element);
 				}
 			} else {
 				// 拓展列表初次渲染期间 #devMode 所在的 toolbar 可能重渲染导致句柄失效，重试 3 次；
@@ -40,7 +44,7 @@ export const extensionDevModeScript = new SystemAutomationScript({
 						);
 						operated = true;
 						if (pressed) break; // 已开启，无需操作
-						await element.click({ timeout: 2000 });
+						await visualClickElement(page, element, { timeout: 2000 });
 						justEnabled = true;
 						break;
 					} catch {
@@ -88,6 +92,8 @@ export const extensionDevModeScript = new SystemAutomationScript({
 			throw err;
 		}
 		await page.waitForTimeout(500);
+		// 页面最短停留 1s：防止操作过快界面一闪而过
+		await stay(t0);
 		await page.close();
 	}
 });

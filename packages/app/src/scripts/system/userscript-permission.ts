@@ -1,4 +1,6 @@
 import { SystemAutomationScript } from '@ocs-desktop/common';
+import { stay } from './utils';
+import { visualClickElement } from '../utils';
 
 /**
  * 系统自动化：为全部侧载拓展开启「允许运行用户脚本」开关。
@@ -10,10 +12,12 @@ import { SystemAutomationScript } from '@ocs-desktop/common';
  */
 export const userscriptPermissionScript = new SystemAutomationScript({
 	name: 'system:userscript-permission',
+	label: '允许用户脚本权限',
 	order: 20,
 	phase: 'launch',
 	async run({ browser, executablePath }) {
 		const scheme = executablePath.includes('edge') ? 'edge' : 'chrome';
+		const t0 = Date.now();
 		const page = await browser.newPage();
 		try {
 			await page.goto(`${scheme}://extensions/`);
@@ -39,13 +43,15 @@ export const userscriptPermissionScript = new SystemAutomationScript({
 					await page.goto(`${scheme}://extensions/?id=${id}`);
 					// 详情页渲染稳定后再操作，过程对用户可见
 					await page.waitForTimeout(500);
-					const result: string = await page.evaluate(() => {
-						const holder: { el: any } = { el: null };
+					// evaluateHandle 直接带出开关元素句柄（shadow DOM 内的引用经句柄传递，
+					// 无需 data 属性标记与二次查询，页面无注入/标记痕迹）
+					const handle = await page.evaluateHandle(() => {
+						let found: any = null;
 						// eslint-disable-next-line no-undef
 						const walk = (root: ParentNode) => {
-							if (holder.el) return;
+							if (found) return;
 							for (const el of Array.from(root.querySelectorAll('*'))) {
-								if (holder.el) return;
+								if (found) return;
 								const shadow = (el as HTMLElement).shadowRoot;
 								if (shadow) walk(shadow);
 								if (el.tagName === 'CR-TOGGLE') {
@@ -54,7 +60,7 @@ export const userscriptPermissionScript = new SystemAutomationScript({
 									for (let i = 0; i < 6 && host; i++) {
 										const text = String(host.innerText || '').trim();
 										if (/用户脚本|user.?scripts?/i.test(text)) {
-											holder.el = el;
+											found = el;
 											return;
 										}
 										host = host.parentElement || host.getRootNode?.()?.host;
@@ -63,22 +69,27 @@ export const userscriptPermissionScript = new SystemAutomationScript({
 							}
 						};
 						walk(document);
-						if (!holder.el) return 'absent';
-						const isOn = holder.el.checked === true || holder.el.getAttribute('aria-pressed') === 'true';
-						if (isOn) return 'already';
-						holder.el.click();
-						return 'clicked';
+						return found;
 					});
-					if (result === 'clicked') {
-						console.log('已开启拓展「允许用户脚本」开关:', id);
-						// 开关切换会重载拓展（SW 重启）；停留片刻让开关状态变化对用户可见
-						await page.waitForTimeout(900);
+					const toggle = handle.asElement();
+					if (toggle) {
+						const isOn = await toggle.evaluate(
+							(el) => (el as HTMLInputElement).checked === true || el.getAttribute('aria-pressed') === 'true'
+						);
+						if (!isOn) {
+							await visualClickElement(page, toggle);
+							console.log('已开启拓展「允许用户脚本」开关:', id);
+							// 开关切换会重载拓展（SW 重启）；停留片刻让开关状态变化对用户可见
+							await page.waitForTimeout(900);
+						}
 					}
 				} catch (e) {
 					console.warn('开启用户脚本开关失败（忽略，不影响其他拓展）:', id, e);
 				}
 			}
 		} finally {
+			// 页面最短停留 1s：防止操作过快界面一闪而过
+			await stay(t0);
 			await page.close().catch(() => {});
 		}
 	}
