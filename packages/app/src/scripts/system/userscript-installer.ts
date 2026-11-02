@@ -1,6 +1,8 @@
 import { BrowserContext, Page } from 'playwright-core';
+import { waitExtensionSwStable } from './extension-verify';
 import { SystemAutomationScript } from '@ocs-desktop/common';
-import { sleep } from './utils';
+import { sleep, stay } from './utils';
+import { visualClickElement } from '../utils';
 
 /** 安装结果 */
 export interface InstallResult {
@@ -26,12 +28,20 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 	// 触发前快照已有页面 URL：浏览器常驻的扩展页（如脚本管理器后台页）会命中 /extension:\/\//，
 	// 快照排除后才能正确识别本次新弹出的脚本管理器安装页
 	const existingUrls = new Set(browser.pages().map((p) => p.url()));
+	const t0 = Date.now();
 	const trigger = await browser.newPage();
 	try {
-		// 触发拓展拦截 .user.js 并弹出安装页（3s 内未完成则关闭触发页）
+		// 触发拓展拦截 .user.js 并弹出安装页（3s 内未完成则关闭触发页）。
+		// ⚠️ ScriptCat 经 declarativeNetRequest 把 .user.js 导航在【同一标签页】重定向到
+		// install.html?url=...（拆包 service_worker.js 实测），此时触发页本身就是安装页，
+		// 竞态关闭前必须检查：已是安装页则不得关闭（否则首次启动 SW 冷启动慢时 3s 必误杀安装页）
 		await Promise.race([
 			trigger.goto(url).catch(() => {}),
-			sleep(3 * 1000).then(() => trigger.close().catch(() => {}))
+			sleep(3 * 1000).then(() => {
+				if (!trigger.isClosed() && !isInstallPageUrl(trigger.url())) {
+					trigger.close().catch(() => {});
+				}
+			})
 		]);
 	} catch {}
 
@@ -45,6 +55,10 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 	try {
 		await installPage.bringToFront();
 		await sleep(1000);
+		// 安装页在点击前意外关闭（拓展重载等）：按 Target closed 异常上抛，由外层重试
+		if (installPage.isClosed()) {
+			throw new Error('Target page, context or browser has been closed');
+		}
 		const clicked = await clickInstallButton(installPage);
 		if (clicked) {
 			// 点击后稍作停留，让用户看到按钮被触发的过程，避免安装页一闪而过
@@ -64,6 +78,8 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
 		if (!installPage.isClosed()) {
 			await installPage.close().catch(() => {});
 		}
+		// 触发页最短停留 1s：防止操作过快界面一闪而过
+		await stay(t0);
 		await trigger.close().catch(() => {});
 	}
 }
@@ -73,6 +89,28 @@ async function installOneScript(url: string, browser: BrowserContext): Promise<I
  * @param existingUrls 触发安装前已存在的页面 URL 快照，
  * 用于排除常驻扩展页（如脚本管理器后台页），仅匹配本次新弹出的扩展页面
  */
+/**
+ * 脚本管理器安装页精确路径清单（拆包实测，随版本维护）：
+ * - ScriptCat：/src/install.html（安装/更新共用，service_worker.js confirmUrl 实测）
+ * - Tampermonkey：/ask.html（5.5+，background.js tabs.create 实测）；/install.html 为旧版兜底
+ *
+ * ⚠️ 勿改回关键字模糊匹配（install|user.js|userscript）：
+ * TM 的脚本编辑器页为 userscript.html、各类 URL 的 query 也可能携带脚本地址，
+ * 模糊匹配会把非安装页误认为安装页（误点按钮/误判关闭）。
+ */
+const INSTALL_PAGE_PATHS = ['/src/install.html', '/ask.html', '/install.html'];
+
+/** 精确判定脚本管理器安装页 URL（协议 + 路径全等，忽略 query/hash） */
+function isInstallPageUrl(url: string): boolean {
+	if (!url.startsWith('chrome-extension://')) return false;
+	try {
+		const pathname = new URL(url).pathname.replace(/\/+$/, '');
+		return INSTALL_PAGE_PATHS.includes(pathname);
+	} catch {
+		return false;
+	}
+}
+
 async function waitForInstallPage(
 	browser: BrowserContext,
 	timeout: number,
@@ -80,11 +118,8 @@ async function waitForInstallPage(
 ): Promise<Page | undefined> {
 	const end = Date.now() + timeout;
 	while (Date.now() < end) {
-		const candidates = browser.pages().filter((p) => /extension:\/\//.test(p.url()) && !existingUrls.has(p.url()));
-		// 多个候选时优先取 URL 含安装特征的页面（脚本管理器安装页路径含 install；
-		// Tampermonkey 5.5+ 的安装确认页为 ask.html?aid=...；
-		// 且 query 携带 .user.js / userScript 脚本地址），兜底取第一个
-		const page = candidates.find((p) => /install|ask\.html|user\.js|userscript/i.test(p.url())) || candidates[0];
+		// 精确匹配安装页路径，排除触发前已存在的页面（常驻扩展页）
+		const page = browser.pages().find((p) => !existingUrls.has(p.url()) && isInstallPageUrl(p.url()));
 		if (page) return page;
 		await sleep(500);
 	}
@@ -98,14 +133,23 @@ async function waitForInstallPage(
  * 防止误点未知页面的任意按钮：
  * 1. ScriptCat（install.html，React SPA）：固定 data-testid="install-primary"（安装/更新共用；
  *    skill 安装页为 skill-install）；成功标识 install-success-ribbon——拆包 install.js 实测确认；
- * 2. Tampermonkey（ask.html/install.html）：.install_buttons 容器内 input[type=button]，
+ * 2. Tampermonkey（ask.html/install.html）：.ask_action_buttons（id 后缀 _install_buttons）容器内 input[type=button]，
  *    文案在 value 属性（textContent 为空），安装/更新恒为容器内动作按钮——拆包 extension.js 实测确认。
  *
  * ⚠️ 勿加 button 通配：ScriptCat 页面的首个 button 是脚本启用开关，误点会变成开关脚本而非安装。
  */
 async function clickInstallButton(installPage: Page): Promise<boolean> {
-	// ScriptCat 按钮在脚本代码加载期间为 disabled：存在才等待其可用，避免无此按钮时无谓耗时
 	const scSelector = '[data-testid="install-primary"], [data-testid="skill-install"]';
+	const tmSelector = '.ask_action_buttons input[type="button"], [id$="_install_buttons"] input[type="button"]';
+	// 按钮为异步渲染（ScriptCat 加载脚本代码 / TM 拉取脚本信息后才出现），先等任一形态出现再操作
+	await installPage
+		.waitForFunction(
+			([sc, tm]) => !!document.querySelector(sc as string) || document.querySelectorAll(tm as string).length > 0,
+			[scSelector, tmSelector] as any,
+			{ timeout: 10 * 1000 }
+		)
+		.catch(() => {});
+	// ScriptCat 按钮在脚本代码加载期间为 disabled：存在才等待其可用，避免无此按钮时无谓耗时
 	if ((await installPage.locator(scSelector).count()) > 0) {
 		await installPage
 			.waitForFunction(
@@ -119,30 +163,26 @@ async function clickInstallButton(installPage: Page): Promise<boolean> {
 			.catch(() => {});
 	}
 
-	const found = await installPage.evaluate(() => {
-		const findTarget = (): HTMLElement | undefined => {
-			// 1. ScriptCat：固定 data-testid（拆包 install.js 实测）
-			const sc = document.querySelector<HTMLElement>('[data-testid="install-primary"], [data-testid="skill-install"]');
-			if (sc) return sc;
-			// 2. Tampermonkey：.install_buttons 内 input[type=button]，文案在 value 属性（拆包 extension.js 实测）
-			const tmButtons = Array.from(
-				document.querySelectorAll<HTMLInputElement>('.install_buttons input[type="button"]')
-			);
-			const tm = tmButtons.find((el) => /安装|更新|Install|Update|Reinstall/i.test(el.value || '')) || tmButtons[0];
-			if (tm) return tm as unknown as HTMLElement;
-			return undefined;
-		};
-		const btn = findTarget();
-		if (btn) {
-			// 滚动到可视区域再点击，点击过程对用户可见
-			// eslint-disable-next-line no-undef
-			btn.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
-			btn.click();
-			return true;
-		}
-		return false;
+	// 查找安装/更新按钮（固定选择器），以 evaluateHandle 直接带出元素句柄，
+	// 交由句柄版可视化点击（无需向 window 注入任何函数，页面无注入痕迹可检测）
+	const handle = await installPage.evaluateHandle(() => {
+		// 1. ScriptCat：固定 data-testid（拆包 install.js 实测）
+		const sc = document.querySelector<HTMLElement>('[data-testid="install-primary"], [data-testid="skill-install"]');
+		if (sc) return sc;
+		// 2. Tampermonkey：.ask_action_buttons（id 后缀 _install_buttons）内 input[type=button]，文案在 value 属性（拆包 extension.js 实测）
+		const tmButtons = Array.from(
+			document.querySelectorAll<HTMLInputElement>(
+				'.ask_action_buttons input[type="button"], [id$="_install_buttons"] input[type="button"]'
+			)
+		);
+		return tmButtons.find((el) => /安装|更新|Install|Update|Reinstall/i.test(el.value || '')) || tmButtons[0] || null;
 	});
-	return found;
+	const btn = handle.asElement();
+	if (!btn) return false;
+	// 滚动到可视区域 + 涟漪提示点击位置（visualClickElement 内置涟漪与延迟）
+	await btn.scrollIntoViewIfNeeded().catch(() => {});
+	await visualClickElement(installPage, btn);
+	return true;
 }
 
 /**
@@ -165,7 +205,9 @@ async function waitForInstallSuccess(installPage: Page, timeout: number): Promis
 				const btn = document.querySelector<HTMLButtonElement>('[class*="primary"]');
 				if (btn && (btn.disabled || btn.getAttribute('disabled') !== null)) return true;
 				// Tampermonkey（ask.html）：安装按钮为 input[type=button]，点击安装后被禁用视为完成信号
-				const tmBtn = document.querySelector<HTMLInputElement>('.install_buttons input[type="button"]');
+				const tmBtn = document.querySelector<HTMLInputElement>(
+					'.ask_action_buttons input[type="button"], [id$="_install_buttons"] input[type="button"]'
+				);
 				if (tmBtn && tmBtn.disabled) return true;
 				return false;
 			})
@@ -184,12 +226,16 @@ async function waitForInstallSuccess(installPage: Page, timeout: number): Promis
  */
 export const userscriptInstallerScript = new SystemAutomationScript({
 	name: 'system:userscript-installer',
+	label: '用户脚本安装',
 	order: 10,
 	phase: 'post',
 	async run(ctx) {
-		const { browser, step, send, userscripts, enabledScriptCount } = ctx;
+		const { browser, step, send, userscripts, enabledScriptCount, extensionPaths } = ctx;
 
 		if (userscripts.length) {
+			// 时序保证：开关切换（开发者模式/用户脚本权限）引发的拓展重载由 Chrome 异步落地，
+			// 重载命中安装页打开期间会销毁页面（Target closed）——安装前等待拓展 SW 稳定
+			await waitExtensionSwStable(browser, extensionPaths);
 			await step('正在安装用户脚本...（如长时间未完成请尝试重启浏览器 ）');
 			try {
 				const results = await initScripts(userscripts, browser);

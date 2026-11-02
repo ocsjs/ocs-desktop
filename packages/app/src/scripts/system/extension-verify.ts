@@ -73,6 +73,50 @@ export function resolveExtensionId(browser: BrowserContext, extensionPath: strin
 }
 
 /**
+ * 等待脚本管理器拓展 service worker 稳定。
+ * 「开发者模式/允许用户脚本」开关切换引发的拓展重载由 Chrome 异步落地（可能延迟数秒），
+ * 重载命中安装页打开期间会销毁拓展页面（Target closed）——安装脚本前必须先等待稳定。
+ * 判定：目标拓展 SW 存在且 URL 集合连续 2s 无变化（重载期间 SW 会短暂消失/更换）；
+ * 超时 20s 兜底放行（MV3 SW 空闲休眠属正常，不等死）。
+ */
+export async function waitExtensionSwStable(
+	browser: BrowserContext,
+	extensionPaths: string[],
+	timeoutMs = 20 * 1000
+): Promise<void> {
+	const expectedIds = new Set(extensionPaths.flatMap((p) => computeExtensionIdCandidates(p)));
+	if (!expectedIds.size) return;
+	const swKey = () =>
+		browser
+			.serviceWorkers()
+			.filter((sw) => sw.url().startsWith('chrome-extension://') && expectedIds.has(new URL(sw.url()).host))
+			.map((sw) => sw.url())
+			.sort()
+			.join('|');
+
+	const deadline = Date.now() + timeoutMs;
+	let lastKey = '';
+	let stableSince = 0;
+	while (Date.now() < deadline) {
+		const key = swKey();
+		if (!key) {
+			// SW 未出现/正在重载：重置稳定计时继续等
+			lastKey = '';
+			await sleep(300);
+			continue;
+		}
+		if (key !== lastKey) {
+			lastKey = key;
+			stableSince = Date.now();
+		} else if (Date.now() - stableSince >= 2000) {
+			// 连续 2s 无变化 → 稳定
+			return;
+		}
+		await sleep(300);
+	}
+}
+
+/**
  * 系统自动化：验证脚本管理器拓展（油猴/脚本猫等应用中心扩展）已加载。
  * 通过检测拓展的 service worker 是否运行来判断（MV3 拓展必有 service worker），
  * 且 SW 的扩展 ID 必须匹配按路径推导的本次加载扩展之一——
@@ -84,6 +128,7 @@ export function resolveExtensionId(browser: BrowserContext, extensionPath: strin
  */
 export const extensionVerifyScript = new SystemAutomationScript({
 	name: 'system:extension-verify',
+	label: '拓展加载验证',
 	order: 30,
 	phase: 'launch',
 	async run({ browser, extensionPaths, uid, send }) {
