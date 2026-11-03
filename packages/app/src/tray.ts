@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, NativeImage } from 'electron';
 import path from 'path';
+import { getProjectPath } from './utils';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -32,7 +33,9 @@ let isQuitting = false;
  * 直接传入会被 macOS 按原始点位渲染，图标占据大片菜单栏。
  */
 function createTrayIcon(): NativeImage {
-	const dir = path.resolve('./public/icons');
+	// 打包后 CWD 是安装目录而非应用目录，path.resolve('./public') 会解析不到图标
+	// （表现为托盘空图标有占位）；统一经 getProjectPath() 定位（打包态指向 asar 内）
+	const dir = path.join(getProjectPath(), 'public', 'icons');
 	const img = nativeImage.createEmpty();
 	if (process.platform === 'darwin') {
 		const rep1 = nativeImage.createFromPath(path.join(dir, '22.png'));
@@ -95,7 +98,9 @@ export function hideToTray() {
 	if (tray && !balloonShown && process.platform === 'win32') {
 		balloonShown = true;
 		tray.displayBalloon({
-			icon: nativeImage.createFromPath(path.resolve('./public/favicon.ico')),
+			// 高分辨率 PNG（256px）：favicon.ico 为小尺寸图标，气泡放大显示会模糊；
+			// 路径经 getProjectPath 定位（打包后 CWD 非应用目录，相对路径会解析失败）
+			icon: nativeImage.createFromPath(path.join(getProjectPath(), 'public', 'icons', '256.png')),
 			title: 'OCS Desktop',
 			content:
 				'正在后台运行，已最小化到系统托盘，浏览器与自动化任务保持运行。点击托盘图标可重新打开；右键选择「退出」可完全关闭。'

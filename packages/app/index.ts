@@ -4,7 +4,8 @@ import { remoteRegister } from './src/tasks/remote.register';
 import { initStore } from './src/tasks/init.store';
 import { autoLaunch } from './src/tasks/auto.launch';
 import { createWindow } from './src/window';
-import { createTray, isAppQuitting, quitApp } from './src/tray';
+import { createTray, destroyTray, isAppQuitting, quitApp, showMainWindow } from './src/tray';
+import { store } from './src/store';
 import { globalListenerRegister } from './src/tasks/global.listener';
 import { isLinuxSandboxUnavailable, task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
@@ -142,7 +143,21 @@ function bootstrap() {
 
 				task('初始化远程通信模块', () => remoteRegister(window));
 				task('注册app事件监听器', () => globalListenerRegister(window));
-				task('初始化系统托盘', () => createTray(window));
+				// 系统托盘按需创建：仅「后台运行」开启时显示托盘图标；
+				// 运行时切换即时生效（关闭时若窗口正处于托盘隐藏状态则先恢复显示再销毁托盘）
+				task('初始化系统托盘', () => {
+					const syncTray = () => {
+						if (store.store.window?.hideToTrayOnClose) {
+							createTray(window);
+						} else {
+							if (!window.isDestroyed() && !window.isVisible()) showMainWindow();
+							destroyTray();
+						}
+					};
+					syncTray();
+					// electron-store 实例监听：渲染端切换「后台运行」时主进程同步创建/销毁托盘
+					(store as any).onDidChange?.('window', syncTray);
+				});
 
 				// 渲染进程启动时会同步调用 decryptRenderString/saveStore 等加密 IPC，
 				// 必须先确保主密钥就绪（initCrypto 并发幂等，此处等待并行的初始化任务完成），
