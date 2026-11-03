@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.9.0](https://github.com/ocsjs/ocs-desktop/compare/v3.8.0...v3.9.0) (2026-11-02)
+
+
+### ✨ 新功能
+
+* ocr 三选一与验证码手动模式 ([650ab9f](https://github.com/ocsjs/ocs-desktop/commit/650ab9f17c1f90a70e07a8d9bc56ad76652236ff))
+* **web:** 专业模式浏览器面板新增缩略图推流 ([ea0caf0](https://github.com/ocsjs/ocs-desktop/commit/ea0caf0d591f4a49e84a49b71a674709da07ed18))
+* **web:** 标题栏居中显示当前界面标题 ([e67d5c8](https://github.com/ocsjs/ocs-desktop/commit/e67d5c81e9e3d4c4b28f25c12ce2c03aac6f11e6))
+* 下载流程门控、crx 检测提示与双向同步修复 ([5d62129](https://github.com/ocsjs/ocs-desktop/commit/5d621295f7788163f3d4b7cafb40570c9a637470))
+* 开发者设置自动化程序管理与资源检测优化 ([47ede7f](https://github.com/ocsjs/ocs-desktop/commit/47ede7f5b8e4484f4229d1c4bb569f2af4286072))
+* 站点级网络缓存加速与缓存管理 ([b6a8281](https://github.com/ocsjs/ocs-desktop/commit/b6a8281f59c6fe682caa98bca4ca3cce2a4ff55d))
+* 系统自动化可视化点击与页面停留 ([fbdfae9](https://github.com/ocsjs/ocs-desktop/commit/fbdfae9d0ca078a240dc35573a1264edb592e261))
+* 自动化程序超时改为按脚本声明，OCR 脚本延长至 3 分钟 ([9e948f7](https://github.com/ocsjs/ocs-desktop/commit/9e948f74e5570394fc6fd53de4ad7c2bc1b77f63))
+
+
+### 🐛 问题修复
+
+* **web:** 修复右键菜单溢出产生外层滚动条并挤压渲染区域 ([648ad61](https://github.com/ocsjs/ocs-desktop/commit/648ad613f753fd504aeda4adcfe3efd2742c2326))
+* **web:** 修复日志输出终端滚动问题 ([7da110b](https://github.com/ocsjs/ocs-desktop/commit/7da110b4f88e6c8fed122990a30b7544f7a602f2))
+* **web:** 简洁模式右键菜单优化 ([ef2bbf5](https://github.com/ocsjs/ocs-desktop/commit/ef2bbf5f397fc4aa0275ff8da92b56a1622f3040))
+* 仅启动拓展路径含空格被 shell 截断 ([589b953](https://github.com/ocsjs/ocs-desktop/commit/589b9535c6b8456fa31efe8fad141b653a202781))
+* 修复 OCS 配置面板卡死冻结，easy-us 改为依赖化固定版本 ([807d2ff](https://github.com/ocsjs/ocs-desktop/commit/807d2ff1dd45352abce91c4162c73ec38a3f1464))
+* 修复快捷导航界面无法滚动的BUG ([e83eeb6](https://github.com/ocsjs/ocs-desktop/commit/e83eeb66d4a936e02600c5a468beecd800377b3a))
+* 白屏兜底与渲染容错，easy-us 升级 1.1.2 ([0281920](https://github.com/ocsjs/ocs-desktop/commit/02819203ac14e6c1efb0172f98a902642dc86b54))
+* 脚本安装链路修复（同标签重定向竞态/精确匹配/TM 选择器/SW 稳定等待） ([4f546d1](https://github.com/ocsjs/ocs-desktop/commit/4f546d1937391668e391434f650fc8c1510b2bf6))
+
+
+### ⚡ 优化改进
+
+* 增加导航页标签加载动效 ([246621f](https://github.com/ocsjs/ocs-desktop/commit/246621f9827999391a9e75b782b0567773a2d15e))
+
 ## [3.8.0](https://github.com/ocsjs/ocs-desktop/compare/v3.7.0...v3.8.0) (2026-10-31)
 
 
