@@ -16,9 +16,9 @@ export const OCS_CDN = 'https://cdn.ocsjs.com';
 
 /** 软件信息接口（更新日志外的资源/通知/书签/语言等） */
 export const OCS_API = {
-	infos: `${OCS_CDN}/api/ocs-app-infos.json`,
-	langs: `${OCS_CDN}/api/ocs-app-langs.json`,
-	guide: `${OCS_CDN}/articles/app/guide.md`
+	infos: `${OCS_CDN}/api/ocs-app-infos-v2.json`,
+	langs: `${OCS_CDN}/api/ocs-app-langs-v2.json`,
+	guide: `${OCS_CDN}/articles/app/guide-v2.md`
 };
 
 /** electron-updater 更新源（latest.yml / 安装包 / blockmap / CHANGELOG.md 所在目录） */
