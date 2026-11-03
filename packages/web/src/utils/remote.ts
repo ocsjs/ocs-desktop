@@ -1,7 +1,4 @@
 import { BrowserWindow, App, Dialog, WebContents } from 'electron';
-import { notify } from './notify';
-// 注意：必须从零依赖的 errors.ts 导入（utils/index.ts 反向引用本模块，直接导入会形成循环依赖 TDZ）
-import { isTransientNetworkError } from './errors';
 import type { RemoteMethods, LoggerCore } from '@ocs-desktop/common/web';
 import type fs from 'fs';
 import type os from 'os';
@@ -23,9 +20,15 @@ function toError(payload: any): Error {
 		const err = new Error(payload.message || 'Unknown remote error');
 		err.name = payload.name || 'Error';
 		if (payload.stack) err.stack = payload.stack;
+		// 标记为 remote 错误：全局错误兜底（main.ts）据此识别并兜底通知；
+		// 调用方已捕获时不再出现「remote 模块错误 + 业务错误提示」的双重报错
+		Object.assign(err, { __ocsRemote: true });
 		return err;
 	}
-	if (payload instanceof Error) return payload;
+	if (payload instanceof Error) {
+		Object.assign(payload, { __ocsRemote: true });
+		return payload;
+	}
 	return new Error(String(payload));
 }
 
@@ -38,12 +41,9 @@ function registerRemote<T>(eventName: string) {
 	function sendSync(channel: string, ...args: any[]): any {
 		const res = ipcRenderer.sendSync(channel, ...args);
 		if (res?.error) {
-			const err = toError(res.error);
-			if (errorFilter(err.message)) {
-				return;
-			}
+			// 不在此处全局通知：错误已标记（__ocsRemote），callSync 会抛出，
+			// 未捕获时由全局 error 兜底处理器通知（见 main.ts），避免与业务错误提示重复
 			console.log(res);
-			notify('remote 模块错误', err, 'remote', { copy: true, type: 'error' });
 		}
 		return res;
 	}
@@ -62,10 +62,9 @@ function registerRemote<T>(eventName: string) {
 				cleanup();
 				if (payload?.error) {
 					const err = toError(payload.error);
-					if (!errorFilter(err.message)) {
-						console.log({ payload, channel, args });
-						notify('remote 模块错误', err, 'remote', { copy: true, type: 'error' });
-					}
+					// 不在此处全局通知：toError 已标记（__ocsRemote），未捕获时由全局
+					// unhandledrejection 兜底处理器通知（见 main.ts），避免与业务错误提示重复
+					console.log({ payload, channel, args });
 					reject(err);
 				} else {
 					resolve(payload?.data);
@@ -76,7 +75,7 @@ function registerRemote<T>(eventName: string) {
 				if (settled) return;
 				settled = true;
 				cleanup();
-				reject(new Error(`remote 调用超时：${channel}`));
+				reject(Object.assign(new Error(`remote 调用超时：${channel}`), { __ocsRemote: true }));
 			}, REMOTE_CALL_TIMEOUT);
 			ipcRenderer.on(respondChannel, onRespond);
 			// 直接使用 Electron 原生 structured clone 传输，支持 Buffer/Date/Map/Set/undefined/循环引用
@@ -112,7 +111,7 @@ function registerRemote<T>(eventName: string) {
 		): T[K] extends { (...args: any[]): any } ? ReturnType<T[K]> : any {
 			const response = sendSync(eventName + '-call-sync', [property, ...args]);
 			if (response?.error) {
-				// sendSync 已负责通知（含 errorFilter 判断），此处仅抛出还原后的 Error
+				// 直接抛出还原后的 Error（已标记 __ocsRemote，未捕获时由全局兜底通知）
 				throw toError(response.error);
 			}
 			return response?.data;
@@ -145,17 +144,3 @@ export const remote = {
 	// eslint-disable-next-line no-undef
 	logger: registerRemote<LoggerCore>('logger')
 };
-
-function errorFilter(message: string) {
-	//  operation not permitted, stat xxxxx CrashpadMetrics.pma ， 这个是 playwright 问题，暂时无需处理
-	if (String(message).includes('CrashpadMetrics')) {
-		return true;
-	}
-	// 外部站点的瞬时网络错误（超时/连接失败/解析失败）：UI 层已有降级展示（错误标记/条目态），
-	// 无需全局「remote 模块错误」通知刷屏；
-	// 本地回环地址（127.0.0.1/localhost）的连接失败意味着本地服务故障，属重要错误，保留通知
-	if (isTransientNetworkError(message) && !/127\.0\.0\.1|localhost|\[::1\]/.test(message)) {
-		return true;
-	}
-	return false;
-}

@@ -11,11 +11,20 @@ import './assets/less/arco-custom.less';
 // 全局主题样式（主题色板 token + 暗色模式全局覆盖），在 arco-custom 之后引入以覆盖其浅色规则
 import './assets/less/theme.less';
 import { inBrowser } from './utils/node';
+import { shouldIgnoreRemoteError, shouldIgnoreRenderError } from './utils/errors';
 
 window.addEventListener('error', function (e) {
 	console.error(e);
 	if (e instanceof ErrorEvent) {
-		if (errorFilter(e?.message || String(e) || '')) {
+		if (shouldIgnoreRenderError(e?.message || String(e) || '')) {
+			return;
+		}
+		// remote 层错误（已标记，未捕获才到这里）：套用 remote 噪音过滤并用专用标题
+		const err = (e as any).error;
+		if (err?.__ocsRemote) {
+			if (shouldIgnoreRemoteError(err?.message || String(err))) return;
+			remote.logger.call('error', 'remote 模块错误', err?.stack || err?.message || String(err));
+			notify('remote 模块错误', err, 'remote', { type: 'error', copy: true });
 			return;
 		}
 	}
@@ -31,7 +40,14 @@ window.addEventListener('unhandledrejection', function (e) {
 	e.promise.catch((e) => {
 		console.error(e);
 		try {
-			if (errorFilter(e?.message || String(e) || '')) {
+			if (shouldIgnoreRenderError(e?.message || String(e) || '')) {
+				return;
+			}
+			// remote 层错误（已标记，未被调用方捕获才到这里）：套用 remote 噪音过滤并用专用标题
+			if (e?.__ocsRemote) {
+				if (shouldIgnoreRemoteError(e?.message || String(e))) return;
+				remote.logger.call('error', 'remote 模块错误', e?.stack || e?.message || e || '');
+				notify('remote 模块错误', e, 'remote', { type: 'error', copy: true });
 				return;
 			}
 			remote.logger.call('error', '未捕获的异步错误', e?.stack || e?.message || e || '');
@@ -44,17 +60,6 @@ window.addEventListener('unhandledrejection', function (e) {
 		}
 	});
 });
-
-function errorFilter(str: string) {
-	// arco design 问题，暂时无需处理，复现方式，鼠标重复经过 tooltip 或者 dropdown ， 打开 modal 都会出现
-	if (str.includes('ResizeObserver loop')) {
-		return true;
-	}
-	//  operation not permitted, stat xxxxx CrashpadMetrics.pma ， 这个是 playwright 问题，暂时无需处理
-	if (str.includes('CrashpadMetrics')) {
-		return true;
-	}
-}
 
 (() => {
 	/**
