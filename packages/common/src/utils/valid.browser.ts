@@ -1,7 +1,6 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { ValidBrowser } from '../interface';
-import os from 'os';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRuntimePath, getBuiltinChromeRoot } from './chrome.path';
 
 /**
@@ -19,43 +18,18 @@ function getResourcesPath(): string | undefined {
 	}
 }
 
-// 获取可用浏览器路径
+/**
+ * 获取可用浏览器路径——仅返回软件内置浏览器。
+ * 历史原因：内置 Chrome 版本已固定（137），本机浏览器（Edge/系统 Chrome）版本不可控，
+ * 拓展/脚本兼容性无法保证，故不再提供本机浏览器探测。
+ */
 export function getValidBrowsers(): ValidBrowser[] {
-	/** 内置浏览器（darwin/linux 同样解压到 userData，见 chrome.path.ts） */
-	const builtin = [
+	return [
 		{
 			name: '软件内置浏览器-谷歌(Chrome)',
 			path: resolveBuiltinBrowserPath()
 		}
 	].filter((b) => b.path) as ValidBrowser[];
-
-	switch (os.platform()) {
-		case 'win32': {
-			return [
-				...builtin,
-				{
-					name: '微软浏览器(Microsoft Edge)',
-					path: resolveBrowserPath('Microsoft\\Edge\\Application\\msedge.exe')
-				},
-				{
-					name: '谷歌浏览器(Chrome)',
-					path: resolveBrowserPath('Google\\Chrome\\Application\\chrome.exe')
-				}
-			].filter((b) => b.path) as ValidBrowser[];
-		}
-		case 'linux': {
-			return [
-				{
-					name: '软件内置浏览器-谷歌(Chrome)',
-					path: resolveBrowserPath('bin/chrome/chrome/chrome')
-				}
-			].filter((b) => b.path) as ValidBrowser[];
-		}
-		default: {
-			// darwin / linux：仅提供内置浏览器
-			return builtin;
-		}
-	}
 }
 
 /**
@@ -79,22 +53,5 @@ function resolveBuiltinBrowserPath() {
 		getBuiltinChromeRuntimePath(),
 		...(resourcesPath ? [join(resourcesPath, 'bin', 'chrome', 'chrome', BUILTIN_CHROME_FILENAME)] : []),
 		...(devRootCandidate ? [devRootCandidate] : [])
-	].find((p) => existsSync(p));
-}
-
-function resolveBrowserPath(commonPath: string) {
-	const resourcesPath = getResourcesPath();
-	return [
-		...(resourcesPath ? [join(resourcesPath, commonPath)] : []),
-		...(process.platform === 'win32'
-			? [
-					// @ts-ignore
-					join(process.env.ProgramFiles, commonPath),
-					// @ts-ignore
-					join(process.env['ProgramFiles(x86)'], commonPath),
-					join('C:\\Program Files', commonPath),
-					join('C:\\Program Files (x86)', commonPath)
-			  ]
-			: [])
 	].find((p) => existsSync(p));
 }

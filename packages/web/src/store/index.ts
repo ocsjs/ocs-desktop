@@ -37,7 +37,6 @@ export type WebStore = {
 		simpleRunningOnly: boolean;
 		/** 浏览器启动参数 */
 		launchOptions: {
-			custom: boolean;
 			executablePath: string;
 		};
 		/** 当前的主题 */
@@ -179,7 +178,6 @@ export const DEFAULT_RENDER = {
 		simpleCardStyle: 'card' as const,
 		simpleRunningOnly: false,
 		launchOptions: {
-			custom: false,
 			executablePath: ''
 		},
 		theme: {
