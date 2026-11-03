@@ -219,7 +219,8 @@ export async function fetchChangelogMarkdown(): Promise<string> {
 	const { data } = await axios.get(base + OCS_UPDATER.changelogFileName + '?t=' + Date.now(), {
 		timeout: 15 * 1000
 	});
-	return String(data);
+	// 剥离文件首行的「# Changelog」标题（弹窗已有标题，重复展示冗余）
+	return String(data).replace(/^\s*#+\s*changelog\s*\r?\n/i, '');
 }
 
 /**
@@ -292,25 +293,29 @@ function installListener(name: string, channel: string, rate: number, chunkLengt
 
 /** 显示关于软件说明 */
 export async function about() {
-	const guide = await remote.methods.call('get', OCS_API.guide);
-	Modal.info({
-		title: '软件使用教程',
-		closable: true,
-		simple: false,
-		maskClosable: false,
-		footer: false,
-		width: 'auto',
-		bodyStyle: {
-			maxWidth: '800px'
-		},
-		content: () =>
-			h(MarkdownText, {
-				content: guide,
-				style: {
-					maxHeight: '70vh'
-				}
-			})
-	});
+	try {
+		const guide = await remote.methods.call('get', OCS_API.guide);
+		Modal.info({
+			title: '软件使用教程',
+			closable: true,
+			simple: false,
+			maskClosable: false,
+			footer: false,
+			width: 'auto',
+			bodyStyle: {
+				maxWidth: '800px'
+			},
+			content: () =>
+				h(MarkdownText, {
+					content: guide,
+					style: {
+						maxHeight: '70vh'
+					}
+				})
+		});
+	} catch (e) {
+		Message.error('获取教程失败：' + e);
+	}
 }
 
 /** 解析后的主题状态：是否深色 + 系统是否深色。供 Shadow DOM 等无法被 body[arco-theme] 穿透的场景响应深色变化 */
@@ -401,17 +406,6 @@ export function size(num: number) {
 			// @ts-ignore
 			?.reduce((pre, cur) => cur + pre) ?? '0 B'
 	);
-}
-
-export function errorFilter(str: string) {
-	// arco design 问题，暂时无需处理，复现方式，鼠标重复经过 tooltip 或者 dropdown ， 打开 modal 都会出现
-	if (str.includes('ResizeObserver loop limit exceeded')) {
-		return true;
-	}
-	//  operation not permitted, stat xxxxx CrashpadMetrics.pma ， 这个是 playwright 问题，暂时无需处理
-	if (str.includes('CrashpadMetrics')) {
-		return true;
-	}
 }
 
 export function goto(link: string) {
