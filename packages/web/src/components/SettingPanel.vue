@@ -360,7 +360,15 @@
 					style="font-size: 13px"
 					>{{ cacheTotalText }}</span
 				>
-				<div class="ms-auto">
+				<a-space class="ms-auto">
+					<a-tooltip content="在文件夹中显示">
+						<a-button
+							size="small"
+							@click="openCacheFolder"
+						>
+							<FolderIcon />
+						</a-button>
+					</a-tooltip>
 					<a-button
 						size="small"
 						@click="detectHttpCache"
@@ -374,12 +382,11 @@
 						<a-button
 							size="small"
 							status="danger"
-							class="ms-2"
 						>
 							清空全部
 						</a-button>
 					</a-popconfirm>
-				</div>
+				</a-space>
 			</div>
 			<a-divider class="mt-1 mb-2" />
 			<div class="site-cache-list">
@@ -440,8 +447,11 @@ import { changeTheme, size } from '../utils';
 import { checkBrowserCaches } from '../utils/browser';
 import { remote } from '../utils/remote';
 import { CACHEABLE_SITES } from '@ocs-desktop/common/web';
-import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon } from 'lucide-vue-next';
+import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon, FolderIcon } from 'lucide-vue-next';
 import { Message } from '@arco-design/web-vue';
+import { electron } from '../utils/node';
+
+const { shell } = electron;
 
 /**
  * 浏览器增强说明（「？」弹层）：单一文案段
@@ -478,6 +488,13 @@ const currentThemeModeOption = computed(
 const currentThemeColorOption = computed(
 	() => themeColors.find((o) => o.value === store.render.setting.theme.color) ?? themeColors[0]
 );
+
+/** 在文件夹中显示缓存目录（userData/cache，含 http 与 icons 子目录） */
+async function openCacheFolder() {
+	// 经主进程 path.join 拼接（跨平台路径分隔符），而非手写字符串拼接
+	const dir = await remote.path.call('join', store.paths['user-data-path'], 'cache');
+	shell.openPath(dir);
+}
 
 /** HTTP 缓存检测（网络缓存加速的磁盘缓存统计，同时刷新站点级统计展示） */
 const siteCacheStats = ref<Record<string, { count: number; bytes: number }>>({});
