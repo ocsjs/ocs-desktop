@@ -1,9 +1,9 @@
 <!-- eslint-disable max-len -->
 <!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
-	<div>
+	<div class="ocs-configs-root">
 		<template v-if="state.err">
-			<div class="d-inline-block p-5">
+			<div class="d-inline-block p-5 w-100">
 				<a-result
 					title="解析错误！请尝试重启软件"
 					:subtitle="'原因：' + state.err"
@@ -47,8 +47,6 @@
 					</div>
 				</div>
 				<div id="ocs-browser-configs">
-					<!-- easy-us 内部元素（脚本弹窗/消息/提示）的 Shadow DOM 挂载点 -->
-					<div ref="shadowHostEl"></div>
 					<!-- 手风琴模式展示脚本设置（替代原 $modal.simple 弹窗，交互更快且无大小限制） -->
 					<a-collapse
 						v-model:active-key="state.activeKey"
@@ -69,6 +67,15 @@
 					</a-collapse>
 				</div>
 			</div>
+			<!--
+				easy-us 内部元素（脚本弹窗/消息/提示）的 Shadow DOM 挂载点。
+				置于滚动容器外、组件根节点下：根节点的 transform 建立了 fixed 定位包含块，
+				脚本注入的遮罩/弹窗被限定在本组件区域内，不覆盖窗口标题栏。
+			-->
+			<div
+				ref="shadowHostEl"
+				class="ocs-elements-host"
+			></div>
 		</template>
 	</div>
 </template>
@@ -239,7 +246,7 @@ function createScriptPanel(namespace: string) {
 		return undefined;
 	}
 	// @ts-ignore
-	const EUS = global.EUS as typeof import('easy-us');
+	const EUS = globalThis.EUS as typeof import('easy-us');
 	const { $ui, $store } = EUS;
 	return $ui.scriptPanel(script, $store) as unknown as HTMLElement;
 }
@@ -273,14 +280,18 @@ function mountScriptPanel(namespace: string) {
 	shadow.replaceChildren(...createPanelStyles(), panel);
 }
 
-/** 挂载 easy-us 内部元素根节点（脚本弹窗/消息等会渲染到此 Shadow DOM） */
+/**
+ * 挂载 easy-us 内部元素根节点（脚本弹窗/消息等会渲染到此 Shadow DOM）。
+ * 优先挂载到设置页全局宿主 #ocs-elements-host（.setting-layout 的 transform 包含块
+ * 使弹窗/遮罩覆盖整个设置界面并随窗口宽度自适应）；不存在时回退到组件内宿主。
+ */
 function mountShadowWrapper() {
-	const host = shadowHostEl.value;
+	const host = document.querySelector('#ocs-elements-host') ?? shadowHostEl.value;
 	if (!host || !wrapper) {
 		return;
 	}
 	if (wrapper.parentElement !== host) {
-		host.appendChild(wrapper);
+		(host as HTMLElement).appendChild(wrapper);
 	}
 	wrapper.classList.toggle('ocs-dark', themeState.dark);
 }
@@ -315,13 +326,13 @@ function watchStrayModalMasks() {
 
 /**
  * 挂载 easy-us 到全局：固定版本经 package.json 依赖随包分发（不再远程加载），
- * OCS 脚本（UMD）与面板均经 global.EUS 访问；展开为普通对象，允许 OCS 脚本向其写入属性。
+ * OCS 脚本（UMD）与面板均经 globalThis.EUS 访问；展开为普通对象，允许 OCS 脚本向其写入属性。
  */
 function mountEasyUsGlobal() {
 	// @ts-ignore
-	if (global.EUS === undefined) {
+	if (globalThis.EUS === undefined) {
 		// @ts-ignore
-		global.EUS = { ...EasyUS };
+		globalThis.EUS = { ...EasyUS };
 	}
 }
 
@@ -333,8 +344,16 @@ async function loadOCS() {
 		// easy-us 为本地依赖，先行挂载供 OCS 脚本执行时引用
 		mountEasyUsGlobal();
 
+		// 提前创建 easy-us 元素根节点并指派 $elements.root：
+		// 防止 OCS 脚本初始化期间触发的弹窗/遮罩误入 document.body（全屏遮挡且无法点击）
 		// @ts-ignore
-		if (global.OCS === undefined) {
+		const EarlyEUS = globalThis.EUS as typeof import('easy-us');
+		wrapper = wrapper || EarlyEUS.h('div');
+		root = root || wrapper.attachShadow({ mode: 'closed' });
+		EarlyEUS.$elements.root = root;
+
+		// @ts-ignore
+		if (globalThis.OCS === undefined) {
 			// 加载 OCS（开发者设置中可自定义脚本地址，留空用默认线上地址）
 			console.log('[OCSConfigs] 加载 OCS 脚本...');
 			const code = await remote.methods.call('get', Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
@@ -348,23 +367,25 @@ async function loadOCS() {
 		}
 
 		// @ts-ignore
-		const OCS = global.OCS as typeof import('@ocsjs/script');
+		const OCS = globalThis.OCS as typeof import('@ocsjs/script');
 		// @ts-ignore
-		const EUS = global.EUS as typeof import('easy-us');
+		const EUS = globalThis.EUS as typeof import('easy-us');
 
-		const { MemoryStoreProvider, $elements, definedCustomElements, h, $ } = EUS;
+		const { MemoryStoreProvider, definedCustomElements, h, $ } = EUS;
 
-		wrapper = wrapper || h('div');
-		root = root || wrapper.attachShadow({ mode: 'closed' });
-
+		// wrapper/root 已在脚本执行前创建（见上），此处仅同步 OCS 侧引用
 		OCS.$elements.root = root;
-		$elements.root = root;
 
 		/** easy-us 内部元素（弹窗/消息）的样式注入一次即可 */
-		if (root.childNodes.length === 0) {
+		if (root && root.childNodes.length === 0) {
 			root.append(h('style', state.css));
-			/** 弹窗内容自适应，最大 800px */
-			root.append(h('style', ['modal-element { !important; max-width: 800px !important; }'].join('\n')));
+			/** 弹窗最大宽度 800px，高度超出 80vh 时内部滚动 */
+			root.append(
+				h(
+					'style',
+					['modal-element {', '	max-width: 800px !important;', '	overflow: overlay;', '	max-height: 80vh;', '}'].join('\n')
+				)
+			);
 		}
 
 		console.log('[OCSConfigs] 初始化配置面板...');
@@ -422,7 +443,8 @@ onActivated(() => {
 });
 
 onDeactivated(() => {
-	state.watchStopHandle?.();
+	// 注意：不能在此停止 store 的 watch（update:store 回传链路）——
+	// keep-alive 失活后 watch 停止且 onActivated 不重建，会导致配置修改永久不再回传父组件
 	clearTimeout(expandTimer);
 });
 
@@ -453,6 +475,16 @@ function resolveCustomElementName<T extends HTMLElement = HTMLElement>(el: { new
 </script>
 
 <style scoped lang="less">
+/**
+ * 组件根节点：transform 建立 fixed 定位包含块（兜底）。
+ * 弹窗遮罩正常挂载在设置页全局宿主（pages/setting/index.vue #ocs-elements-host，
+ * 覆盖整个设置界面）；该宿主不存在时回退到本组件内，同样不覆盖窗口标题栏。
+ */
+.ocs-configs-root {
+	position: relative;
+	transform: translateZ(0);
+}
+
 /** 侧边栏 + 手风琴列表左右布局 */
 .ocs-configs-body {
 	display: flex;

@@ -1,5 +1,7 @@
 <template>
 	<div class="setting-layout">
+		<!-- OCS 脚本弹窗/遮罩等元素的全局挂载点（由 OCSConfigs.vue 挂载，遮罩覆盖整个设置界面） -->
+		<div id="ocs-elements-host"></div>
 		<!-- 子菜单栏 + 设置内容作为一个整体居中卡片，脱离左侧吸附 -->
 		<div class="setting-unit">
 			<!-- 左侧子菜单栏 -->
@@ -79,6 +81,10 @@ const activePanel = computed(() => panels[activeMenu.value]);
 	overflow: auto;
 	background-color: var(--theme-bg-color-deep);
 	padding: 12px;
+	position: relative;
+	/* 建立 fixed 定位包含块：OCS 脚本注入的弹窗遮罩（position:fixed）被限定在设置界面内，
+	   不覆盖窗口标题栏（traffic light 区域），宽度随窗口自适应（见 OCSConfigs.vue） */
+	transform: translateZ(0);
 }
 
 /* 子菜单栏 + 内容区作为一个整体：统一背景、居中卡片 */
