@@ -25,12 +25,16 @@
 		"!**/*.map",
 		"!node_modules/xlsx/dist/{shim.min,xlsx.core.min,xlsx.extendscript,xlsx.full.min,xlsx,xlsx.min,xlsx.mini.min}.js"
 	],
+	"asarUnpack": [
+		"out/main/script.js"
+	],
 	"beforePack": "./scripts/before-pack.js",
 	"electronFuses": {
 		"enableEmbeddedAsarIntegrityValidation": true,
 		"onlyLoadAppFromAsar": true,
 		"enableNodeOptionsEnvironmentVariable": false,
-		"enableNodeCliInspectArguments": false
+		"enableNodeCliInspectArguments": false,
+		"resetAdHocDarwinSignature": true
 	},
 	"nsis": {
 		"oneClick": true

@@ -87,6 +87,21 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
 
+      # mac 防回归冒烟：electronFuses 改写 Electron Framework 后若未重签，
+      # arm64 会在启动首次读 fuse 时被内核 SIGKILL（Code Signature Invalid）。
+      # codesign --verify 全量校验页哈希；ELECTRON_RUN_AS_NODE 真实执行一次二进制走启动路径。
+      - name: Verify mac app code signature
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          set -e
+          APP_DIR=$(find releases -maxdepth 2 -name "OCS Desktop.app" | head -1)
+          echo "Verifying: $APP_DIR"
+          codesign --verify --deep --strict --verbose=2 "$APP_DIR"
+          codesign -dv --verbose=2 "$APP_DIR" 2>&1 | head -20
+          ELECTRON_RUN_AS_NODE=1 "$APP_DIR/Contents/MacOS/OCS Desktop" -e "process.exit(0)"
+          echo "mac app signature & launch smoke test OK"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
