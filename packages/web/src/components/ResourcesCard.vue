@@ -230,7 +230,7 @@
 									</span>
 									<a-tooltip
 										v-else
-										:content="isFileSupported(file) ? '' : '该资源暂不支持当前系统'"
+										:content="isFileSupported(file) ? '点击安装该应用' : '该资源暂不支持当前系统'"
 									>
 										<a-button
 											type="primary"
@@ -444,6 +444,7 @@ watch(selectedExtensionUrl, async (newUrl, oldUrl) => {
 });
 
 async function download(group_name: string, file: ResourceFile) {
+	console.log('download app', group_name, file);
 	operationCount.value++;
 	try {
 		const files = await resourceLoader.list();
@@ -500,13 +501,15 @@ async function download(group_name: string, file: ResourceFile) {
 }
 
 async function remove(group_name: string, file: ResourceFile) {
+	console.log('remove app', group_name, file);
 	operationCount.value++;
 	try {
 		await resourceLoader.remove(group_name, file);
 		fileStatus[file.url].exists = false;
+		fileStatus[file.url].downloading = false;
+		fileStatus[file.url].downloadRate = 0;
 	} catch (err) {
-		// @ts-ignore
-		Message.error('删除错误 ' + err.message);
+		Message.error('删除错误 ' + String(err));
 	} finally {
 		operationCount.value--;
 	}
