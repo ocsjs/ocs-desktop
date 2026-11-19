@@ -19,17 +19,19 @@ export function normalizeUrl(input: unknown): string {
 	value = value.replace(/^["'<\s]+/, '').replace(/["'>\s]+$/, '');
 	if (!value) return value;
 
-	// 已带任意协议头（http: https: ftp: file: data: ...）
-	if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) {
-		return value;
-	}
 	// 协议相对链接 //example.com
 	if (value.startsWith('//')) {
 		return 'https:' + value;
 	}
-	// 域名 / localhost / IPv4，可后接端口与路径、查询、锚点
+	// 域名 / localhost / IPv4，可后接端口与路径、查询、锚点。
+	// 必须先于协议头判定：「localhost:3000」「127.0.0.1:8080」的 host:port 形态
+	// 会被 scheme 正则（[a-zA-Z][\w+.-]*:）误判为自带协议，导致补全失效
 	if (DOMAIN_LIKE_RE.test(value)) {
 		return 'https://' + value;
+	}
+	// 已带任意协议头（http: https: ftp: file: data: ...）
+	if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) {
+		return value;
 	}
 	return value;
 }
