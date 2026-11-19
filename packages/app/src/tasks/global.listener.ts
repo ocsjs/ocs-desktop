@@ -1,6 +1,7 @@
 import { createWindow } from '../window';
 import { app, BrowserWindow } from 'electron';
 import { existsSync, statSync } from 'fs';
+import { sendToRenderer } from '../ipc/events';
 
 export function globalListenerRegister(win: BrowserWindow) {
 	app.on('second-instance', (e, argv) => {
@@ -14,7 +15,7 @@ export function globalListenerRegister(win: BrowserWindow) {
 				win.show();
 			}
 			const file = getFileInArguments(argv);
-			win.webContents.send('open-file', file);
+			sendToRenderer(win.webContents, 'open-file', file);
 		}
 	});
 

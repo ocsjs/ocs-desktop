@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, NativeImage } from 'electron';
 import path from 'path';
 import { getProjectPath } from './utils';
+import { sendToRenderer } from './ipc/events';
 
 let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -144,7 +145,7 @@ export function destroyTray() {
  */
 function quitFromTray() {
 	showMainWindow();
-	mainWindow?.webContents.send('quit');
+	sendToRenderer(mainWindow?.webContents, 'quit');
 }
 
 // app.quit（重启 / 系统关机）路径会触发 before-quit，置位程序化退出标记以绕过「隐藏到托盘」

@@ -1,11 +1,12 @@
 import { app, dialog, clipboard } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { NetUtils } from '../utils/net';
 import { gt, lte } from 'semver';
+import { NetUtils } from '../utils/net';
 import { Logger } from '../logger';
 import { StoreData } from '../store';
 import { getCurrentWebContents, moveWindowToTop } from '../utils';
 import { UpdateInformationResource, OCS_UPDATER, OCS_DOWNLOAD_PAGE, AppStore } from '@ocs-desktop/common';
+import { sendToRenderer } from '../ipc/events';
 
 const logger = Logger('updater');
 
@@ -45,12 +46,18 @@ function listenUpdaterEvents() {
 			description: { feat: [], fix: [], other: [] },
 			url: ''
 		};
-		getCurrentWebContents().send('detect-new-app-version', newVersion);
+		sendToRenderer(getCurrentWebContents(), 'detect-new-app-version', newVersion);
 	});
 
 	autoUpdater.on('download-progress', (progress) => {
 		/** 对齐旧 IPC 参数格式 (rate, totalLength, chunkLength)，渲染层无需改动 */
-		getCurrentWebContents().send('update-download', progress.bytesPerSecond, progress.total, progress.transferred);
+		sendToRenderer(
+			getCurrentWebContents(),
+			'update-download',
+			progress.bytesPerSecond,
+			progress.total,
+			progress.transferred
+		);
 	});
 
 	autoUpdater.on('update-downloaded', () => {

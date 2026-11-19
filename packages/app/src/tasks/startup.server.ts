@@ -12,6 +12,7 @@ import { canOCR, det, ocr } from '../utils/ocr';
 import { createHash } from 'crypto';
 import { getInitStatus } from './init.status';
 import { getServerToken } from './server.auth';
+import { sendToRenderer } from '../ipc/events';
 import { isAllowedUserscriptPath } from '../utils/server.security';
 const logger = Logger('server');
 
@@ -442,7 +443,7 @@ export async function startupServer() {
 	app.get('/api/bookmark/show-browser-in-app', (req, res) => {
 		moveWindowToTop();
 		// 显示浏览器文件
-		getCurrentWebContents().send('show-browser-in-app', req.query.uid);
+		sendToRenderer(getCurrentWebContents(), 'show-browser-in-app', req.query.uid as string);
 	});
 
 	// 提供本地用户脚本（扩展只能拦截 http/https 请求安装脚本）

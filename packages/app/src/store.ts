@@ -117,8 +117,7 @@ backupPreV3Config();
  * electron 本地存储实例（内部实现细节，不导出）。
  * 外部一律经 StoreData 工具对象访问（见下）。
  */
-/** @deprecated 过渡导出（分步提交期间兼容未迁移消费方；IPC bridge 提交移除） */
-export const store = new Store<typeof OriginalAppStore>();
+const store = new Store<typeof OriginalAppStore>();
 
 /**
  * store 数据访问工具库（store 的唯一公开入口）。
@@ -163,6 +162,20 @@ export const StoreData = {
 		(store as any).onDidChange?.(key, callback);
 	}
 } as const;
+
+/**
+ * IPC 'electron-store' 命名空间目标（remote.register 注册用）。
+ * 协议保持：渲染端 get('store') 读全树、set('store', v) 整体替换。
+ * （IPC bridge 通道收敛时随 electron-store 命名空间注销一并移除）
+ */
+export const storeIpcTarget = {
+	get store() {
+		return store.store;
+	},
+	set store(value: typeof OriginalAppStore) {
+		StoreData.replaceAll(value);
+	}
+};
 
 /**
  * 获取解密后的渲染进程数据

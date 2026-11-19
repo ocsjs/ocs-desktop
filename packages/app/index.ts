@@ -1,12 +1,13 @@
 import { app, ipcMain } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { remoteRegister } from './src/tasks/remote.register';
+import { remoteRegister } from './src/ipc/register';
+import { sendToRenderer } from './src/ipc/events';
 import { initStore } from './src/tasks/init.store';
 import { autoLaunch } from './src/tasks/auto.launch';
 import { createWindow } from './src/window';
 import { createTray, destroyTray, isAppQuitting, quitApp, showMainWindow } from './src/tray';
-import { store } from './src/store';
+import { StoreData } from './src/store';
 import { globalListenerRegister } from './src/tasks/global.listener';
 import { isLinuxSandboxUnavailable, task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
@@ -96,7 +97,7 @@ function bootstrap() {
 					// 交给渲染层去关闭浏览器；程序化退出走 'quit' 以绕过「隐藏到托盘」
 					// 销毁保护（2.x 4634090 移植）：AppImage 重启链路等场景下窗口可能已销毁
 					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
-						window.webContents.send(isAppQuitting() ? 'quit' : 'close');
+						sendToRenderer(window.webContents, isAppQuitting() ? 'quit' : 'close');
 					}
 				});
 
@@ -119,7 +120,7 @@ function bootstrap() {
 					// 销毁保护（2.x 4634090 移植）
 					if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
 						const quitting = isAppQuitting();
-						window.webContents.send(quitting ? 'quit' : 'close');
+						sendToRenderer(window.webContents, quitting ? 'quit' : 'close');
 						if (!quitting) {
 							// 渲染层无响应兜底（白屏/主线程阻塞导致 close 消息无人处理）：
 							// 3s 后窗口仍可见说明渲染层未能接管（既未隐藏托盘也未退出），强制销毁防僵尸窗口
@@ -156,7 +157,7 @@ function bootstrap() {
 				// 运行时切换即时生效（关闭时若窗口正处于托盘隐藏状态则先恢复显示再销毁托盘）
 				task('初始化系统托盘', () => {
 					const syncTray = () => {
-						if (store.store.window?.hideToTrayOnClose) {
+						if (StoreData.get().window?.hideToTrayOnClose) {
 							createTray(window);
 						} else {
 							if (!window.isDestroyed() && !window.isVisible()) showMainWindow();
@@ -165,7 +166,7 @@ function bootstrap() {
 					};
 					syncTray();
 					// electron-store 实例监听：渲染端切换「后台运行」时主进程同步创建/销毁托盘
-					(store as any).onDidChange?.('window', syncTray);
+					StoreData.onDidChange('window', syncTray);
 				});
 
 				// 渲染进程启动时会同步调用 decryptRenderString/saveStore 等加密 IPC，
