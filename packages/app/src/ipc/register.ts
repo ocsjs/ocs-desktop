@@ -4,7 +4,7 @@ import { Logger } from '../logger';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { StoreData, storeIpcTarget } from '../store';
+import { StoreData } from '../store';
 import { initHttpCache } from '../utils/http-cache';
 import { sendToRenderer } from './events';
 import { methods } from './methods';
@@ -59,35 +59,15 @@ function assertRemoteAccess(name: string, sender: Electron.WebContents, property
  * @param name 事件前缀名称
  * @param target 事件目标
  */
+/**
+ * 注册主进程远程通信事件（统一 invoke 异步通道）。
+ *
+ * 历史通道 -get/-set/-call-sync（sendSync 同步调用）已随 bridge 统一门面全异步化移除：
+ * facade 全部经 -call 调用，唯一保留的同步 IPC 是 preload 构建期的 ipc:introspect 自省。
+ */
 function registerRemoteEvent(name: string, target: any) {
 	const logger = Logger('remote');
 	try {
-		ipcMain
-			.on(name + '-get', (event, [property]) => {
-				try {
-					assertRemoteAccess(name, event.sender, property);
-					event.returnValue = target[property];
-				} catch (e) {
-					event.returnValue = { error: serializeError(e) };
-				}
-			})
-			.on(name + '-set', (event, [property, value]) => {
-				try {
-					assertRemoteAccess(name, event.sender, property);
-					event.returnValue = target[property] = value;
-				} catch (e) {
-					event.returnValue = { error: serializeError(e) };
-				}
-			})
-			.on(name + '-call-sync', (event, [property, ...args]) => {
-				try {
-					assertRemoteAccess(name, event.sender, property);
-					event.returnValue = { data: target[property](...args) };
-				} catch (e) {
-					event.returnValue = { error: serializeError(e) };
-				}
-			});
-
 		/**
 		 * 异步调用（invoke/handle）
 		 * 由框架管理请求-回复关联，替代旧的「一次性回调频道 + send」方案：
@@ -116,7 +96,8 @@ export function remoteRegister(_win: BrowserWindow) {
 	win = _win;
 	// HTTP 磁盘缓存根目录（主进程）：userData/cache/http
 	initHttpCache(StoreData.get().paths['user-data-path']);
-	registerRemoteEvent('electron-store', storeIpcTarget);
+	// electron-store 命名空间注册已移除：渲染端整树读取经 methods.getStore（facade 特判分支），
+	// 写路径统一 methods.saveStore；remoteWhitelists.electronStore 仍保留以驱动 facade 创建该域
 	registerRemoteEvent('fs', fs);
 	registerRemoteEvent('os', os);
 	registerRemoteEvent('path', path);

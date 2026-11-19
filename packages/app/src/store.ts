@@ -164,20 +164,6 @@ export const StoreData = {
 } as const;
 
 /**
- * IPC 'electron-store' 命名空间目标（remote.register 注册用）。
- * 协议保持：渲染端 get('store') 读全树、set('store', v) 整体替换。
- * （IPC bridge 通道收敛时随 electron-store 命名空间注销一并移除）
- */
-export const storeIpcTarget = {
-	get store() {
-		return store.store;
-	},
-	set store(value: typeof OriginalAppStore) {
-		StoreData.replaceAll(value);
-	}
-};
-
-/**
  * 获取解密后的渲染进程数据
  */
 export { getDecryptedRenderData };
