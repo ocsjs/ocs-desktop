@@ -27,6 +27,9 @@ import { stripCrxHeader } from '../utils/crx';
 import { StoreData } from '../store';
 import { Logger } from '../logger';
 import { quickVerifyExtension, fullVerifyExtension } from './verify';
+// 契约类型下沉至 @ocs-desktop/common（types.ts），供 RemoteMethods 生成契约引用（依赖方向：app → common）
+import type { BundledExtensionInfo, ExtensionIntegrityResult } from '@ocs-desktop/common';
+export type { BundledExtensionInfo, ExtensionIntegrityResult };
 
 const logger = Logger('extensions');
 
@@ -50,25 +53,8 @@ export interface BundledExtensionManifest {
 	files: Record<string, string>;
 }
 
-export interface BundledExtensionInfo {
-	id: string;
-	name: string;
-	version: string;
-	license: string;
-	sourceUrl: string;
-	homepage: string;
-}
-
-export interface ExtensionIntegrityResult {
-	id: string;
-	/** ok=校验通过；repaired=校验失败已从 asar 重释放；skipped=未安装（按需安装，不强制释放）；failed=修复失败 */
-	status: 'ok' | 'repaired' | 'skipped' | 'failed';
-	error?: string;
-}
-
-/** asar 内的内置拓展目录（dev 模式下 getAppPath 指向源码包目录，路径逻辑一致） */
+/** asar 内的内置拓展目录（按形态探测：打包/dev 为 getAppPath 直下；构建产物直跑（out/main）上溯两级到包根） */
 function bundledDir() {
-	// 按形态探测：打包/dev 为 getAppPath 直下；构建产物直跑（out/main）上溯两级到包根
 	const candidates = [
 		path.join(app.getAppPath(), 'resources', 'extensions'),
 		path.join(app.getAppPath(), '..', '..', 'resources', 'extensions')
@@ -77,7 +63,7 @@ function bundledDir() {
 }
 
 function extensionsFolder() {
-	// store 为 electron-store 实例，完整数据需经 .store 访问（同 utils/ocr.ts）
+	// 完整数据经 StoreData.get() 读取（facade 缓存；conf .store getter 每次读盘且副本不可写，见 Bug3 修复）
 	return StoreData.get().paths.extensionsFolder;
 }
 
