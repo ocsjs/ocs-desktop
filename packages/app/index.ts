@@ -1,5 +1,6 @@
 import { app, ipcMain } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { remoteRegister } from './src/tasks/remote.register';
 import { initStore } from './src/tasks/init.store';
 import { autoLaunch } from './src/tasks/auto.launch';
@@ -176,7 +177,13 @@ function bootstrap() {
 					await window.loadURL(process.env.ELECTRON_RENDERER_URL);
 					window.webContents.openDevTools();
 				} else {
-					await window.loadFile(path.join(app.getAppPath(), 'out/renderer/index.html'));
+					// 渲染产物路径按形态探测：打包（asar 根下 out/renderer）→ 构建产物直跑（out/main 直跑）
+					const rendererCandidates = [
+						path.join(app.getAppPath(), 'out', 'renderer', 'index.html'),
+						// 构建产物直跑：getAppPath=out/main，上一级即 out/renderer
+						path.join(app.getAppPath(), '..', 'renderer', 'index.html')
+					];
+					await window.loadFile(rendererCandidates.find((p) => fs.existsSync(p)) ?? rendererCandidates[0]);
 				}
 
 				// 加载完成显示，解决一系列的显示/黑屏问题

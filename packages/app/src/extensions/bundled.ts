@@ -68,7 +68,12 @@ export interface ExtensionIntegrityResult {
 
 /** asar 内的内置拓展目录（dev 模式下 getAppPath 指向源码包目录，路径逻辑一致） */
 function bundledDir() {
-	return path.join(app.getAppPath(), 'resources', 'extensions');
+	// 按形态探测：打包/dev 为 getAppPath 直下；构建产物直跑（out/main）上溯两级到包根
+	const candidates = [
+		path.join(app.getAppPath(), 'resources', 'extensions'),
+		path.join(app.getAppPath(), '..', '..', 'resources', 'extensions')
+	];
+	return candidates.find((p) => fs.existsSync(p)) ?? candidates[0];
 }
 
 function extensionsFolder() {

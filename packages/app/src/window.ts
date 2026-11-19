@@ -2,6 +2,7 @@
 import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import path from 'path';
 import url from 'url';
+import fs from 'fs';
 import { store } from './store';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 
@@ -115,9 +116,16 @@ export function createLoadingWindow(): BrowserWindow {
 	const port = (store.store.server?.port as number | undefined) || DEFAULT_SERVER_PORT;
 	// 渲染产物经 electron-vite 输出到 out/renderer（含 publicDir 拷贝的 loading.html）；
 	// dev 模式直接读 web 源文件（vite publicDir），不依赖 dev server。
-	const loadingHtmlPath = app.isPackaged
-		? path.join(app.getAppPath(), 'out', 'renderer', 'loading.html')
-		: path.join(app.getAppPath(), '..', 'web', 'public', 'loading.html');
+	// 加载独立 loading.html（file://）。按形态探测首个存在的路径：
+	// 1. 打包（asar 根下 out/renderer，publicDir 拷贝产物）
+	// 2. 构建产物直跑（getAppPath=out/main，上一级即 out/renderer）
+	// 3. dev 模式读 web 源文件（packages/web/public，不依赖 dev server）
+	const loadingHtmlCandidates = [
+		path.join(app.getAppPath(), 'out', 'renderer', 'loading.html'),
+		path.join(app.getAppPath(), '..', 'renderer', 'loading.html'),
+		path.join(app.getAppPath(), '..', 'web', 'public', 'loading.html')
+	];
+	const loadingHtmlPath = loadingHtmlCandidates.find((p) => fs.existsSync(p)) ?? loadingHtmlCandidates[1];
 	win.loadURL(url.pathToFileURL(loadingHtmlPath).href + `?port=${port}`);
 
 	return win;
