@@ -1,8 +1,8 @@
-import axios from 'axios';
 import { OCS_API } from '@ocs-desktop/common';
-import { Logger } from '../logger';
+import { Logger } from '../../logger';
+import { get } from './request';
 
-const logger = Logger('net-status');
+const logger = Logger('net:status');
 
 /** 单次探测超时：3s 内拿不到 CDN 响应即判定弱网 */
 const PROBE_TIMEOUT = 3 * 1000;
@@ -28,8 +28,7 @@ export function probeNetwork(force = false): Promise<boolean> {
 	if (inflight) {
 		return inflight;
 	}
-	inflight = axios
-		.get(OCS_API.infos, { timeout: PROBE_TIMEOUT, validateStatus: () => true })
+	inflight = get(OCS_API.infos, { timeout: PROBE_TIMEOUT, validateStatus: () => true })
 		.then((res) => res.status > 0)
 		.catch(() => false)
 		.then((ok) => {

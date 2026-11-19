@@ -2,7 +2,7 @@ import express from 'express';
 import { Logger } from '../logger';
 import path from 'path';
 import fs from 'fs';
-import axios from 'axios';
+import { NetUtils } from '../utils/net';
 import { app as electronApp } from 'electron';
 import { StoreData } from '../store';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
@@ -11,7 +11,6 @@ import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils
 import { canOCR, det, ocr } from '../utils/ocr';
 import { createHash } from 'crypto';
 import { getInitStatus } from './init.status';
-import { probeNetwork } from './net.status';
 import { getServerToken } from './server.auth';
 import { isAllowedUserscriptPath } from '../utils/server.security';
 const logger = Logger('server');
@@ -173,7 +172,7 @@ const ICON_REQUEST_HEADERS = {
 /** 请求某个 URL 的图片数据，返回可解析图片或 null */
 async function tryFetchImage(url: string): Promise<{ data: Buffer; contentType: string } | null> {
 	try {
-		const response = await axios.get(url, {
+		const response = await NetUtils.get(url, {
 			responseType: 'arraybuffer',
 			timeout: 3000,
 			// 允许跟随重定向（部分图标地址会 301/302 到真实图片，Google Favicon 也会 302）
@@ -389,7 +388,7 @@ export async function startupServer() {
 		// 弱网模式（3s 探测失败）直接返回兜底图标，不再发起竞速请求
 		let inflight = iconInflight.get(iconUrl);
 		if (!inflight) {
-			inflight = (async () => ((await probeNetwork()) ? fetchIcon(iconUrl) : FALLBACK_ICON))().finally(() =>
+			inflight = (async () => ((await NetUtils.probeNetwork()) ? fetchIcon(iconUrl) : FALLBACK_ICON))().finally(() =>
 				iconInflight.delete(iconUrl)
 			);
 			iconInflight.set(iconUrl, inflight);
@@ -478,8 +477,7 @@ export async function startupServer() {
 				next();
 				return;
 			}
-			axios
-				.get(devOrigin + req.originalUrl, {
+			NetUtils.get(devOrigin + req.originalUrl, {
 					responseType: 'stream',
 					timeout: 10000,
 					maxRedirects: 0,

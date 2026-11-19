@@ -1,12 +1,11 @@
 import { app, dialog, clipboard } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import axios from 'axios';
+import { NetUtils } from '../utils/net';
 import { gt, lte } from 'semver';
 import { Logger } from '../logger';
 import { StoreData } from '../store';
 import { getCurrentWebContents, moveWindowToTop } from '../utils';
 import { UpdateInformationResource, OCS_UPDATER, OCS_DOWNLOAD_PAGE, AppStore } from '@ocs-desktop/common';
-import { probeNetwork } from './net.status';
 
 const logger = Logger('updater');
 
@@ -108,7 +107,7 @@ function effectiveFeedUrl() {
 async function resolveChangelogMarkdown(latest: string, current: string): Promise<string> {
 	const changelogUrl = effectiveFeedUrl() + 'CHANGELOG.md';
 	try {
-		const { data } = await axios.get(changelogUrl + '?t=' + Date.now(), { timeout: 15_000 });
+		const { data } = await NetUtils.get(changelogUrl + '?t=' + Date.now(), { timeout: 15_000 });
 		const sections = extractVersionSections(String(data), current, latest);
 		if (sections.length === 0) {
 			return `## ${latest}\n\n暂无详细更新日志`;
@@ -164,7 +163,7 @@ export async function updater(config?: AppStore['updater']) {
 	applyUpdaterConfig();
 	logger.info('检查更新', { version: app.getVersion() });
 	// 弱网模式：3s 探测失败直接跳过更新检测，避免 checkForUpdates 在弱网下长时间挂起
-	if (!(await probeNetwork())) {
+	if (!(await NetUtils.probeNetwork())) {
 		logger.info('弱网模式，跳过本次更新检测');
 		return undefined;
 	}

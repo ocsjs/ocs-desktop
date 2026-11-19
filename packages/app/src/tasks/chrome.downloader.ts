@@ -10,7 +10,7 @@ import {
 } from '@ocs-desktop/common';
 import { Logger } from '../logger';
 import { store } from '../store';
-import { downloadFile } from '../utils/download';
+import { NetUtils } from '../utils/net';
 
 const logger = Logger('chrome-downloader');
 
@@ -94,7 +94,7 @@ async function downloadAndVerify(
 	tempZipPath: string,
 	onRate: (rate: number, totalLength: number, chunkLength: number) => void
 ): Promise<void> {
-	await downloadFile(source.url, tempZipPath, { onProgress: onRate });
+	await NetUtils.download(source.url, tempZipPath, { onProgress: onRate });
 
 	// 下载完成后整体校验（分块并发下无法边下边算；150MB 读盘哈希约 1s，可忽略）
 	const hash = crypto.createHash('sha256');

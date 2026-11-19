@@ -22,7 +22,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { unzip } from '../utils';
-import { downloadFile } from '../utils/download';
+import { NetUtils } from '../utils/net';
 import { stripCrxHeader } from '../utils/crx';
 import { StoreData } from '../store';
 import { Logger } from '../logger';
@@ -185,7 +185,7 @@ async function downloadBundledExtensionFallback(manifest: BundledExtensionManife
 		const tempFile = path.join(extensionsFolder(), `.tmp-dl-${manifest.id}-${Date.now()}`);
 		try {
 			logger.warn(`${manifest.name} 从 asar 释放失败，远程下载兜底：${url}`);
-			await downloadFile(url, tempFile);
+			await NetUtils.download(url, tempFile);
 			let zipBuf = fs.readFileSync(tempFile);
 			if (manifest.format === 'crx') {
 				zipBuf = stripCrxHeader(zipBuf);

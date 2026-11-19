@@ -3,7 +3,7 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import { Logger } from '../logger';
-import { downloadFile as smartDownloadFile } from './download';
+import { NetUtils } from './net';
 import xlsx from 'xlsx';
 
 const taskLogger = Logger('task');
@@ -19,7 +19,7 @@ export async function task(name: string, func: any) {
  * 下载文件（统一下载器：分块并发 + 断点续传，实现见 utils/download.ts）
  */
 export async function downloadFile(fileURL: string, outputURL: string, rateHandler: any) {
-	return smartDownloadFile(fileURL, outputURL, { onProgress: rateHandler });
+	return NetUtils.download(fileURL, outputURL, { onProgress: rateHandler });
 }
 
 /**

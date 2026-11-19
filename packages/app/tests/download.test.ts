@@ -4,9 +4,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { AddressInfo } from 'net';
-import { downloadFile } from '../src/utils/download';
+import { NetUtils } from '../src/utils/net';
 
-// ── 统一下载器（utils/download.ts）测试 ──
+// ── 统一下载器（NetUtils.download）测试 ──
 // 覆盖：分块并发完整性、块内断线重试续传、跨调用断点续传（旁车元数据）、
 // 服务器不支持 Range 时的单流回退、etag 变化放弃续传。
 
@@ -83,7 +83,7 @@ describe('统一下载器', () => {
 	it('分块并发下载大文件，内容完整一致', async () => {
 		const dest = path.join(workDir, 'out.bin');
 		const rates: number[] = [];
-		await downloadFile(baseUrl + '/file', dest, {
+		await NetUtils.download(baseUrl + '/file', dest, {
 			chunkSize: 1024 * 1024,
 			onProgress: (rate) => rates.push(rate)
 		});
@@ -100,7 +100,7 @@ describe('统一下载器', () => {
 	it('连接中断时块内续传重试，最终完整下载', async () => {
 		serverBehavior.maxBytesPerConn = 512 * 1024; // 每连接最多传 512KB 后断开
 		const dest = path.join(workDir, 'out.bin');
-		await downloadFile(baseUrl + '/file', dest, { chunkSize: 1024 * 1024, retries: 30 });
+		await NetUtils.download(baseUrl + '/file', dest, { chunkSize: 1024 * 1024, retries: 30 });
 		expect(fs.readFileSync(dest).equals(SOURCE)).toBe(true);
 	});
 
@@ -122,7 +122,7 @@ describe('统一下载器', () => {
 			JSON.stringify({ url: baseUrl + '/file', size: SOURCE.length, etag: '"v1"', chunkSize, done: [0, 1, 2, 3] })
 		);
 
-		await downloadFile(baseUrl + '/file', dest, { chunkSize });
+		await NetUtils.download(baseUrl + '/file', dest, { chunkSize });
 		expect(fs.readFileSync(dest).equals(SOURCE)).toBe(true);
 		// 探测请求（bytes=0-0，start=0）之外，不应再请求已完成块的起始偏移
 		const fetchedStarts = rangeStarts.filter((s) => s !== 0);
@@ -134,7 +134,7 @@ describe('统一下载器', () => {
 	it('服务器不支持 Range 时回退单流下载', async () => {
 		serverBehavior.range = false;
 		const dest = path.join(workDir, 'out.bin');
-		await downloadFile(baseUrl + '/file', dest);
+		await NetUtils.download(baseUrl + '/file', dest);
 		expect(fs.readFileSync(dest).equals(SOURCE)).toBe(true);
 	});
 
@@ -152,7 +152,7 @@ describe('统一下载器', () => {
 				done: [0, 1]
 			})
 		);
-		await downloadFile(baseUrl + '/file', dest, { chunkSize: 1024 * 1024 });
+		await NetUtils.download(baseUrl + '/file', dest, { chunkSize: 1024 * 1024 });
 		expect(fs.readFileSync(dest).equals(SOURCE)).toBe(true);
 	});
 });

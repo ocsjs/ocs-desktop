@@ -1,9 +1,10 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { Logger } from '../logger';
+import { Logger } from '../../logger';
+import { get } from './request';
 
-const logger = Logger('download');
+const logger = Logger('net:download');
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -47,7 +48,7 @@ interface DownloadMeta {
 	done: number[];
 }
 
-export interface DownloadFileOptions {
+export interface DownloadOptions {
 	/** 分块并发数（默认 6） */
 	concurrency?: number;
 	/** 单块大小（默认 max(4MB, size/并发*4)，限制总块数） */
@@ -60,6 +61,7 @@ export interface DownloadFileOptions {
 
 /**
  * 统一下载器：分块并发 + 断点续传（业界主流下载器做法，参考 IDM/aria2/electron-updater）。
+ * 请求层走 NetUtils.get（系统代理注入 + 代理失效降级直连）。
  *
  * 流程：
  * 1. Range 探测（GET bytes=0-0）：服务器支持 206 且文件足够大 → 分块并发；
@@ -70,9 +72,9 @@ export interface DownloadFileOptions {
  *    跳过已完成分块，仅补缺失分块。
  * 4. 全部完成：清理旁车元数据。
  */
-export async function downloadFile(fileURL: string, outputURL: string, options: DownloadFileOptions = {}) {
+export async function download(fileURL: string, outputURL: string, options: DownloadOptions = {}) {
 	const { concurrency = DEFAULT_CONCURRENCY, retries = CHUNK_RETRIES, onProgress } = options;
-	logger.info('downloadFile', fileURL, outputURL);
+	logger.info('download', fileURL, outputURL);
 	fs.mkdirSync(path.dirname(outputURL), { recursive: true });
 
 	const probe = await probeRangeSupport(fileURL);
@@ -147,7 +149,7 @@ export async function downloadFile(fileURL: string, outputURL: string, options: 
 		let offset = start;
 		for (let attempt = 0; ; attempt++) {
 			try {
-				const res = await axios.get(fileURL, {
+				const res = await get(fileURL, {
 					headers: { Range: `bytes=${offset}-${end}` },
 					responseType: 'stream',
 					// 非 206 视为失败（含 200 全量响应：服务器不支持 Range，交给上层回退）
@@ -216,7 +218,7 @@ export async function downloadFile(fileURL: string, outputURL: string, options: 
 async function probeRangeSupport(url: string): Promise<{ supported: boolean; size: number; etag: string }> {
 	try {
 		const res = await withRetry(() =>
-			axios.get(url, {
+			get(url, {
 				headers: { Range: 'bytes=0-0' },
 				responseType: 'stream',
 				validateStatus: (s) => s < 400,
@@ -249,7 +251,7 @@ async function simpleDownload(
 	onProgress?: (rate: number, totalLength: number, loadedLength: number) => void
 ) {
 	const { data } = await withRetry(() =>
-		axios.get(url, {
+		get(url, {
 			responseType: 'stream',
 			validateStatus: (s) => s >= 200 && s < 300,
 			timeout: IDLE_TIMEOUT
