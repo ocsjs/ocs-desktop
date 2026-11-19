@@ -61,19 +61,24 @@ if (!gotTheLock) {
 
 /** 启动渲染进程 */
 function bootstrap() {
+	// store 就绪链：initCrypto → initStore（含 paths 初始化）。remoteRegister 依赖 store.paths
+	// （HTTP 磁盘缓存根目录），并发启动时若本链尚未完成而窗口分支先执行 remoteRegister，
+	// 会读 store.paths 崩溃（存量 store 因磁盘已有 paths 不暴露；全新 userData 下必现）
+	const storeReady = task('初始化加密密钥', () => initCrypto()).then(() =>
+		task('初始化本地设置', async () => {
+			initStore();
+			// 内置拓展完整性校验（asar 基准，篡改自动重释放）：依赖 store.paths，
+			// 不阻塞启动（快检毫秒级；首次释放/修复才有秒级耗时，环境补全链路另有兜底安装）
+			task('校验内置拓展', () => ensureExtensionsIntegrity());
+			await task('启动接口服务', () => startupServer());
+		})
+	);
+
 	task('OCS启动程序', () =>
 		Promise.all([
 			task('初始化错误处理', () => handleError()),
 			// 密钥初始化必须在 initStore 之前完成（initStore 同步调用 getDecryptedRenderData）
-			task('初始化加密密钥', () => initCrypto()).then(() =>
-				task('初始化本地设置', async () => {
-					initStore();
-					// 内置拓展完整性校验（asar 基准，篡改自动重释放）：依赖 store.paths，
-					// 不阻塞启动（快检毫秒级；首次释放/修复才有秒级耗时，环境补全链路另有兜底安装）
-					task('校验内置拓展', () => ensureExtensionsIntegrity());
-					await task('启动接口服务', () => startupServer());
-				})
-			),
+			storeReady,
 			task('初始化自动启动', () => autoLaunch()),
 			// AppImage 桌面集成（菜单入口/图标自注册），幂等，仅 Linux AppImage 生效
 			task('AppImage桌面集成', () => integrateAppImageDesktop()),
@@ -141,6 +146,9 @@ function bootstrap() {
 					}, 1000);
 				});
 
+				// remoteRegister 依赖 store.paths（HTTP 磁盘缓存根目录），须等 initStore 完成；
+				// catch 容错：接口服务失败（如端口占用）不应阻断窗口加载（保持旧行为）
+				await storeReady.catch(() => {});
 				task('初始化远程通信模块', () => remoteRegister(window));
 				task('注册app事件监听器', () => globalListenerRegister(window));
 				// 系统托盘按需创建：仅「后台运行」开启时显示托盘图标；
