@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import axios from 'axios';
 import { gt, lte } from 'semver';
 import { Logger } from '../logger';
-import { store } from '../store';
+import { StoreData } from '../store';
 import { getCurrentWebContents, moveWindowToTop } from '../utils';
 import { UpdateInformationResource, OCS_UPDATER, OCS_DOWNLOAD_PAGE, AppStore } from '@ocs-desktop/common';
 import { probeNetwork } from './net.status';
@@ -98,7 +98,7 @@ function listenUpdaterEvents() {
 
 /** 当前生效的更新源目录（测试模式可在设置中覆盖），保证以 / 结尾 */
 function effectiveFeedUrl() {
-	return (store.store.updater?.feedUrl || DEFAULT_FEED_URL).replace(/\/?$/, '/');
+	return (StoreData.get().updater?.feedUrl || DEFAULT_FEED_URL).replace(/\/?$/, '/');
 }
 
 /**
@@ -141,7 +141,7 @@ function extractVersionSections(changelog: string, current: string, latest: stri
 
 /** 应用设置中的更新测试配置（自定义更新源 / 允许降级），正式用户默认留空不影响线上 */
 function applyUpdaterConfig() {
-	const config = store.store.updater;
+	const config = StoreData.get().updater;
 	if (config?.feedUrl) {
 		autoUpdater.setFeedURL({ provider: 'generic', url: config.feedUrl });
 		logger.info('使用自定义更新源', config.feedUrl);
@@ -159,7 +159,7 @@ export async function updater(config?: AppStore['updater']) {
 	 * 此处先同步到主进程 store，保证本次检查立即使用新值（如自定义更新源）
 	 */
 	if (config) {
-		store.set('updater', config);
+		StoreData.set('updater', config);
 	}
 	applyUpdaterConfig();
 	logger.info('检查更新', { version: app.getVersion() });

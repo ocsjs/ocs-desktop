@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
 import { app as electronApp } from 'electron';
-import { store } from '../store';
+import { StoreData } from '../store';
 import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 import { getDecryptedRenderData } from '../crypto';
 import { getCurrentWebContents, getProjectPath, moveWindowToTop } from '../utils';
@@ -233,7 +233,7 @@ export async function startupServer() {
 	const app = express();
 
 	// authToken 改内存态持有（不落盘），store 中字段废弃置空；分发见 server.auth.ts
-	store.set('server', {
+	StoreData.set('server', {
 		port: DEFAULT_SERVER_PORT,
 		authToken: ''
 	});
@@ -283,14 +283,14 @@ export async function startupServer() {
 
 	/** 获取 browser 数据 */
 	app.get('/browser', requireToken, (req, res) => {
-		const render = getDecryptedRenderData(store);
+		const render = getDecryptedRenderData(StoreData.get().render);
 		// 如果开启了同步配置，就返回，否则返回空对象
 		const data = render?.setting?.ocs?.openSync ? render?.setting?.ocs?.store : {};
 		res.json(data);
 	});
 
 	app.get('/is-browser-config-sync', requireToken, (req, res) => {
-		const render = getDecryptedRenderData(store);
+		const render = getDecryptedRenderData(StoreData.get().render);
 		res.end(String(render.setting.ocs.openSync));
 	});
 
@@ -311,7 +311,7 @@ export async function startupServer() {
 			res.status(400).json({ error: '缺少 uid 参数' });
 			return;
 		}
-		const render = getDecryptedRenderData(store);
+		const render = getDecryptedRenderData(StoreData.get().render);
 		const root = render?.browser?.root;
 		if (!root) {
 			res.json(null);
@@ -347,7 +347,7 @@ export async function startupServer() {
 
 	/** 获取导航页设置：搜索引擎开关、快捷平台访问开关、自定义网站列表 */
 	app.get('/api/bookmark/page-settings', (req, res) => {
-		const render = getDecryptedRenderData(store);
+		const render = getDecryptedRenderData(StoreData.get().render);
 		const bookmarkPage = render?.setting?.browser?.bookmarkPage;
 		res.json({
 			enableSearch: bookmarkPage?.enableSearch !== false,
@@ -456,7 +456,7 @@ export async function startupServer() {
 		const filePath = String(req.query.path || '');
 		const predownloadDir = path.resolve(electronApp.getPath('temp'), './ocs-userscripts');
 		// 用户通过「添加本地脚本」显式注册的路径（render.scripts 中 isLocalScript 条目）
-		const scripts = getDecryptedRenderData(store)?.scripts ?? [];
+		const scripts = getDecryptedRenderData(StoreData.get().render)?.scripts ?? [];
 		if (!isAllowedUserscriptPath(filePath, predownloadDir, scripts) || !fs.existsSync(path.resolve(filePath))) {
 			res.status(403).send('Forbidden');
 			return;
@@ -518,7 +518,7 @@ export async function startupServer() {
 	return new Promise<void>((resolve, reject) => {
 		// ⚠️ 安全：仅绑定回环地址，所有消费方（导航页/渲染端/受管浏览器内脚本）都在本机，
 		// 绑 0.0.0.0 会把全部接口暴露给局域网
-		const server = app.listen(store.store.server.port, '127.0.0.1', () => {
+		const server = app.listen(StoreData.get().server.port, '127.0.0.1', () => {
 			const address = server.address();
 			if (address && typeof address === 'object') {
 				// 存储本次服务的端口
@@ -530,7 +530,7 @@ export async function startupServer() {
 		// eslint-disable-next-line no-undef
 		server.on('error', (err: NodeJS.ErrnoException) => {
 			if (err.code === 'EADDRINUSE') {
-				logger.error(`端口 ${store.store.server.port} 已被占用，服务启动失败`);
+				logger.error(`端口 ${StoreData.get().server.port} 已被占用，服务启动失败`);
 			} else {
 				logger.error(`OCS服务启动失败: ${err.message}`);
 			}

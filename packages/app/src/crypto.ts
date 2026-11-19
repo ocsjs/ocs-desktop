@@ -251,13 +251,13 @@ export function decryptRenderString(encrypted: string): string {
 }
 
 /**
- * 获取解密后的渲染进程数据
+ * 获取解密后的渲染进程数据（直接传入 render 原文/密文；store 实例不再跨模块导出）
  */
-export function getDecryptedRenderData(store: { store: { render: any } }): any {
-	if (typeof store?.store?.render === 'string') {
-		return JSON.parse(decryptRenderString(store.store.render));
+export function getDecryptedRenderData(render: any): any {
+	if (typeof render === 'string') {
+		return JSON.parse(decryptRenderString(render));
 	}
-	return store?.store?.render || {};
+	return render || {};
 }
 
 // ────────────────────────────────────────────

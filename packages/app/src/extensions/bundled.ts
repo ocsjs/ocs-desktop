@@ -24,7 +24,7 @@ import path from 'path';
 import { unzip } from '../utils';
 import { downloadFile } from '../utils/download';
 import { stripCrxHeader } from '../utils/crx';
-import { store } from '../store';
+import { StoreData } from '../store';
 import { Logger } from '../logger';
 import { quickVerifyExtension, fullVerifyExtension } from './verify';
 
@@ -73,7 +73,7 @@ function bundledDir() {
 
 function extensionsFolder() {
 	// store 为 electron-store 实例，完整数据需经 .store 访问（同 utils/ocr.ts）
-	return store.store.paths.extensionsFolder;
+	return StoreData.get().paths.extensionsFolder;
 }
 
 function extensionDir(id: string) {

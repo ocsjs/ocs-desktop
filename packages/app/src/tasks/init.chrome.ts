@@ -5,7 +5,7 @@ import { sleep, unzip, moveDirWithRetry, isDevMode } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
-import { store } from '../store';
+import { StoreData } from '../store';
 import { createLoadingWindow } from '../window';
 import { setInitStatus, updateInitLogText } from './init.status';
 import { downloadBuiltinChromeZip } from './chrome.downloader';
@@ -252,7 +252,7 @@ function ensureChromeExecutablePermission(chromeFinalPath: string) {
 
 function migrateLegacyBuiltinBrowserPath(chromeFinalPath: string) {
 	try {
-		const render = store.store.render;
+		const render = StoreData.get().render;
 		if (!render || typeof render !== 'object') {
 			return;
 		}
@@ -261,7 +261,7 @@ function migrateLegacyBuiltinBrowserPath(chromeFinalPath: string) {
 		const legacyChromeRoot = path.join(process.resourcesPath, 'bin', 'chrome');
 		if (typeof currentPath === 'string' && currentPath.startsWith(legacyChromeRoot) && fs.existsSync(chromeFinalPath)) {
 			render.setting.launchOptions.executablePath = chromeFinalPath;
-			store.set('render', render);
+			StoreData.set('render', render);
 			logger.log('migrate builtin browser path', { from: currentPath, to: chromeFinalPath });
 		}
 	} catch (e) {

@@ -3,9 +3,9 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import child_process from 'child_process';
 import { Logger } from '../logger';
-import { store } from '../store';
+import { StoreData } from '../store';
 
-const getOcrFolder = () => path.join(store.store.paths.downloadFolder, './apps/ocr');
+const getOcrFolder = () => path.join(StoreData.get().paths.downloadFolder, './apps/ocr');
 
 const logger = Logger('ocr');
 

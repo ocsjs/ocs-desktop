@@ -51,7 +51,9 @@ export const OriginalAppStore: AppStore = {
 		/** 允许降级/同版本覆盖安装（重复测试用） */
 		allowDowngrade: false,
 		/** 强制指定内置浏览器下载源（'' 默认按优先级降级） */
-		chromeSource: ''
+		chromeSource: '',
+		/** 手动 HTTP 代理（留空走系统代理自动检测） */
+		proxyUrl: ''
 	},
 	/** 脚本资源覆盖（开发者设置-脚本调试，留空使用默认线上地址） */
 	scriptResources: {
@@ -112,11 +114,55 @@ function backupPreV3Config() {
 backupPreV3Config();
 
 /**
- * - electron 本地存储对象
- * - 可以使用 store.store 访问
- * - 设置数据请使用 store.set('key', value)
+ * electron 本地存储实例（内部实现细节，不导出）。
+ * 外部一律经 StoreData 工具对象访问（见下）。
  */
+/** @deprecated 过渡导出（分步提交期间兼容未迁移消费方；IPC bridge 提交移除） */
 export const store = new Store<typeof OriginalAppStore>();
+
+/**
+ * store 数据访问工具库（store 的唯一公开入口）。
+ *
+ * 为什么不允许直接导出 store 实例：conf@10 的 `.store` getter 每次调用都
+ * readFileSync + JSON.parse 重新反序列化——对返回值做属性赋值改的是一次性副本
+ * （写入静默丢失），且每次访问都读盘。统一收口到本对象的三类操作：
+ * - get()：整树读取（进程内缓存，任何写入自动失效）
+ * - set()：点路径写入（唯一推荐写入入口）
+ * - invalidateCache()：手动失效（绕过 set 的写入兜底）
+ */
+let storeDataCache: (typeof OriginalAppStore) | undefined;
+
+/** 任何写入（set/顶层 setter）后使整树缓存失效 */
+store.onDidAnyChange?.(() => {
+	storeDataCache = undefined;
+});
+
+export const StoreData = {
+	/** 整树读取（进程内缓存，写入即失效；消除 conf getter 每次读盘的开销） */
+	get(): typeof OriginalAppStore {
+		if (!storeDataCache) {
+			storeDataCache = store.store;
+		}
+		return storeDataCache;
+	},
+	/** 点路径写入（如 set('paths.downloadFolder', x)） */
+	set(key: string, value: unknown): void {
+		store.set(key, value);
+	},
+	/** 整树替换（仅初始化/迁移/IPC 全量写回使用） */
+	replaceAll(value: typeof OriginalAppStore): void {
+		store.store = value;
+		StoreData.invalidateCache();
+	},
+	/** 手动失效缓存（对绕过 set/replaceAll 的写入兜底） */
+	invalidateCache(): void {
+		storeDataCache = undefined;
+	},
+	/** 订阅指定顶层键变化（如托盘同步监听 window 键） */
+	onDidChange(key: string, callback: () => void): void {
+		(store as any).onDidChange?.(key, callback);
+	}
+} as const;
 
 /**
  * 获取解密后的渲染进程数据

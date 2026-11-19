@@ -2,7 +2,7 @@
 
 import { app, dialog } from 'electron';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
-import { OriginalAppStore, store } from '../store';
+import { OriginalAppStore, StoreData } from '../store';
 import { valid, coerce, clean, gt, SemVer } from 'semver';
 import defaultsDeep from 'lodash/defaultsDeep';
 import { Logger } from '../logger';
@@ -14,7 +14,7 @@ const logger = Logger('store-init');
  * 初始化配置
  */
 export function initStore() {
-	const version = store.store.version;
+	const version = StoreData.get().version;
 	logger.log('version', version);
 
 	if (typeof version === 'string') {
@@ -24,31 +24,31 @@ export function initStore() {
 		const originVersion = parseVersion(version);
 		// 是否需要更新设置
 		if (gt(appVersion, originVersion)) {
-			store.store = defaultsDeep(store.store, OriginalAppStore);
+			StoreData.replaceAll(defaultsDeep(StoreData.get(), OriginalAppStore));
 		}
 	}
 	//  初始化
 	else {
-		const render = store.store.render ? JSON.parse(JSON.stringify(store.store.render)) : {};
+		const render = StoreData.get().render ? JSON.parse(JSON.stringify(StoreData.get().render)) : {};
 		OriginalAppStore.render = render;
 		// 初始化设置
-		store.store = OriginalAppStore;
+		StoreData.replaceAll(OriginalAppStore);
 
-		logger.log('store', store.store);
+		logger.log('store', StoreData.get());
 	}
 
 	// 同步存储版本号为当前应用版本：
 	// 上面的 defaultsDeep 只补缺不覆盖，version 会永远停留在首次写入的旧值，
 	// 导致 config.json 与「设置-更新设置-当前版本」显示历史版本号
-	store.set('version', app.getVersion());
+	StoreData.set('version', app.getVersion());
 
 	/**
 	 * 如果浏览器缓存为空，则初始化，如果不为空那就是用户自己设置了
 	 */
-	if (!store.store.paths.userDataDirsFolder) {
+	if (!StoreData.get().paths.userDataDirsFolder) {
 		OriginalAppStore.paths.userDataDirsFolder = path.resolve(app.getPath('userData'), './userDataDirs');
 	} else {
-		OriginalAppStore.paths.userDataDirsFolder = store.store.paths.userDataDirsFolder;
+		OriginalAppStore.paths.userDataDirsFolder = StoreData.get().paths.userDataDirsFolder;
 	}
 
 	/**
@@ -64,7 +64,7 @@ export function initStore() {
 	ensureWritableDir(OriginalAppStore.paths.extensionsFolder, '拓展', OriginalAppStore.paths.extensionsFolder);
 
 	// 强制更新路径
-	store.set('paths', OriginalAppStore.paths);
+	StoreData.set('paths', OriginalAppStore.paths);
 }
 
 /**
