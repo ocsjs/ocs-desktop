@@ -4,7 +4,7 @@ import { existsSync, statSync } from 'fs';
 
 export function globalListenerRegister(win: BrowserWindow) {
 	app.on('second-instance', (e, argv) => {
-		if (win && process.platform === 'win32') {
+		if (win && !win.isDestroyed() && process.platform === 'win32') {
 			if (win.isMinimized()) {
 				win.restore();
 			}
