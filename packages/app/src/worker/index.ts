@@ -13,6 +13,7 @@ import { AutomationScripts, LegacyScriptMappings } from '../scripts/index';
 import { runSystemScripts } from '../scripts/system';
 import { initHttpCache } from '../utils/http-cache';
 import _get from 'lodash/get';
+import { sendToParent } from './parent-channel';
 import child_process from 'child_process';
 import http from 'http';
 import os from 'os';
@@ -48,7 +49,7 @@ interface Langs {
 	error_when_extension_not_found?: string;
 }
 
-/** 脚本工作线程（类型契约见 @ocs-desktop/common contract.ts） */
+/** 脚本工作线程（类型契约见 @ocs-desktop/common types.ts） */
 export class ScriptWorker implements ScriptWorkerContract {
 	uid: string = '';
 	browser?: BrowserContext;
@@ -412,7 +413,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 		]);
 		this.browser = undefined;
 		send('browser-closed');
-		process.exit();
+		// postMessage 为异步，立即 exit 可能丢弃在途消息；延迟退出确保 browser-closed 送达
+		setTimeout(() => process.exit(), 100);
 	}
 
 	/**
@@ -1229,7 +1231,7 @@ export async function launchBrowser({
 }
 
 function send(event: string, ...args: any[]) {
-	process.send?.({ event, args });
+	sendToParent({ event, args });
 }
 
 /** execFile 的 Promise 包装（用于系统内存查询命令） */
@@ -1564,7 +1566,8 @@ function watchNoPagesAutoClose(browser: BrowserContext) {
 function handleBrowserClose(browser: BrowserContext) {
 	browser.once('close', () => {
 		send('browser-closed');
-		process.exit();
+		// postMessage 为异步，立即 exit 可能丢弃在途消息；延迟退出确保 browser-closed 送达
+		setTimeout(() => process.exit(), 100);
 	});
 }
 

@@ -210,12 +210,32 @@ export async function breakSliderVerify(
 	}
 }
 
+/**
+ * worker 侧代理配置：OCS_PROXY_URL 由主进程 fork worker 时注入
+ * （worker 为纯 Node 进程，无 Electron session 代理解析能力）。
+ * 未注入（无系统代理）返回 undefined，axios 按直连处理。
+ */
+function getWorkerAxiosProxy(): { host: string; port: number; protocol: string } | undefined {
+	const raw = process.env.OCS_PROXY_URL;
+	if (!raw) return undefined;
+	try {
+		const u = new URL(raw);
+		const port = parseInt(u.port || '8080', 10);
+		if (!u.hostname || !Number.isFinite(port)) return undefined;
+		return { host: u.hostname, port, protocol: 'http' };
+	} catch {
+		return undefined;
+	}
+}
+
 export function getBase64(url: string) {
 	return axios
 		.get(url, {
 			responseType: 'arraybuffer',
 			// 10s 超时：滑块背景图等外部资源在弱网环境下避免无限挂起
-			timeout: 10 * 1000
+			timeout: 10 * 1000,
+			// 系统代理感知（主进程解析注入），OCR 等 localhost 请求不走此函数故不受影响
+			proxy: getWorkerAxiosProxy()
 		})
 		.then((response) => Buffer.from(response.data, 'binary').toString('base64'));
 }

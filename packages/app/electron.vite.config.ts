@@ -34,6 +34,23 @@ export default defineConfig({
 			}
 		}
 	},
+	preload: {
+		// common 同理内联（preload 仅使用其类型，编译期擦除；防御性配置保持一致）
+		plugins: [externalizeDepsPlugin({ exclude: ['@ocs-desktop/common'] })],
+		resolve: {
+			alias: commonAlias
+		},
+		build: {
+			outDir: 'out/preload',
+			rollupOptions: {
+				input: {
+					index: path.resolve(__dirname, 'src/preload/index.ts'),
+					// 初始化 loading 闪屏窗口的专用窄接口 preload（window.ocsInit）
+					loading: path.resolve(__dirname, 'src/preload/loading.ts')
+				}
+			}
+		}
+	},
 	renderer: {
 		root: path.resolve(__dirname, '../web'),
 		resolve: {
