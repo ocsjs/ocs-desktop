@@ -8,7 +8,15 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"outDir": "./lib",
-		"declaration": true
+		"declaration": true,
+		"baseUrl": ".",
+		"paths": {
+			// 与 electron-vite alias 同策略：common 解析到源码，
+			// 使 common 源码内的包名自引用（生成产物中的 '@ocs-desktop/common'）可解析
+			"@ocs-desktop/common": ["../common/index.ts"],
+			"@ocs-desktop/common/web": ["../common/web.ts"],
+			"@ocs-desktop/common/node": ["../common/node.ts"]
+		}
 	},
 	"include": ["**/*.ts"],
 	"exclude": ["node_modules", "dist", "out", "tests", "extensions", "**/*.spec.ts", "**/*.test.ts", "**/*.d.ts"]

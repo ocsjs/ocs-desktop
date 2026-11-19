@@ -8,7 +8,15 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"declaration": true
+		"declaration": true,
+		"baseUrl": ".",
+		"paths": {
+			// 包内自引用映射：生成产物（remote-methods.generated.ts 等）保留 '@ocs-desktop/common'
+			// 原样标识符即可编译，无需生成脚本做任何路径改写（改名/移动零维护）
+			"@ocs-desktop/common": ["./index.ts"],
+			"@ocs-desktop/common/node": ["./node.ts"],
+			"@ocs-desktop/common/web": ["./web.ts"]
+		}
 	},
 	"exclude": ["node_modules", "lib", "tests", "**/*.test.ts"]
 }

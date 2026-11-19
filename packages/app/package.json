@@ -5,13 +5,17 @@
 	"main": "./out/main/index.js",
 	"desktopName": "ocs-desktop.desktop",
 	"scripts": {
-		"dev": "electron-vite dev",
+		"dev": "concurrently -k -n vite,contract -c blue,magenta \"electron-vite dev\" \"node scripts/gen-remote-contract.mjs --watch\"",
 		"build": "electron-vite build",
 		"pack": "electron-vite build && electron-builder --config ./electron.builder.json --dir --publish never",
 		"dist": "electron-vite build && electron-builder --config ./electron.builder.json --publish never",
 		"fetch:extensions": "node ./scripts/fetch-extensions.js",
 		"test": "vitest run",
-		"proxy": "HTTPS_PROXY=127.0.0.1:7890"
+		"proxy": "HTTPS_PROXY=127.0.0.1:7890",
+		"gen:contract": "node scripts/gen-remote-contract.mjs",
+		"gen:contract:check": "node scripts/gen-remote-contract.mjs --check",
+		"gen:contract:watch": "node scripts/gen-remote-contract.mjs --watch",
+		"predev": "node scripts/gen-remote-contract.mjs"
 	},
 	"devDependencies": {
 		"@types/adm-zip": "^0.5.5",

@@ -95,7 +95,7 @@ export interface SystemScriptContext {
 	browser: import('playwright-core').BrowserContext;
 	uid: string;
 	/** AppStore 快照（启动时传入；import type 避免与 contract 循环依赖） */
-	store: import('../contract').AppStore | undefined;
+	store: import('../types').AppStore | undefined;
 	/** worker→渲染端事件上报 */
 	send: (event: string, ...args: any[]) => void;
 	step: SystemScriptStep;

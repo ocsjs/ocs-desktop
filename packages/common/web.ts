@@ -11,7 +11,7 @@ export { StringUtils } from './src/utils/string';
 export { normalizeUrl } from './src/utils/url';
 export { validateConfigValue } from './src/utils/config';
 export * from './src/interface';
-export * from './src/contract';
+export * from './src/types';
 export * from './src/scripts/interface';
 export * from './src/scripts/script';
 export type { LoggerCore } from './src/logger.core';

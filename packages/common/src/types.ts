@@ -8,6 +8,10 @@ import type { AxiosRequestConfig } from 'axios';
 import type { LaunchOptions } from 'playwright-core';
 import type { AutomationScript } from './scripts/script';
 import type { Config } from './scripts/interface';
+
+/** 生成产物（remote-methods.generated.ts）所需的类型转发 */
+export type { ValidBrowser } from './interface';
+export type { SystemScriptPhase } from './scripts/script';
 import type { UpdateInformationResource } from './api';
 import type { getValidBrowsers } from './utils/valid.browser';
 
@@ -53,6 +57,8 @@ export interface AppStore {
 		allowDowngrade: boolean;
 		/** 强制指定内置浏览器下载源（'' 默认按优先级降级；npmmirror/official/ocs-cdn 用于测试下载链路） */
 		chromeSource: string;
+		/** 手动 HTTP 代理（如 http://127.0.0.1:7890），优先级高于系统代理自动检测；留空走自动检测 */
+		proxyUrl: string;
 	};
 	/** 脚本资源覆盖（开发者设置-脚本调试，留空使用默认线上地址 OCS_SCRIPT_RESOURCES） */
 	scriptResources: {
@@ -95,94 +101,33 @@ export interface DownloadUserscriptResult {
 	error?: string;
 }
 
-/**
- * 主进程 methods 远程调用契约。
- * 实现见 @ocs-desktop/app src/tasks/remote.register.ts（const methods: RemoteMethods）。
- */
-export interface RemoteMethods {
-	autoLaunch: () => void;
-	get: (url: string, config?: AxiosRequestConfig<any> | undefined) => Promise<any>;
-	/** 带磁盘缓存的 GET（脚本猫/GreasyFork 等速度不稳定站点加速）：TTL 内命中缓存，失败回退过期缓存 */
-	cachedGet: (url: string, ttlMs: number) => Promise<any>;
-	getWithStatus: (url: string, config?: AxiosRequestConfig<any> | undefined) => Promise<{ status: number; data: any }>;
-	download: (channel: string, url: string, dest: string) => Promise<string>;
-	unzip: (input: string, output: string) => Promise<void>;
-	getValidBrowsers: typeof getValidBrowsers;
-	getBrowserMajorVersion: (executablePath: string) => number | undefined;
-	getExtensionPaths: (extensionsFolder: string) => string[];
-	/**
-	 * 内置拓展完整性校验（asar 内官方清单为基准）：
-	 * 仅处理已释放的拓展，快检 → 全量哈希 → 不符自动从 asar 重释放；
-	 * 未安装的拓展为 skipped（按需安装，不强制释放）。
-	 */
-	ensureBuiltinExtensionsIntegrity: () => Promise<
-		{ id: string; status: 'ok' | 'repaired' | 'skipped' | 'failed'; error?: string }[]
-	>;
-	/** 按需从 asar 释放指定内置拓展（环境补全/应用中心切换脚本管理器），返回拓展目录 */
-	installBundledExtension: (id: string) => Promise<string>;
-	/** 内置拓展清单（构建期官方渠道获取并钉哈希，随 App 发版更新） */
-	getBundledExtensions: () => {
-		id: string;
-		name: string;
-		version: string;
-		license: string;
-		sourceUrl: string;
-		homepage: string;
-	}[];
-	/** 系统自动化程序清单（开发者设置-自动化程序管理展示） */
-	getSystemScripts: () => { name: string; label?: string; phase: string; order: number }[];
-	/** 下载并安装内置浏览器，返回安装完成后的可执行文件路径 */
-	installBuiltinChrome: () => Promise<string>;
-	exportExcel: (excel: { sheetName: string; list: any[] }[], filename: string) => void;
-	statisticFolderSize: (dir: string) => Promise<number>;
-	// eslint-disable-next-line no-undef
-	getPlatform: () => NodeJS.Platform;
-	getSystemDark: () => boolean;
-	updateApp: (newVersion: UpdateInformationResource) => Promise<void>;
-	/** 手动检查更新，返回当前/最新版本与是否有更新（undefined 表示检查失败）。
-	 *  可携带渲染层最新的 updater 配置，避免持久化防抖未落盘导致主进程读到旧值 */
-	checkUpdate: (
-		config?: AppStore['updater']
-	) => Promise<{ current: string; latest: string; hasUpdate: boolean; message?: string } | undefined>;
-	hideToTray: () => void;
-	quitApp: (code?: number) => void;
-	cancelQuit: () => void;
-	destroyTray: () => void;
-	resetApp: () => void;
-	isEncryptionAvailable: () => boolean;
-	/** 获取本地服务访问令牌（内存态，不落盘） */
-	getServerToken: () => string;
-	/** 获取 Linux 密钥环后端（basic_text = 无密钥环）；非 Linux 返回 undefined */
-	getStorageBackend: () => string | undefined;
-	/** 获取主进程真实显示环境变量（Linux 沙箱会清理渲染进程 env 导致 DISPLAY 丢失，fork worker 前需取回） */
-	getDisplayEnv: () => Record<string, string>;
-	/** HTTP 磁盘缓存统计（网络缓存加速的缓存检测）：条数 + 总字节数 */
-	httpCacheStats: () => { count: number; bytes: number };
-	/** HTTP 磁盘缓存统计（按站点分组，含 unknown） */
-	httpCacheStatsBySite: () => Record<string, { count: number; bytes: number }>;
-	/** 清空 HTTP 磁盘缓存（siteId 为空时清空全部） */
-	clearHttpCache: (siteId?: string) => void;
-	/** 网站图标缓存统计（条数 + 总字节数） */
-	iconCacheStats: () => { count: number; bytes: number };
-	/** 清空网站图标缓存（内存 + 磁盘） */
-	clearIconCache: () => void;
-	isDirectory: (path: string) => boolean;
-	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */
-	canOCR: () => boolean;
-	/** 是否 electron-vite dev 开发模式（pnpm dev），dev 下软件无法自动重启 */
-	isDevMode: () => boolean;
-	getRawScripts: () => RawAutomationScript[];
-	encryptRenderString: (plaintext: string) => string;
-	decryptRenderString: (encrypted: string) => string;
-	/** 导出数据：用户密码加密（跨机器可移植） */
-	encryptExportString: (plaintext: string, password: string) => string;
-	/** 导入数据：用户密码解密（密码错误抛错） */
-	decryptExportString: (payload: string, password: string) => string;
-	/** 判断密文是否为密码加密的导出格式 */
-	isPasswordEncrypted: (payload: string) => boolean;
-	saveStore: (plainStoreJson: string, shouldEncrypt: boolean) => void;
-	downloadUserscripts: (urls: string[]) => Promise<DownloadUserscriptResult[]>;
+/** 内置拓展清单信息（供渲染进程能力探测；实现见 app src/extensions/bundled.ts） */
+export interface BundledExtensionInfo {
+	id: string;
+	name: string;
+	version: string;
+	license: string;
+	sourceUrl: string;
+	homepage: string;
 }
+
+/** 内置拓展完整性校验单项结果 */
+export interface ExtensionIntegrityResult {
+	id: string;
+	/** ok=校验通过；repaired=校验失败已从 asar 重释放；skipped=未安装（按需安装，不强制释放）；failed=修复失败 */
+	status: 'ok' | 'repaired' | 'skipped' | 'failed';
+	error?: string;
+}
+
+/**
+ * 主进程 methods 远程调用契约（实现即真相源，生成产物）。
+ * 真相源：@ocs-desktop/app src/tasks/remote.methods.ts 的 methods 实现对象；
+ * 产物由 packages/app/scripts/gen-remote-contract.mjs 经 tsc 声明发射生成（pnpm gen:contract）。
+ */
+export type { RemoteMethods } from './types/remote-methods.generated';
+
+/** 渲染端 window.ocs 门面类型（bridge 统一门面；生成产物，真相源同上 + remote.whitelists.ts） */
+export type { OcsBridge } from './types/bridge.generated';
 
 /** worker 初始化参数中的自动化脚本纯数据形态 */
 export type ScriptWorkerAutomationScript = { name: string; configs: Record<string, Config> };
@@ -283,3 +228,81 @@ export interface ScriptWorker {
 	info(...msg: any[]): void;
 	error(...msg: any[]): void;
 }
+
+/** ScriptWorker 子进程事件负载（主进程 script-worker.host 转发，script-worker 频道） */
+export interface ScriptWorkerEventPayload {
+	uid: string;
+	kind: 'message' | 'stdout' | 'stderr' | 'exit' | 'event';
+	/** kind=event：worker 业务事件名 */
+	event?: string;
+	/** kind=event：worker 业务事件参数 */
+	args?: any[];
+	/** kind=stdout/stderr：输出文本块 */
+	chunk?: string;
+	/** kind=exit：退出码 */
+	code?: number | null;
+}
+
+/**
+ * 内置浏览器文件完整性检查结果（checkBuiltinChromeIntegrity 返回值）。
+ * 实现见 @ocs-desktop/app src/tasks/chrome.integrity.ts（特性代码后续提交）。
+ */
+export interface ChromeIntegrityResult {
+	/** ok：完整；corrupted：文件被杀软等删改；missing：浏览器未安装/可执行文件不存在 */
+	status: 'ok' | 'corrupted' | 'missing';
+	/** 是否存在逐文件哈希基准清单（旧版本安装无清单，仅做关键文件降级检查） */
+	hasManifest: boolean;
+	/** status=corrupted 时的损坏详情（缺失/被篡改文件示例） */
+	detail?: string;
+}
+
+/**
+ * 内置浏览器安装进度（builtin-chrome-install-progress 事件负载）。
+ * 实现见 @ocs-desktop/app src/tasks/init.chrome.ts。
+ */
+export interface BuiltinChromeInstallProgress {
+	phase: 'download' | 'extract' | 'configure';
+	/** 下载阶段才有：源名/进度 */
+	sourceName?: string;
+	sourceIndex?: number;
+	sourceCount?: number;
+	rate?: number;
+	message: string;
+}
+
+
+/**
+ * 主进程 → 渲染进程 事件推送契约：频道名 → 参数元组。
+ * 消灭散落的字符串字面量频道，重构时获得编译期保障。
+ *
+ * 发送侧封装：@ocs-desktop/app src/tasks/ipc.events.ts sendToRenderer
+ * 监听侧封装：@ocs-desktop/web src/utils/ipc.ts onRendererEvent
+ */
+export interface IpcEventMap {
+	/** 文件下载进度（remote.methods.download 的进度回调推送，对齐 downloadFile 参数格式） */
+	download: [channel: string, rate: number, totalLength: number, chunkLength: number];
+	/** 内置浏览器安装进度（installBuiltinChrome 推送） */
+	'builtin-chrome-install-progress': [progress: BuiltinChromeInstallProgress];
+	/** 系统深浅色变化（nativeTheme updated，用于「自动」模式跟随系统） */
+	'system-theme-change': [dark: boolean];
+	/** 更新包下载进度（electron-updater download-progress，参数对齐 download 格式） */
+	'update-download': [bytesPerSecond: number, totalLength: number, transferred: number];
+	/** 检测到新版本（含更新日志 markdown） */
+	'detect-new-app-version': [info: UpdateInformationResource];
+	/** 在软件内定位显示指定浏览器（本地服务 HTTP 接口触发） */
+	'show-browser-in-app': [uid: string];
+	/** 系统关联/拖入打开文件（未找到文件参数时为 undefined） */
+	'open-file': [path: string | undefined];
+	/** 窗口即将关闭（渲染层接管关闭流程，决定隐藏托盘或退出） */
+	close: [];
+	/** 应用即将退出 */
+	quit: [];
+	/** ScriptWorker 子进程事件转发（主进程托管 utilityProcess → 渲染进程，按 uid 过滤） */
+	'script-worker': [payload: ScriptWorkerEventPayload];
+}
+
+/** 类型化事件订阅（主进程 → 渲染进程），返回取消订阅函数 */
+export type OcsEventSubscriber = <K extends keyof IpcEventMap>(
+	channel: K,
+	callback: (...args: IpcEventMap[K]) => void
+) => () => void;

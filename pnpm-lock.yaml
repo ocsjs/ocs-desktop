@@ -214,6 +214,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.19
+      electron:
+        specifier: 42.11.3
+        version: 42.11.3
       playwright-core:
         specifier: 'catalog:'
         version: 1.60.0
@@ -6760,6 +6763,7 @@ snapshots:
   '@types/node@26.6.6':
     dependencies:
       undici-types: 8.9.0
+    optional: true
 
   '@types/qs@6.15.1': {}
 
@@ -9830,7 +9834,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 26.6.6
+      '@types/node': 22.19.19
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -11809,7 +11813,8 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  undici-types@8.9.0: {}
+  undici-types@8.9.0:
+    optional: true
 
   undici@6.28.1: {}
 

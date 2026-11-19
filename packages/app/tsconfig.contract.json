@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.json",
+	"include": ["src/ipc/methods.ts", "src/ipc/bridge-types.entry.ts"],
+	"compilerOptions": {
+		"noEmit": false,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"skipLibCheck": true,
+		// 契约发射只需要这两个入口的类型，paths 别名与 app 主 tsconfig 一致
+		"paths": {
+			"@ocs-desktop/common/web": ["../common/web.ts"],
+			"@ocs-desktop/common/node": ["../common/node.ts"],
+			"@ocs-desktop/common": ["../common/index.ts"]
+		}
+	}
+}
