@@ -65,7 +65,7 @@
 import { ref, reactive } from 'vue';
 import { RouteRecordRaw, useRouter } from 'vue-router';
 import { routes, CustomRouteType, router } from '../route';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { store } from '../store';
 import { ListIcon, CodeIcon, SettingsIcon } from 'lucide-vue-next';
 import { Tooltip } from '@arco-design/web-vue';
@@ -89,14 +89,14 @@ const state = reactive({
 const version = ref('');
 
 /** 获取版本号 */
-remote.app.call('getVersion').then((v) => {
+bridge.app.getVersion().then((v) => {
 	version.value = v;
 });
 
 function clickMenu(route: RouteRecordRaw & { meta: { title: string } }) {
 	router.push(route.path);
 	store.render.state.title = `OCS桌面版 - ${route.meta.title}`;
-	remote.win.call('setTitle', `OCS桌面版 - ${route.meta.title}`);
+	bridge.win.setTitle(`OCS桌面版 - ${route.meta.title}`);
 }
 </script>
 

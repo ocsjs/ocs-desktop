@@ -267,13 +267,12 @@ import UsageAlertCollapse from './UsageAlertCollapse.vue';
 import { store, uiSession } from '../store/index';
 import { t } from '../utils/langs';
 import { Message } from '@arco-design/web-vue';
-import { child_process, electron } from '../utils/node';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
+import { onRendererEvent } from '../utils/ipc';
+
 import { useResources } from '../composables/useResources';
 import { promptRestartAfterOcrInstall } from '../utils/ocr';
 import { FolderIcon, CircleHelpIcon, LayoutGridIcon } from 'lucide-vue-next';
-
-const { ipcRenderer } = electron;
 
 const {
 	resourceGroups,
@@ -372,7 +371,7 @@ function isFileSupported(file: ResourceFile): boolean {
 }
 
 onMounted(() => {
-	remote.methods.call('getPlatform').then((p) => (currentPlatform.value = p));
+	bridge.methods.getPlatform().then((p) => (currentPlatform.value = p));
 	if (!resState.initialized) {
 		loadResources();
 	} else {
@@ -451,22 +450,23 @@ async function download(group_name: string, file: ResourceFile) {
 
 		for (const localFile of files) {
 			if (localFile.filename.startsWith(file.id) && localFile.filename.replace(file.id, '').trim() !== '') {
-				await remote.fs.call('rmSync', localFile.path, {
+				await bridge.fs.rmSync(localFile.path, {
 					recursive: true
 				});
 			}
 		}
 
-		const listener = (e: any, channel: string, rate: number) => {
-			fileStatus[file.url].downloadRate = rate;
-		};
-
-		ipcRenderer.on('download', listener);
+		// 按 channel 过滤：多资源并发下载时进度互不串扰（命名规则见 resources.loader）
+		const offDownload = onRendererEvent('download', (channel, rate) => {
+			if (channel === 'download-file-' + file.id) {
+				fileStatus[file.url].downloadRate = rate;
+			}
+		});
 		try {
 			fileStatus[file.url].downloading = true;
 			if (group_name === 'extensions') {
 				// 内置拓展随包发版：从 asar 释放（官方源构建期获取 + 逐文件完整性校验），无网络下载
-				await remote.methods.call('installBundledExtension', file.id);
+				await bridge.methods.installBundledExtension(file.id);
 			} else {
 				await resourceLoader.download(group_name, file);
 			}
@@ -481,6 +481,7 @@ async function download(group_name: string, file: ResourceFile) {
 			}
 
 			fileStatus[file.url].exists = true;
+			Message.success(`${file.name} 下载完成`);
 
 			// OCR 识别模块安装完成：提示重启（部分系统中 ocr 执行文件可能无法及时被访问）
 			if (group_name === 'apps' && file.id === 'ocr') {
@@ -489,9 +490,9 @@ async function download(group_name: string, file: ResourceFile) {
 		} catch (err) {
 			// @ts-ignore
 			Message.error('下载错误 ' + err.message);
+		} finally {
+			offDownload();
 		}
-		Message.success(`${file.name} 下载完成`);
-		ipcRenderer.removeListener('download', listener);
 	} catch (err) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
@@ -516,11 +517,8 @@ async function remove(group_name: string, file: ResourceFile) {
 }
 
 function openDownloadFolder() {
-	if (process.platform === 'win32') {
-		child_process.exec(`explorer.exe "${store.paths.downloadFolder}"`);
-	} else {
-		electron.shell.openPath(store.paths.downloadFolder);
-	}
+	// shell.openPath 跨平台打开文件夹（Windows 下等效 explorer.exe）
+	bridge.shell.openPath(store.paths.downloadFolder);
 }
 </script>
 

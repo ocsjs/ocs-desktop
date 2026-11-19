@@ -1,4 +1,4 @@
-import { remote } from './utils/remote';
+import { bridge } from './utils/bridge';
 import { createApp } from 'vue';
 import ArcoVue from '@arco-design/web-vue';
 import App from './App.vue';
@@ -20,16 +20,18 @@ window.addEventListener('error', function (e) {
 			return;
 		}
 		// remote 层错误（已标记，未捕获才到这里）：套用 remote 噪音过滤并用专用标题
+		// 标记判定：__ocsRemote 属性（同上下文内有效）或 name === 'OcsRemoteError'
+		// （contextBridge 跨边界仅保留 name/message/stack，preload 侧 toError 以 name 作可靠标记）
 		const err = (e as any).error;
-		if (err?.__ocsRemote) {
+		if (err?.__ocsRemote || err?.name === 'OcsRemoteError') {
 			if (shouldIgnoreRemoteError(err?.message || String(err))) return;
-			remote.logger.call('error', 'remote 模块错误', err?.stack || err?.message || String(err));
+			bridge.logger.error('remote 模块错误', err?.stack || err?.message || String(err));
 			notify('remote 模块错误', err, 'remote', { type: 'error', copy: true });
 			return;
 		}
 	}
 
-	remote.logger.call('error', '未知的错误', e);
+	bridge.logger.error('未知的错误', e);
 	notify('未知的错误', e, 'render-error', {
 		type: 'error',
 		copy: true
@@ -44,13 +46,13 @@ window.addEventListener('unhandledrejection', function (e) {
 				return;
 			}
 			// remote 层错误（已标记，未被调用方捕获才到这里）：套用 remote 噪音过滤并用专用标题
-			if (e?.__ocsRemote) {
+			if (e?.__ocsRemote || e?.name === 'OcsRemoteError') {
 				if (shouldIgnoreRemoteError(e?.message || String(e))) return;
-				remote.logger.call('error', 'remote 模块错误', e?.stack || e?.message || e || '');
+				bridge.logger.error('remote 模块错误', e?.stack || e?.message || e || '');
 				notify('remote 模块错误', e, 'remote', { type: 'error', copy: true });
 				return;
 			}
-			remote.logger.call('error', '未捕获的异步错误', e?.stack || e?.message || e || '');
+			bridge.logger.error('未捕获的异步错误', e?.stack || e?.message || e || '');
 			notify('未捕获的异步错误', e, 'render-error', {
 				type: 'error',
 				copy: true
@@ -83,15 +85,21 @@ window.addEventListener('unhandledrejection', function (e) {
 		return;
 	}
 
-	createApp(App)
-		.use(router)
-		.use(ArcoVue)
-		.directive('focus', {
-			mounted(el) {
-				el.focus();
-			}
-		})
-		.mount('#app');
-	// 标记 Vue 已挂载：index.html 白屏兜底监听据此停止介入
-	(window as any).__ocsMounted = true;
+	// store 异步启动门：磁盘配置（含加密 render 解密）读取完成后才挂载，
+	// 避免组件在 store 响应式空壳阶段渲染出默认设置闪烁
+	void (async () => {
+		const { initStore } = await import('./store');
+		await initStore();
+		createApp(App)
+			.use(router)
+			.use(ArcoVue)
+			.directive('focus', {
+				mounted(el) {
+					el.focus();
+				}
+			})
+			.mount('#app');
+		// 标记 Vue 已挂载：index.html 白屏兜底监听据此停止介入
+		(window as any).__ocsMounted = true;
+	})();
 })();

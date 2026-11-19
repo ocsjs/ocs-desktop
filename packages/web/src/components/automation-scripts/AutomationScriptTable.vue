@@ -78,7 +78,7 @@ import uniqueId from 'lodash/uniqueId';
 import { store } from '../../store';
 import type { Config } from '@ocs-desktop/common/web';
 import { normalizeUrl } from '@ocs-desktop/common/web';
-import { remote } from '../../utils/remote';
+import { bridge } from '../../utils/bridge';
 import xlsx from 'xlsx';
 
 const props = defineProps<{
@@ -336,9 +336,7 @@ function exportTemplateExcel() {
 		template[config.label] = '';
 	}
 
-	remote.methods.call(
-		'exportExcel',
-		[
+	bridge.methods.exportExcel([
 			{
 				sheetName: 'Sheet1',
 				list: [template]
@@ -366,15 +364,14 @@ function importTemplateExcelConfirm() {
 defineExpose({ state, arrayLikeConfigs, exportTemplateExcel, importTemplateExcelConfirm, onConfirm });
 
 function importTemplateExcel() {
-	remote.dialog
-		.call('showOpenDialog', {
+	bridge.dialog.showOpenDialog({
 			title: '选择表格进行导入',
 			buttonLabel: '导入',
 			filters: [{ extensions: ['xlsx', 'csv', 'xls'], name: 'excel表格' }]
 		})
 		.then(async ({ canceled, filePaths }) => {
 			if (canceled === false && filePaths.length) {
-				const text = await remote.fs.call('readFileSync', filePaths[0]);
+				const text = await bridge.fs.readFileSync(filePaths[0]);
 				const book = xlsx.read(text, { type: 'array' });
 
 				const excel = book.SheetNames.map((name) => ({

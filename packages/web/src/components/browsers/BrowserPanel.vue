@@ -278,8 +278,8 @@ import XTerm from '../XTerm.vue';
 import BrowserPreview from './BrowserPreview.vue';
 import { Process } from '../../utils/process';
 import { FRAMERATE_TO_NTH_FRAME, QUALITY_TO_PARAMS } from '../../composables/useScreencastVisibility';
-import { electron } from '../../utils/node';
-import { remote } from '../../utils/remote';
+import { bridge } from '../../utils/bridge';
+
 import UsageAlertCollapse from '../UsageAlertCollapse.vue';
 import { getDisplayNotes } from '../../utils/display-notes';
 import { PlusIcon, Trash2Icon, FolderIcon } from 'lucide-vue-next';
@@ -401,15 +401,15 @@ function clearHistory() {
 /** 渲染侧边toc跳转栏 */
 onMounted(() => {
 	nextTick(async () => {
-		state.cachePathExists = await remote.fs.call('existsSync', props.browser.cachePath);
+		state.cachePathExists = await bridge.fs.existsSync(props.browser.cachePath);
 		// 打开面板即开始缩略图推流（浏览器已在运行时；启动中的由 status watch 接管）
 		syncPanelScreencast(true);
 	});
 });
 
 async function open(p: string) {
-	if (await remote.fs.call('existsSync', p)) {
-		electron.shell.openPath(p);
+	if (await bridge.fs.existsSync(p)) {
+		bridge.shell.openPath(p);
 	}
 }
 </script>

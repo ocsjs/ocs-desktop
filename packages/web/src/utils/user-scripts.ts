@@ -1,28 +1,26 @@
 import { Message } from '@arco-design/web-vue';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { store, StoreUserScript } from '../store';
-import { electron } from './node';
 
 /**
  * 添加并且解析本地脚本
  */
 export function addScriptFromFile() {
-	remote.dialog
-		.call('showOpenDialog', {
+	bridge.dialog.showOpenDialog({
 			title: '选择脚本文件，后缀必须为 (.user.js)',
 			buttonLabel: '添加脚本',
 			filters: [{ extensions: ['user.js'], name: '用户脚本' }]
 		})
 		.then(async ({ canceled, filePaths }) => {
 			if (canceled === false && filePaths.length) {
-				const text = await remote.fs.call('readFileSync', filePaths[0], { encoding: 'utf8' });
+				const text = await bridge.fs.readFileSync(filePaths[0], { encoding: 'utf8' });
 				await addLocalScript(filePaths[0], text.toString());
 			}
 		});
 }
 
 async function addLocalScript(uri: string, text: string) {
-	if (await remote.fs.call('existsSync', uri)) {
+	if (await bridge.fs.existsSync(uri)) {
 		const metadata = getMetadataFromScript(text);
 		if (metadata === undefined) {
 			Message.error('脚本格式不正确，请选择能够解析的用户脚本。');
@@ -63,7 +61,7 @@ export async function addScriptFromUrl(url: string) {
 	}
 
 	if (url.startsWith('http')) {
-		const text = await remote.methods.call('get', url);
+		const text = await bridge.methods.get(url);
 		const metadata = getMetadataFromScript(text);
 		if (metadata === undefined) {
 			Message.error('脚本格式不正确，请选择能够解析的用户脚本。');
@@ -135,7 +133,7 @@ export function openScriptSource(script: StoreUserScript) {
 		if (script.info.url.startsWith('http')) {
 			window.open(script.info.url, '_blank');
 		} else {
-			electron.shell.openPath(script.info.url);
+			bridge.shell.openPath(script.info.url);
 		}
 	}
 }

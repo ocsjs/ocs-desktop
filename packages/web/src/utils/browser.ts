@@ -1,9 +1,10 @@
 import { h } from 'vue';
 import { Button, Message, Modal, Space } from '@arco-design/web-vue';
 import { size, sleep } from '.';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { store } from '../store';
-import { electron, inBrowser } from '../utils/node';
+import { inBrowser } from '../utils/node';
+
 import { processes } from './process';
 import { Folder } from '../fs/folder';
 import { Browser } from '../fs/browser';
@@ -13,7 +14,7 @@ import type { RawAutomationScript } from '@ocs-desktop/common/web';
 import { resetSearch } from './entity';
 import { ensureEnvironmentReady } from './env-bootstrap';
 import { LoaderCircleIcon } from 'lucide-vue-next';
-const { shell } = electron;
+const shell = bridge.shell;
 
 /**
  * 生成不重复的名称，如果重复则追加 (n)
@@ -85,7 +86,7 @@ export function newBrowser(opts?: {
 	const id = Entity.uuid();
 	const userDataDirsFolder = store.paths.userDataDirsFolder;
 
-	const path_sep = remote.path.get('sep');
+	const path_sep = bridge.path.sep;
 
 	const siblingNames = Object.values(currentFolder.value.children).map((c) => c.name);
 	const name = opts?.name
@@ -140,7 +141,7 @@ export async function checkBrowserCaches() {
 			return h('div', [h(LoaderCircleIcon, { class: 'icon-spin' }), '正在计算浏览器缓存...']);
 		}
 	});
-	const totalSize = await remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder);
+	const totalSize = await bridge.methods.statisticFolderSize(store.paths.userDataDirsFolder);
 	console.log('当前浏览器总缓存大小', size(totalSize));
 	modal.close();
 
@@ -186,19 +187,19 @@ export function showClearBrowserCachesModal(totalSize: number) {
 
 export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]) {
 	return new Promise<void>((resolve, reject) => {
-		remote.fs.call('readdirSync', userDataDirsFolder, {} as any).then(async (_dirs) => {
+		bridge.fs.readdirSync(userDataDirsFolder, {} as any).then(async (_dirs) => {
 			try {
 				const paths = [];
 				const dirs = _dirs as unknown as string[];
 
 				for (const dir of dirs) {
 					if (dir && dir.trim() && uids.includes(dir.trim())) {
-						paths.push(await remote.path.call('join', userDataDirsFolder, String(dir)));
+						paths.push(await bridge.path.join(userDataDirsFolder, String(dir)));
 					}
 				}
 				await Promise.all(
 					paths.map((path) => {
-						return remote.fs.call('rmSync', path, {
+						return bridge.fs.rmSync(path, {
 							recursive: true,
 							force: true
 						});
@@ -263,7 +264,7 @@ export async function forceCloseAllBrowsers() {
 	});
 
 	// 最久5秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗
-	const timeout = setTimeout(() => remote.methods.call('quitApp', 0), 5000);
+	const timeout = setTimeout(() => bridge.methods.quitApp(0), 5000);
 	try {
 		for (const process of processes) {
 			await process.close();

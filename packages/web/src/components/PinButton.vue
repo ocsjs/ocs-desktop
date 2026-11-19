@@ -16,6 +16,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { store } from '../store';
+import { bridge } from '../utils/bridge';
 import { PinIcon } from 'lucide-vue-next';
 
 /**
@@ -28,8 +29,8 @@ import { PinIcon } from 'lucide-vue-next';
  * - darwin：控制按钮（红绿灯）位于左上角，顶部栏整体右对齐并由 .title 的 padding-left
  *   统一预留红绿灯区域，本按钮静态定位于 flex 流末尾即可
  */
-const isDarwin = process.platform === 'darwin';
-const isLinux = process.platform === 'linux';
+const isDarwin = bridge.platform === 'darwin';
+const isLinux = bridge.platform === 'linux';
 
 /** 避让右上角系统控制按钮的 right 偏移（API 不可用时回退 Windows 三键宽度 135px） */
 const rightOffset = ref(135);

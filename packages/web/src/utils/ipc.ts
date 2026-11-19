@@ -1,12 +1,27 @@
-import { UpdateInformationResource } from '@ocs-desktop/common';
+import type { IpcEventMap, OcsEventSubscriber } from '@ocs-desktop/common/web';
 import { store } from '../store';
-import { electron } from '../utils/node';
 import { notify } from './notify';
 import { Modal, Progress } from '@arco-design/web-vue';
 import { h } from 'vue';
 import { marked } from 'marked';
-import { remote } from './remote';
-const { ipcRenderer, shell } = electron;
+import { bridge } from './bridge';
+
+/**
+ * 类型化事件监听（主进程 → 渲染进程）。
+ * 频道与负载由 @ocs-desktop/common/web 的 IpcEventMap 契约约束，
+ * 实际订阅由 preload 注入的 window.ocs.on 完成（contextIsolation 下渲染进程不持有 ipcRenderer）；
+ * 纯浏览器宿主无注入，返回空取消函数。
+ * 返回取消订阅函数。
+ */
+export function onRendererEvent<K extends keyof IpcEventMap>(
+	channel: K,
+	callback: (...args: IpcEventMap[K]) => void
+): () => void {
+	// eslint-disable-next-line no-undef
+	const subscriber = ((window as any).ocs?.on ?? undefined) as OcsEventSubscriber | undefined;
+	if (!subscriber) return () => {};
+	return subscriber(channel, callback);
+}
 
 /** 更新弹窗/更新日志弹窗的 markdown 样式（注入一次，两处共用） */
 export function ensureUpdaterChangelogStyle() {
@@ -28,7 +43,7 @@ export function ensureUpdaterChangelogStyle() {
 
 export function activeIpcRenderListener() {
 	/** 如果正在更新的话，获取更新进度 */
-	ipcRenderer.on('update-download', (e, rate, totalLength, chunkLength) => {
+	onRendererEvent('update-download', (rate, totalLength, chunkLength) => {
 		const percent = totalLength > 0 ? chunkLength / totalLength : 0;
 		notify(
 			'OCS更新程序',
@@ -54,12 +69,12 @@ export function activeIpcRenderListener() {
 	});
 
 	// 显示浏览器
-	ipcRenderer.on('show-browser-in-app', (e, uid) => {
+	onRendererEvent('show-browser-in-app', (uid) => {
 		store.render.browser.currentBrowserUid = uid;
 	});
 
 	// 检测到新版本
-	ipcRenderer.on('detect-new-app-version', (e, new_version: UpdateInformationResource) => {
+	onRendererEvent('detect-new-app-version', (new_version) => {
 		console.log('detect-new-app-version', new_version);
 		if (!new_version) {
 			return;
@@ -74,7 +89,8 @@ export function activeIpcRenderListener() {
 			maskClosable: false,
 			width: 500,
 			async onOk() {
-				await remote.methods.call('updateApp', new_version);
+				// 实现无参（electron-updater 自管理版本信息），历史契约的参数早已被实现忽略
+				await bridge.methods.updateApp();
 			},
 			content: () =>
 				h('div', [
@@ -86,7 +102,7 @@ export function activeIpcRenderListener() {
 							const anchor = (event.target as HTMLElement).closest('a');
 							if (anchor) {
 								event.preventDefault();
-								shell.openExternal(anchor.href);
+								bridge.shell.openExternal(anchor.href);
 							}
 						}
 					})

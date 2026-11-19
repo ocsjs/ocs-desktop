@@ -445,13 +445,12 @@ import { t } from '../utils/langs';
 import BrowserPath from './setting/BrowserPath.vue';
 import { changeTheme, size } from '../utils';
 import { checkBrowserCaches } from '../utils/browser';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { CACHEABLE_SITES } from '@ocs-desktop/common/web';
 import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon, FolderIcon } from 'lucide-vue-next';
 import { Message } from '@arco-design/web-vue';
-import { electron } from '../utils/node';
 
-const { shell } = electron;
+const shell = bridge.shell;
 
 /**
  * 浏览器增强说明（「？」弹层）：单一文案段
@@ -492,7 +491,7 @@ const currentThemeColorOption = computed(
 /** 在文件夹中显示缓存目录（userData/cache，含 http 与 icons 子目录） */
 async function openCacheFolder() {
 	// 经主进程 path.join 拼接（跨平台路径分隔符），而非手写字符串拼接
-	const dir = await remote.path.call('join', store.paths['user-data-path'], 'cache');
+	const dir = await bridge.path.join(store.paths['user-data-path'], 'cache');
 	shell.openPath(dir);
 }
 
@@ -506,8 +505,8 @@ const cacheManagerVisible = ref(false);
 /** 打开缓存管理弹窗（同时加载站点与图标统计） */
 async function openCacheManager() {
 	cacheManagerVisible.value = true;
-	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
-	iconStats.value = await remote.methods.call('iconCacheStats');
+	siteCacheStats.value = await bridge.methods.httpCacheStatsBySite();
+	iconStats.value = await bridge.methods.iconCacheStats();
 }
 
 /** 图标缓存统计展示文本（未检测时不显示） */
@@ -517,7 +516,7 @@ const iconStatsText = computed(() =>
 
 /** 清空网站图标缓存 */
 async function clearIcons() {
-	await remote.methods.call('clearIconCache');
+	await bridge.methods.clearIconCache();
 	iconStats.value = { count: 0, bytes: 0 };
 	Message.success('网站图标缓存已清空');
 }
@@ -535,14 +534,14 @@ const cacheTotalText = computed(() => {
 });
 
 async function detectHttpCache() {
-	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
-	iconStats.value = await remote.methods.call('iconCacheStats');
+	siteCacheStats.value = await bridge.methods.httpCacheStatsBySite();
+	iconStats.value = await bridge.methods.iconCacheStats();
 	Message.success('缓存统计已刷新');
 }
 
 /** 清空 HTTP 磁盘缓存（脚本下载/搜索缓存） */
 async function clearHttpCache() {
-	await remote.methods.call('clearHttpCache');
+	await bridge.methods.clearHttpCache();
 	siteCacheStats.value = {};
 	Message.success('HTTP 缓存已清空');
 }
@@ -564,8 +563,8 @@ function siteStatsText(id: string) {
 
 /** 清空指定站点的缓存 */
 async function clearSiteCache(id: string, name: string) {
-	await remote.methods.call('clearHttpCache', id);
-	siteCacheStats.value = await remote.methods.call('httpCacheStatsBySite');
+	await bridge.methods.clearHttpCache(id);
+	siteCacheStats.value = await bridge.methods.httpCacheStatsBySite();
 	Message.success(`已清空 ${name} 的缓存`);
 }
 

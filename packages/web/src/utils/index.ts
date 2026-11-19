@@ -2,15 +2,12 @@ import { h, reactive } from 'vue';
 import { store } from '../store';
 import dayjs from 'dayjs';
 import { Message, Modal } from '@arco-design/web-vue';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { notify } from './notify';
-import { electron } from './node';
 import MarkdownText from '../components/MarkdownText.vue';
-import { OCSApi, OCS_API, OCS_UPDATER, DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
+import { OCSApi, OCS_API, OCS_UPDATER, DEFAULT_SERVER_PORT, Infos } from '@ocs-desktop/common/web';
+import { onRendererEvent } from './ipc';
 import axios from 'axios';
-import { Infos } from '@ocs-desktop/common';
-
-const { ipcRenderer } = electron;
 
 export function sleep(timeout: number) {
 	return new Promise((resolve) => setTimeout(resolve, timeout));
@@ -193,8 +190,7 @@ export function detectWeakNetwork(): Promise<boolean> {
 	if (_weakNetInflight) {
 		return _weakNetInflight;
 	}
-	_weakNetInflight = remote.methods
-		.call('getWithStatus', OCS_API.infos, { timeout: 3000 })
+	_weakNetInflight = bridge.methods.getWithStatus(OCS_API.infos, { timeout: 3000 })
 		.then((res) => !((res?.status ?? 0) > 0))
 		.catch(() => true)
 		.then((weak) => {
@@ -249,20 +245,27 @@ export async function download({
 	/** url */
 	url: string;
 }) {
-	const listener = (e: any, channel: string, rate: number, chunkLength: number, totalLength: number) => {
+	const listener = (channel: string, rate: number, chunkLength: number, totalLength: number) => {
 		installListener(name, channel, rate, chunkLength, totalLength);
 	};
 
-	// 监听下载进度
-	ipcRenderer.on('download', listener);
+	// 监听下载进度（参数序见 IpcEventMap.download：channel, rate, totalLength, chunkLength=已下载字节）
+	// 参数显式标注类型：TS 4.9 对多参数回调的泛型元组上下文推断会退化为全频道联合
+	const offDownload = onRendererEvent(
+		'download',
+		(channel: string, rate: number, totalLength: number, chunkLength: number) =>
+			listener(channel, rate, chunkLength, totalLength)
+	);
 	try {
 		// 下载
-		return await remote.methods.call('download', 'download-file-' + name, url, dest);
+		return await bridge.methods.download('download-file-' + name, url, dest);
 	} catch (err) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
+	} finally {
+		// 成功/失败都必须取消订阅：成功路径 return 也会跳过尾部语句导致监听器泄漏
+		offDownload();
 	}
-	ipcRenderer.removeListener('download', listener);
 }
 
 function installListener(name: string, channel: string, rate: number, chunkLength: number, totalLength: number) {
@@ -294,7 +297,7 @@ function installListener(name: string, channel: string, rate: number, chunkLengt
 /** 显示关于软件说明 */
 export async function about() {
 	try {
-		const guide = await remote.methods.call('get', OCS_API.guide);
+		const guide = await bridge.methods.get(OCS_API.guide);
 		Modal.info({
 			title: '软件使用教程',
 			closable: true,
@@ -323,7 +326,7 @@ export const themeState = reactive({ dark: false, systemDark: false });
 
 // 初始化系统深浅色：用主进程 nativeTheme.shouldUseDarkColors（比渲染层 matchMedia 更可靠）
 try {
-	themeState.systemDark = remote.methods.callSync('getSystemDark') as boolean;
+	themeState.systemDark = await bridge.methods.getSystemDark() as boolean;
 } catch (e) {
 	console.error('读取系统主题失败：' + e);
 }
@@ -353,14 +356,12 @@ export async function changeTheme() {
 		document.body.setAttribute('theme-color', themeColor);
 	}
 	// 标题栏颜色需平台判断（macOS 不使用自定义标题栏）
-	const platform = await remote.methods.call('getPlatform');
+	const platform = await bridge.methods.getPlatform();
 	document.body.classList.add('platform-' + platform);
 	if (platform !== 'darwin') {
 		// height 与窗口创建时的 titleBarOverlay.height 保持一致（32 = --title-height），
 		// 否则主题切换后覆盖层高度被重置，Linux 下控制按钮渲染位置会太靠上
-		remote.win.call(
-			'setTitleBarOverlay',
-			themeState.dark
+		bridge.win.setTitleBarOverlay(themeState.dark
 				? { color: '#2C2C2C', symbolColor: 'white', height: 32 }
 				: { color: '#fff', symbolColor: 'black', height: 32 }
 		);
@@ -372,7 +373,7 @@ let themeListenerInited = false;
 export function initThemeSystemListener() {
 	if (themeListenerInited) return;
 	themeListenerInited = true;
-	ipcRenderer.on('system-theme-change', (_e, dark: boolean) => {
+	onRendererEvent('system-theme-change', (dark) => {
 		themeState.systemDark = dark;
 		if (store.render.setting.theme.mode === 'auto') {
 			changeTheme();
@@ -381,11 +382,11 @@ export function initThemeSystemListener() {
 }
 
 export function setAutoLaunch() {
-	remote.methods.call('autoLaunch');
+	bridge.methods.autoLaunch();
 }
 
 export function setAlwaysOnTop() {
-	remote.win.call('setAlwaysOnTop', store.window.alwaysOnTop);
+	bridge.win.setAlwaysOnTop(store.window.alwaysOnTop);
 }
 
 // 再导出保持既有导入路径可用（实现位于零依赖的 errors.ts，防 index ↔ remote 循环依赖）

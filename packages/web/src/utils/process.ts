@@ -1,5 +1,4 @@
-import { ChildProcess } from 'child_process';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { store, uiSession } from '../store';
 import { router } from '../route';
 import { t } from './langs';
@@ -10,12 +9,14 @@ import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common/web';
 import { Browser } from '../fs/browser';
 import { Message, Button, Notification } from '@arco-design/web-vue';
 import EventEmitter from 'events';
-import { child_process, electron } from './node';
+import { onRendererEvent } from './ipc';
+
 import { notify } from './notify';
 import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
 import { notifyOcrMissingAfterLaunch, promptOcrChoiceBeforeLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
+import { handleBuiltinChromeLaunchFailure } from './browser-repair';
 
 /** 用户脚本安装结果（由 worker 回传） */
 interface InstallResult {
@@ -42,9 +43,9 @@ function base64ToBlobUrl(base64: string): string {
 let _previewFolderPromise: Promise<string> | undefined;
 function previewFolder(): Promise<string> {
 	_previewFolderPromise ??= (async () => {
-		const dir = await remote.path.call('join', store.paths['user-data-path'], 'previews');
-		if (!(await remote.fs.call('existsSync', dir))) {
-			await remote.fs.call('mkdirSync', dir, { recursive: true });
+		const dir = await bridge.path.join(store.paths['user-data-path'], 'previews');
+		if (!(await bridge.fs.existsSync(dir))) {
+			await bridge.fs.mkdirSync(dir, { recursive: true });
 		}
 		return dir;
 	})();
@@ -54,8 +55,8 @@ function previewFolder(): Promise<string> {
 /** 将预览帧持久化到磁盘（uid.jpg），静默容错 */
 export async function persistPreviewFrame(uid: string, base64: string) {
 	try {
-		const file = await remote.path.call('join', await previewFolder(), `${uid}.jpg`);
-		await remote.fs.call('writeFileSync', file, base64, 'base64');
+		const file = await bridge.path.join(await previewFolder(), `${uid}.jpg`);
+		await bridge.fs.writeFileSync(file, base64, 'base64');
 	} catch (err) {
 		console.warn('[preview] 预览帧持久化失败：', err);
 	}
@@ -64,9 +65,9 @@ export async function persistPreviewFrame(uid: string, base64: string) {
 /** 删除磁盘上持久化的预览帧，静默容错 */
 export async function deletePersistedPreviewFrame(uid: string) {
 	try {
-		const file = await remote.path.call('join', await previewFolder(), `${uid}.jpg`);
-		if (await remote.fs.call('existsSync', file)) {
-			await remote.fs.call('rmSync', file, { force: true });
+		const file = await bridge.path.join(await previewFolder(), `${uid}.jpg`);
+		if (await bridge.fs.existsSync(file)) {
+			await bridge.fs.rmSync(file, { force: true });
 		}
 	} catch (err) {
 		console.warn('[preview] 删除持久化预览帧失败：', err);
@@ -86,9 +87,9 @@ export async function restoreClosedPreviews(browsers: { uid: string }[]) {
 		for (const b of browsers) {
 			if (Process.isRunning(b.uid) || closedPreviews.has(b.uid)) continue;
 			try {
-				const file = await remote.path.call('join', dir, `${b.uid}.jpg`);
-				if (!(await remote.fs.call('existsSync', file))) continue;
-				const base64 = (await remote.fs.call('readFileSync', file, 'base64')) as string;
+				const file = await bridge.path.join(dir, `${b.uid}.jpg`);
+				if (!(await bridge.fs.existsSync(file))) continue;
+				const base64 = (await bridge.fs.readFileSync(file, 'base64')) as string;
 				if (base64) {
 					closedPreviews.set(b.uid, base64ToBlobUrl(base64));
 				}
@@ -116,7 +117,8 @@ export function clearClosedPreview(uid: string) {
  */
 export class Process extends EventEmitter {
 	uid: string;
-	shell?: ChildProcess;
+	/** worker 事件订阅的取消函数（主进程转发 'script-worker' 频道） */
+	private _offWorkerEvent?: () => void;
 	worker?: RemoteScriptWorker;
 	/** 状态 */
 	status: 'closed' | 'closing' | 'launching' | 'launched' = 'closed';
@@ -191,45 +193,9 @@ export class Process extends EventEmitter {
 	}
 
 	/**
-	 * 使用 child_process 运行 ocs 命令
+	 * 启动 ScriptWorker（主进程 utilityProcess 托管 fork）并建立事件转发订阅
 	 */
 	async init(onConsole?: (data: any) => void) {
-		// electron-vite 的 renderer 构建按浏览器环境编译，会把裸写的 process.env 整体替换为空对象 {}，
-		// 导致 worker 子进程丢失 DISPLAY/WAYLAND_DISPLAY/HOME 等全部环境变量，
-		// 其启动的浏览器因无显示服务器立即退出（Playwright 报 "Target page, context or browser has been closed"）。
-		// 注意：esbuild 的 define 会把 globalThis.process 等同于 process 标识符，一行连写的
-		// globalThis.process?.env 会被整体替换为 {}。必须先取出局部变量再访问 env 才能绕开词法匹配
-		// （已实测：拆行写法在构建产物中保留 globalThis.process，一行写法被替换为空对象）。
-		// 渲染进程开启 nodeIntegration，globalThis.process 即真实进程对象；
-		// 纯浏览器环境（导航页）下 globalThis.process 不存在，回退空对象（该环境不会执行 fork）。
-		const realProcess = (globalThis as any).process;
-		const workerEnv = realProcess?.env ?? process.env;
-		this.shell = child_process.fork(
-			await remote.path.call('join', await remote.app.call('getAppPath'), './out/main/script.js'),
-			{
-				stdio: ['ipc'],
-				// 双保险：workerEnv 提供全量环境变量（globalThis.process 绕开 esbuild define 替换）；
-				// 再叠加主进程真实显示变量，兜底 Chromium 沙箱清理渲染进程 env（DISPLAY 丢失）的场景
-				env: { ...workerEnv, ...remote.methods.callSync('getDisplayEnv') }
-			}
-		);
-		this.worker = createRemoteScriptWorker(this.shell);
-
-		this.shell.stdout?.on('data', (data: any) => {
-			this.appendLog(data.toString());
-			onConsole?.(data.toString());
-		});
-		this.shell.stderr?.on('data', (data: any) => {
-			onConsole?.(data.toString());
-			remote.logger.call('error', String(data));
-			this.appendLog(`${this.browser.name} 错误`, data);
-			notify(`${this.browser.name} 错误`, data, this.browser.uid, {
-				duration: 60 * 1000,
-				copy: true,
-				type: 'error'
-			});
-		});
-
 		/** 监听器 */
 		const listeners: Record<string, (...args: any[]) => void> = {
 			/** 浏览器启动 */
@@ -332,7 +298,7 @@ export class Process extends EventEmitter {
 							{
 								type: 'primary',
 								size: 'small',
-								onClick: () => electron.shell.showItemInFolder(file.path)
+								onClick: () => bridge.shell.showItemInFolder(file.path)
 							},
 							'打开所在文件夹'
 						)
@@ -346,10 +312,15 @@ export class Process extends EventEmitter {
 			 */
 			'browser-closed': () => {
 				console.log('browser-closed', this.uid);
+				// 取消 worker 事件订阅（worker 已关闭，防止残留监听泄漏）
+				this._offWorkerEvent?.();
+				this._offWorkerEvent = undefined;
 				// 启动失败时 worker 会统一走 close() 发回 browser-closed：
 				// 若状态仍停留在 launching，回落为 closed，解除卡片一直转圈的状态
 				if (this.status === 'launching') {
 					this.status = 'closed';
+					// 启动失败复检：内置浏览器文件被杀毒软件破坏时引导修复，成功后自动重新启动
+					void handleBuiltinChromeLaunchFailure(this.browser);
 				}
 				// 开启预览图显示时，保留最后一帧作为"浏览器关闭后的预览图"，由界面层展示/关闭
 				if (store.render.setting.browser.screenshotPreview && this.frameUrl) {
@@ -368,18 +339,57 @@ export class Process extends EventEmitter {
 			}
 		};
 
-		this.shell.on('message', ({ event, args }: { event: string; args: any[] }) => {
-			// 将 shell 的事件共享到当前的对象
-			this.emit(event, ...args);
-			if (listeners[event]) {
-				listeners[event](...args);
+		// worker 的消息/stdio/退出由主进程经 'script-worker' 频道统一转发，按 uid 过滤。
+		// 订阅必须先于 fork：注册前的推送会丢失（包括 worker 启动失败的 exit 与最早期 stdout 报错）
+		this._offWorkerEvent = onRendererEvent('script-worker', (payload) => {
+			if (payload.uid !== this.uid) return;
+			if (payload.kind === 'stdout') {
+				const text = String(payload.chunk ?? '');
+				this.appendLog(text);
+				onConsole?.(text);
+				this.emit('console', text);
+			} else if (payload.kind === 'stderr') {
+				const text = String(payload.chunk ?? '');
+				onConsole?.(text);
+				bridge.logger.error(text);
+				this.appendLog(`${this.browser.name} 错误`, text);
+				this.emit('console-stderr', text);
+				notify(`${this.browser.name} 错误`, text, this.browser.uid, {
+					duration: 60 * 1000,
+					copy: true,
+					type: 'error'
+				});
+			} else if (payload.kind === 'exit') {
+				this.emit('exit', payload.code);
+				// 兜底清理：worker 崩溃/被强杀时 browser-closed 业务消息可能丢失，
+				// 此处做与 browser-closed 等价的幂等清理，防止订阅泄漏、状态滞留与 processes 残留
+				this._offWorkerEvent?.();
+				this._offWorkerEvent = undefined;
+				if (this.status !== 'closed') {
+					this.status = 'closed';
+				}
+				Process.remove(this.uid);
+			} else if (payload.kind === 'message') {
+				const event = payload.event || '';
+				const args = payload.args || [];
+				// 将 worker 的事件共享到当前的对象
+				this.emit(event, ...args);
+				// hasOwnProperty：防止 event 为 'constructor'/'toString' 等时经原型链误命中
+				if (Object.prototype.hasOwnProperty.call(listeners, event)) {
+					listeners[event](...args);
+				}
 			}
 		});
+
+		// 主进程托管 fork：环境变量在主进程组装（process.env 完整），
+		// 渲染进程不再需要 child_process.fork 与 globalThis.process 拆行 hack
+		await bridge.methods.scriptWorkerLaunch(this.uid);
+		this.worker = createRemoteScriptWorker(this.uid);
 
 		// 初始化进程数据
 		// authToken 为内存态（不落盘）：从主进程经 IPC 获取后注入 store 副本传给 worker，
 		// 不写入持久化 store（避免再次落盘 config.json）
-		const authToken = remote.methods.callSync('getServerToken');
+		const authToken = await bridge.methods.getServerToken();
 		this.worker('init', {
 			store: { ...store, server: { ...store.server, authToken } },
 			cachePath: this.browser.cachePath,
@@ -410,7 +420,7 @@ export class Process extends EventEmitter {
 		}
 
 		try {
-			const exists = await remote.fs.call('existsSync', this.launchOptions.executablePath);
+			const exists = await bridge.fs.existsSync(this.launchOptions.executablePath);
 			if (!exists) {
 				Message.error('浏览器路径不存在，请在软件设置中修改');
 				return;
@@ -424,7 +434,7 @@ export class Process extends EventEmitter {
 			const enabledUserScripts = store.render.scripts.filter((s) => s.enable);
 			for (const s of enabledUserScripts) {
 				if (!s.url.startsWith('http')) {
-					const res = await remote.fs.call('existsSync', s.info?.code_url || s.url);
+					const res = await bridge.fs.existsSync(s.info?.code_url || s.url);
 					if (!res) {
 						notify(
 							'本地脚本不存在',
@@ -447,8 +457,8 @@ export class Process extends EventEmitter {
 			const weakNetwork = await detectWeakNetwork();
 			// 脚本按浏览器 profile 安装：新建/清缓存后的 profile 无标记文件，
 			// 此时不能凭全局 lastInstalledVersion 跳过安装（拓展内实际并无脚本）
-			const scriptMarkerPath = await remote.path.call('join', this.browser.cachePath, '.ocs-scripts-installed.json');
-			const profileInitialized = await remote.fs.call('existsSync', scriptMarkerPath);
+			const scriptMarkerPath = await bridge.path.join(this.browser.cachePath, '.ocs-scripts-installed.json');
+			const profileInitialized = await bridge.fs.existsSync(scriptMarkerPath);
 			Status.loading(weakNetwork ? '检测到弱网环境，跳过脚本更新检查...' : '正在检查脚本更新...');
 			const scriptsToInstall = await filterScriptsNeedingInstall(enabledUserScripts, {
 				skipRemoteCheck: weakNetwork,
@@ -490,9 +500,7 @@ export class Process extends EventEmitter {
 			// 远程脚本：一次性批量预下载（主进程内部并行），避免逐个串行等待（最坏 N×60s → 60s 封顶）
 			if (remoteItems.length > 0) {
 				Status.loading(`正在并行下载 ${remoteItems.length} 个脚本...`);
-				const results = await remote.methods.call(
-					'downloadUserscripts',
-					remoteItems.map((r) => r.remoteUrl)
+				const results = await bridge.methods.downloadUserscripts(remoteItems.map((r) => r.remoteUrl)
 				);
 				for (let i = 0; i < remoteItems.length; i++) {
 					const { item, remoteUrl } = remoteItems[i];
@@ -538,16 +546,14 @@ export class Process extends EventEmitter {
 					.map((r) => urlToItem.get(r.url)?.script.info?.name as string | undefined)
 					.filter((n): n is string => !!n);
 				if (succeededNames.length) {
-					const managedPath = await remote.path.call('join', this.browser.cachePath, '.ocs-scripts-managed.json');
+					const managedPath = await bridge.path.join(this.browser.cachePath, '.ocs-scripts-managed.json');
 					try {
 						let existing: string[] = [];
-						if (await remote.fs.call('existsSync', managedPath)) {
-							const data = JSON.parse(String(await remote.fs.call('readFileSync', managedPath, 'utf-8')));
+						if (await bridge.fs.existsSync(managedPath)) {
+							const data = JSON.parse(String(await bridge.fs.readFileSync(managedPath, 'utf-8')));
 							existing = Array.isArray(data.names) ? data.names : [];
 						}
-						await remote.fs.call(
-							'writeFileSync',
-							managedPath,
+						await bridge.fs.writeFileSync(managedPath,
 							JSON.stringify({ names: [...new Set([...existing, ...succeededNames])] })
 						);
 					} catch (e) {
@@ -557,13 +563,12 @@ export class Process extends EventEmitter {
 				// 本次请求的脚本全部安装成功 → 写入 profile 安装标记；
 				// 有失败则不写标记，下次启动该 profile 按全新处理重试全部
 				if (allSucceeded) {
-					remote.fs
-						.call('writeFileSync', scriptMarkerPath, JSON.stringify({ time: Date.now(), count: results.length }))
+					bridge.fs.writeFileSync(scriptMarkerPath, JSON.stringify({ time: Date.now(), count: results.length }))
 						.catch(() => {});
 				}
 				Status.clear();
 			});
-			this.shell?.once('exit', () => {
+			this.once('exit', () => {
 				Status.clear();
 			});
 			return { userscripts, enabledScriptCount: enabledUserScripts.length };
@@ -582,6 +587,9 @@ export class Process extends EventEmitter {
 				.then((result) => {
 					if (result) {
 						this.once('launched', () => {
+							// 启动流程结束，清除「正在启动...」加载状态
+							// （原仅挂在 userscript-install-result：脚本均最新时安装器跳过、事件不发，状态栏永不消失）
+							Status.clear();
 							// OCR 依赖提示（非阻塞）：needOCR 脚本且未安装 OCR 模块时，
 							// 弹常驻通知提供安装入口，不阻止浏览器使用
 							notifyOcrMissingAfterLaunch(this.browser.automationScripts);
@@ -592,7 +600,7 @@ export class Process extends EventEmitter {
 						this.once('browser-closed', () => {
 							resolve(null);
 						});
-						this.shell?.once('exit', (code) => {
+						this.once('exit', (code) => {
 							resolve(code);
 						});
 						this.worker?.('launch', {
@@ -604,6 +612,7 @@ export class Process extends EventEmitter {
 					} else {
 						// launchPreCheck 失败（路径为空/不存在/读取错误等）：状态回落，Promise 结束
 						this.status = 'closed';
+						Status.clear();
 						resolve(null);
 					}
 				})
@@ -621,10 +630,12 @@ export class Process extends EventEmitter {
 		return new Promise<void>((resolve) => {
 			this.once('browser-closed', resolve);
 			// 兜底：worker 异常（如 browser.close 与推流竞争挂起、进程崩溃）时
-			// 15s 后强制回落 closed，避免卡片永久转圈、重启/关闭流程悬挂
+			// 15s 后强制回落 closed，避免卡片永久转圈、重启/关闭流程悬挂；
+			// 同时强制终止 worker：残留 worker 会让 scriptWorkerLaunch 因同 uid 占位直接 return，重启静默失败
 			setTimeout(() => {
 				if (this.status === 'closing') {
 					this.status = 'closed';
+					bridge.methods.scriptWorkerKill(this.uid).catch(() => {});
 					resolve();
 				}
 			}, 15 * 1000);
@@ -637,9 +648,11 @@ export class Process extends EventEmitter {
 	bringToFront() {
 		if (this.status === 'launched' && this.launchOptions) {
 			const action = `http://localhost:${store.server.port}/ocs-action_bring-to-top`;
-			child_process.exec(
-				`"${this.launchOptions.executablePath}" --user-data-dir="${this.browser.cachePath}" "${action}"`
-			);
+			// 主进程 spawn 分离启动（数组参数，规避 shell 拼接注入/引号截断）
+			bridge.methods.launchBrowserDetached(this.launchOptions.executablePath, [
+				`--user-data-dir=${this.browser.cachePath}`,
+				action
+			]);
 			this.worker?.('bringToFront');
 			Message.warning('已置顶，如未生效，电脑底部任务栏闪烁的浏览器图标即为置顶浏览器。');
 		} else {
@@ -719,16 +732,19 @@ export class Process extends EventEmitter {
 export const processes: Process[] = reactive([]);
 
 /**
- * 创建  ScriptWorker Shell 调用 APi
- * @param shell
+ * 创建 ScriptWorker 调用 API（主进程托管：消息经 remote.methods.scriptWorkerSend 转发）
+ * @param uid 浏览器 uid（worker 注册表键）
  */
-function createRemoteScriptWorker(shell: ChildProcess) {
+function createRemoteScriptWorker(uid: string) {
 	return <W extends keyof ScriptWorker, F extends ScriptWorker[W]>(
 		event: W,
 		...args: F extends { (...args: any[]): any } ? Parameters<F> : any[]
 	) => {
-		if (shell.connected) {
-			shell.send({ event, args });
-		}
+		// JSON 拍平：payload 常含 Vue reactive 代理（store 展开后嵌套对象仍为 Proxy），
+		// structured clone 不支持 Proxy（报 "An object could not be cloned"）；
+		// 且迁移前 child_process.send 本身就是 JSON 序列化，语义保持一致
+		const message = JSON.parse(JSON.stringify({ event, args }));
+		// worker 不存在时主进程静默忽略（对齐原 shell.connected 守卫语义）
+		bridge.methods.scriptWorkerSend(uid, message).catch(() => {});
 	};
 }

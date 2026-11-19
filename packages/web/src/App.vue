@@ -113,9 +113,8 @@
 import { watch, onMounted, onUnmounted, ref, computed } from 'vue';
 import { store } from './store';
 import { t } from './utils/langs';
-import { remote } from './utils/remote';
+import { bridge } from './utils/bridge';
 import { root } from './fs/folder';
-import { electron } from './utils/node';
 import { closeAllBrowser, showClearBrowserCachesModal, askCloseOrTray } from './utils/browser';
 import { processes } from './utils/process';
 import {
@@ -126,7 +125,7 @@ import {
 	setAutoLaunch,
 	initThemeSystemListener
 } from './utils';
-import { activeIpcRenderListener } from './utils/ipc';
+import { activeIpcRenderListener, onRendererEvent } from './utils/ipc';
 import { getWindowsRelease } from './utils/os';
 import { notify } from './utils/notify';
 import { currentBrowser } from './fs';
@@ -140,39 +139,43 @@ import BrowserPanel from './components/browsers/BrowserPanel.vue';
 import BrowserPanelOperators from './components/BrowserPanelOperators.vue';
 import Setup from './components/Setup.vue';
 
-const { ipcRenderer } = electron;
+/** 主密钥就绪状态（启动后静态，setup 时预取一次，供同步判定使用） */
+const encryptionAvailable = ref(false);
 
 /** 是否启用加密存储：开发者设置「数据加密」开关 + 主密钥就绪（两者同时成立才加密） */
 function isEncryptionEnabled() {
-	return store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
+	return store.render.setting.dev?.dataEncryption !== false && encryptionAvailable.value;
 }
 
 /** 异步保存，用于实时持久化（单次 IPC 调用，加密+写入在主进程完成） */
 async function saveStoreToLocal(_store: typeof store) {
 	try {
 		const shouldEncrypt = isEncryptionEnabled();
-		await remote.methods.call('saveStore', JSON.stringify(_store), shouldEncrypt);
+		await bridge.methods.saveStore(JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
 	}
 }
 
-/** 同步版本保存，用于关闭时确保数据写入磁盘（单次 IPC 调用） */
+/** 关闭路径保存（fire-and-forget：invoke 消息在 quit 流程中先行送达主进程） */
 function saveStoreToLocalSync(_store: typeof store) {
 	try {
 		const shouldEncrypt = isEncryptionEnabled();
-		remote.methods.callSync('saveStore', JSON.stringify(_store), shouldEncrypt);
+		void bridge.methods.saveStore(JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
 	}
 }
 
 onMounted(async () => {
+	// 预取主密钥就绪状态（启动后静态；供 isEncryptionEnabled 同步判定）
+	encryptionAvailable.value = await bridge.methods.isEncryptionAvailable();
+
 	/** 开启 Ipc 通道监听 */
 	activeIpcRenderListener();
 
 	/** 设置窗口边框 */
-	remote.os.call('platform').then(async (platform) => {
+	bridge.os.platform().then(async (platform) => {
 		if (platform === 'win32') {
 			const release = await getWindowsRelease();
 			if (release !== 'win11') {
@@ -183,10 +186,10 @@ onMounted(async () => {
 
 	/** 初始化标题（store.title 供标题栏居中显示，原生标题用于任务栏等系统位置） */
 	store.render.state.title = 'OCS桌面版 - 首页';
-	remote.win.call('setTitle', `OCS桌面版 - 首页`);
+	bridge.win.setTitle(`OCS桌面版 - 首页`);
 
 	/** 初始化 store */
-	remote.logger.call('info', 'render store init');
+	bridge.logger.info('render store init');
 	setAutoLaunch();
 	setAlwaysOnTop();
 	changeTheme().catch(console.error);
@@ -206,7 +209,7 @@ onMounted(async () => {
 	}
 
 	/** 检测浏览器缓存大小，超过阈值则提示 */
-	remote.methods.call('statisticFolderSize', store.paths.userDataDirsFolder).then((totalSize) => {
+	bridge.methods.statisticFolderSize(store.paths.userDataDirsFolder).then((totalSize) => {
 		if (totalSize > 1024 * 1024 * 1024 * (store.render.setting.browser.cachesSizeWarningPoint ?? 10)) {
 			showClearBrowserCachesModal(totalSize);
 		}
@@ -214,9 +217,9 @@ onMounted(async () => {
 
 	/** Linux 密钥环检测：basic_text 表示无可用密钥环（gnome-keyring/kwallet），
 	 *  信封加密的密钥包裹将退化为明文存储，引导用户安装 */
-	remote.os.call('platform').then(async (platform) => {
+	bridge.os.platform().then(async (platform) => {
 		if (platform !== 'linux') return;
-		const backend = await remote.methods.call('getStorageBackend');
+		const backend = await bridge.methods.getStorageBackend();
 		if (backend === 'basic_text') {
 			notify(
 				'系统未检测到密钥环',
@@ -298,17 +301,17 @@ onMounted(async () => {
 		m.close();
 		console.log('数据已保存');
 		// 即将退出：销毁托盘避免 Windows 残留图标，再通过 quitApp 程序化退出（绕过隐藏到托盘）
-		remote.methods.call('destroyTray');
-		remote.methods.call('quitApp', 0);
+		bridge.methods.destroyTray();
+		bridge.methods.quitApp(0);
 		return true;
 	}
 
-	ipcRenderer.on('close', async () => {
+	onRendererEvent('close', async () => {
 		// 防重入：避免重复点击关闭按钮或 window.close 循环导致并发触发关闭流程、重复弹窗
 		if (isExiting) return;
 		// 后台运行：关闭窗口时仅隐藏到系统托盘，浏览器与自动化任务保持运行，不退出应用
 		if (store.window.hideToTrayOnClose) {
-			remote.methods.call('hideToTray');
+			bridge.methods.hideToTray();
 			return;
 		}
 		// 后台运行未开启：若仍有浏览器正在运行，询问「关闭并退出」还是「移动至托盘运行」
@@ -318,7 +321,7 @@ onMounted(async () => {
 			const choice = await askCloseOrTray();
 			if (choice === 'tray') {
 				isExiting = false;
-				remote.methods.call('hideToTray');
+				bridge.methods.hideToTray();
 				return;
 			}
 			if (choice === 'cancel') {
@@ -328,7 +331,7 @@ onMounted(async () => {
 			// choice === 'exit'：用户已确认关闭，跳过 closeAllBrowser 的二次确认弹窗
 			if (!(await performFullExit(true))) {
 				isExiting = false;
-				remote.methods.call('cancelQuit');
+				bridge.methods.cancelQuit();
 			}
 			return;
 		}
@@ -337,17 +340,17 @@ onMounted(async () => {
 		if (!(await performFullExit())) {
 			// 用户取消了关闭浏览器，复位退出标记与程序化退出标记，恢复「隐藏到托盘」能力
 			isExiting = false;
-			remote.methods.call('cancelQuit');
+			bridge.methods.cancelQuit();
 		}
 	});
 
 	/** 托盘「退出」/ 程序化退出：绕过「隐藏到托盘」逻辑，强制执行完整退出流程 */
-	ipcRenderer.on('quit', async () => {
+	onRendererEvent('quit', async () => {
 		if (isExiting) return;
 		isExiting = true;
 		if (!(await performFullExit())) {
 			isExiting = false;
-			remote.methods.call('cancelQuit');
+			bridge.methods.cancelQuit();
 		}
 	});
 });

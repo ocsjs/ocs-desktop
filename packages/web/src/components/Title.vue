@@ -138,13 +138,13 @@ import { h, ref } from 'vue';
 import { fetchRemoteNotify, date, about, fetchChangelogMarkdown } from '../utils';
 import { ensureUpdaterChangelogStyle } from '../utils/ipc';
 import { marked } from 'marked';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import TitleLink from './TitleLink.vue';
 import { Message, Modal, InputPassword } from '@arco-design/web-vue';
 import { store, devSession } from '../store/index';
 import { restartAppGuarded } from '../utils/restart';
 import { OCS_WEBSITE, OCS_DOWNLOAD_PAGE } from '@ocs-desktop/common/web';
-import { electron } from '../utils/node';
+
 import { currentBrowser, currentFolder, currentEntities, currentSearchedEntities } from '../fs/index';
 import { Folder, root } from '../fs/folder';
 import { FolderOptions, FolderType } from '../fs/interface';
@@ -161,7 +161,7 @@ import {
 	HouseIcon
 } from 'lucide-vue-next';
 
-const { shell } = electron;
+const shell = bridge.shell;
 
 /** 标题栏菜单弹窗显隐（点击选项后关闭） */
 const toolsMenuVisible = ref(false);
@@ -174,7 +174,7 @@ function relaunch() {
 
 // 打开日志目录
 async function openLog() {
-	const path = await remote.path.call('join', await remote.app.call('getPath', 'logs'), date(Date.now()));
+	const path = await bridge.path.join(await bridge.app.getPath('logs'), date(Date.now()));
 	shell.openPath(path);
 }
 
@@ -210,8 +210,7 @@ function promptPassword(options: { title: string; notice: string; placeholder: s
 }
 
 function importData() {
-	remote.dialog
-		.call('showOpenDialog', {
+	bridge.dialog.showOpenDialog({
 			title: '选择导入的数据文件',
 			buttonLabel: '导入',
 			filters: [{ extensions: ['ocsdata'], name: 'ocsdata' }]
@@ -219,14 +218,14 @@ function importData() {
 		.then(async ({ canceled, filePaths }) => {
 			if (canceled === false && filePaths.length) {
 				try {
-					const text = await remote.fs.call('readFileSync', filePaths[0], { encoding: 'utf8' });
+					const text = await bridge.fs.readFileSync(filePaths[0], { encoding: 'utf8' });
 					const _store: typeof store = JSON.parse(text.toString());
 
 					// 如果 render 是加密字符串，先解密为明文再导入
 					if (typeof _store.render === 'string') {
 						const renderStr = _store.render as string;
 						let decrypted: string;
-						if (remote.methods.callSync('isPasswordEncrypted' as any, renderStr)) {
+						if (await bridge.methods.isPasswordEncrypted(renderStr)) {
 							// 密码加密的导出文件（跨机器可移植）
 							const password = await promptPassword({
 								title: '导入加密数据',
@@ -235,14 +234,14 @@ function importData() {
 							});
 							if (password === null) return;
 							try {
-								decrypted = remote.methods.callSync('decryptExportString' as any, renderStr, password) as string;
+								decrypted = await bridge.methods.decryptExportString(renderStr, password) as string;
 							} catch {
 								Message.error('密码错误或文件已损坏，导入失败。');
 								return;
 							}
 						} else {
 							// 本机加密格式：仅限在导出它的那台电脑上导入
-							decrypted = remote.methods.callSync('decryptRenderString' as any, renderStr) as string;
+							decrypted = await bridge.methods.decryptRenderString(renderStr) as string;
 							const probe = JSON.parse(decrypted);
 							if (typeof probe !== 'object' || probe === null || Object.keys(probe).length === 0) {
 								Message.error('该文件由其他电脑加密导出，无法在本机解密。请在原电脑上导出时设置导出密码后重新导出。');
@@ -266,9 +265,7 @@ function importData() {
 									if (entity.type === 'folder') {
 										folders.push(entity as any);
 									} else if (entity.type === 'browser' && (entity as any).cachePath === '$CACHE_PATH') {
-										(entity as any).cachePath = await remote.path.call(
-											'join',
-											store.paths.userDataDirsFolder,
+										(entity as any).cachePath = await bridge.path.join(store.paths.userDataDirsFolder,
 											entity.uid
 										);
 									}
@@ -322,8 +319,7 @@ async function exportData() {
 		if (!confirmed) return;
 	}
 
-	remote.dialog
-		.call('showSaveDialog', {
+	bridge.dialog.showSaveDialog({
 			title: '选择导出位置',
 			buttonLabel: '导出',
 			defaultPath: `OCS软件数据导出_-${date(Date.now())}`
@@ -355,9 +351,7 @@ async function exportData() {
 
 				// 导出前加密 render 数据：设置导出密码时用密码加密（跨电脑可导入），留空则明文导出
 				if (password && typeof _store.render !== 'string') {
-					(_store as any).render = remote.methods.callSync(
-						'encryptExportString' as any,
-						JSON.stringify(_store.render),
+					(_store as any).render = await bridge.methods.encryptExportString(JSON.stringify(_store.render),
 						password
 					) as string;
 				}
@@ -368,15 +362,16 @@ async function exportData() {
 					delete _store[key];
 				}
 
-				await remote.fs.call('writeFileSync', filePath + '.ocsdata', JSON.stringify(_store, null, 4));
+				await bridge.fs.writeFileSync(filePath + '.ocsdata', JSON.stringify(_store, null, 4));
 				Message.success('导出成功！');
 			}
 		});
 }
 
 function openDevTools() {
+	// DevTools 调试对象（命名为 ocsDebug：window.ocs 预留给阶段 C preload 注入的桥接 API）
 	// @ts-ignore
-	window.ocs = {
+	window.ocsDebug = {
 		currentBrowser,
 		currentEntities,
 		currentFolder,
@@ -388,7 +383,7 @@ function openDevTools() {
 	// 开启开发者设置子界面（会话级，重启后自动隐藏；静默开启，不弹提示）
 	devSession.enabled = true;
 
-	remote.webContents.call('openDevTools');
+	bridge.webContents.openDevTools();
 }
 
 async function showVersionLogs() {

@@ -1,5 +1,5 @@
 import { reactive } from 'vue';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import defaultsDeep from 'lodash/defaultsDeep';
 import type { AppStore, UserScripts } from '@ocs-desktop/common/web';
 import { CommonUserScript } from '../types/user.script';
@@ -237,54 +237,74 @@ export const DEFAULT_RENDER = {
 	}
 } as WebStore;
 
-const _store: AppStore & { render: WebStore } = defaultsDeep(remote['electron-store'].get('store'), {
-	render: DEFAULT_RENDER,
-	// 补齐主进程 window 配置中可能缺失的字段（旧版本用户未触发版本迁移时），后台运行默认关闭
-	window: { hideToTrayOnClose: false },
-	// 补齐更新/调试配置（旧版本用户的磁盘 store 无此字段）
-	updater: { feedUrl: '', infosUrl: '', allowDowngrade: false, chromeSource: '' },
-	// 补齐脚本资源覆盖配置
-	scriptResources: { index: '' }
-});
-
-// 解密数据（兼容新旧加密格式）
-// @ts-ignore - render 在磁盘上可能是加密后的字符串
-if (typeof _store.render === 'string') {
-	try {
-		console.log('_store', _store);
-		// @ts-ignore
-		const renderStr = _store.render as string;
-		const data = JSON.parse(remote.methods.callSync('decryptRenderString' as any, renderStr));
-		if (data && typeof data === 'object' && !Array.isArray(data)) {
-			// 迁移：旧版 screenshotQuality 语义为帧率，拆分为 screenshotFramerate(帧率) + screenshotQuality(画质)
-			const _oldBrowser = data?.setting?.browser;
-			if (_oldBrowser && !('screenshotFramerate' in _oldBrowser) && 'screenshotQuality' in _oldBrowser) {
-				_oldBrowser.screenshotFramerate = _oldBrowser.screenshotQuality;
-				_oldBrowser.screenshotQuality = 'medium';
-			}
-			// 解密后的 render 是历史持久化对象，可能缺少后续版本新增的字段，
-			// 再次与默认值合并以补齐（如 state.guide），避免渲染端读取 undefined。
-			Reflect.set(_store, 'render', defaultsDeep(data, DEFAULT_RENDER));
-		} else {
-			// 解密结果不是对象（历史重复加密等数据损坏场景，主进程已尝试逐层恢复）。
-			// 字符串会让 defaultsDeep 产出装箱 String，Vue 对其响应式追踪失效（界面点击无反应），
-			// 因此必须回退为全新默认对象，保证 render 永远是普通对象。
-			console.error('渲染进程数据损坏（解密结果非对象），已重置为默认设置');
-			Reflect.set(_store, 'render', defaultsDeep({}, DEFAULT_RENDER));
-		}
-	} catch (e) {
-		// 解密失败同样必须回退为默认对象，绝不能让 render 残留为字符串
-		console.error('数据解密失败：' + e);
-		Reflect.set(_store, 'render', defaultsDeep({}, DEFAULT_RENDER));
+/** 响应式空壳（默认值填充；磁盘数据由 initStore 异步读取后就地填充） */
+const _store: AppStore & { render: WebStore } = defaultsDeep(
+	{},
+	{
+		render: DEFAULT_RENDER,
+		// 补齐主进程 window 配置中可能缺失的字段（旧版本用户未触发版本迁移时），后台运行默认关闭
+		window: { hideToTrayOnClose: false },
+		// 补齐更新/调试配置（旧版本用户的磁盘 store 无此字段）
+		updater: { feedUrl: '', infosUrl: '', allowDowngrade: false, chromeSource: '', proxyUrl: '' },
+		// 补齐脚本资源覆盖配置
+		scriptResources: { index: '' }
 	}
-}
+);
 
-// 迁移：旧版 theme.dark(boolean) -> theme.mode('light'|'dark'|'auto')
-// defaultsDeep 已补齐 mode:'auto'，此处根据旧 dark 值修正：dark:true -> 'dark'，dark:false -> 'auto'
-const _theme = _store.render?.setting?.theme as { dark?: boolean; mode?: 'light' | 'dark' | 'auto' } | undefined;
-if (_theme && _theme.dark !== undefined) {
-	_theme.mode = _theme.dark ? 'dark' : 'auto';
-	delete _theme.dark;
+/**
+ * 异步初始化 store：main.ts 在 createApp().mount() 前 await。
+ * store 先以默认值建响应式空壳（import 方持同引用），此处读取磁盘数据后就地填充，
+ * mount 前已完成填充，启动期读取行为与同步初始化等价。
+ */
+export async function initStore() {
+	const disk = await bridge.electronStore.get();
+	const loaded: AppStore & { render: WebStore } = defaultsDeep(disk, {
+		render: DEFAULT_RENDER,
+		window: { hideToTrayOnClose: false },
+		updater: { feedUrl: '', infosUrl: '', allowDowngrade: false, chromeSource: '', proxyUrl: '' },
+		scriptResources: { index: '' }
+	});
+
+	// 解密数据（兼容新旧加密格式）
+	if (typeof loaded.render === 'string') {
+		try {
+			const renderStr = loaded.render as string;
+			const data = JSON.parse(await bridge.methods.decryptRenderString(renderStr));
+			if (data && typeof data === 'object' && !Array.isArray(data)) {
+				// 迁移：旧版 screenshotQuality 语义为帧率，拆分为 screenshotFramerate(帧率) + screenshotQuality(画质)
+				const _oldBrowser = data?.setting?.browser;
+				if (_oldBrowser && !('screenshotFramerate' in _oldBrowser) && 'screenshotQuality' in _oldBrowser) {
+					_oldBrowser.screenshotFramerate = _oldBrowser.screenshotQuality;
+					_oldBrowser.screenshotQuality = 'medium';
+				}
+				// 解密后的 render 是历史持久化对象，可能缺少后续版本新增的字段，
+				// 再次与默认值合并以补齐（如 state.guide），避免渲染端读取 undefined。
+				loaded.render = defaultsDeep(data, DEFAULT_RENDER);
+			} else {
+				// 解密结果不是对象（历史重复加密等数据损坏场景，主进程已尝试逐层恢复）。
+				// 字符串会让 defaultsDeep 产出装箱 String，Vue 对其响应式追踪失效（界面点击无反应），
+				// 因此必须回退为全新默认对象，保证 render 永远是普通对象。
+				console.error('渲染进程数据损坏（解密结果非对象），已重置为默认设置');
+				loaded.render = defaultsDeep({}, DEFAULT_RENDER);
+			}
+		} catch (e) {
+			// 解密失败同样必须回退为默认对象，绝不能让 render 残留为字符串
+			console.error('数据解密失败：' + e);
+			loaded.render = defaultsDeep({}, DEFAULT_RENDER);
+		}
+	}
+
+	// 迁移：旧版 theme.dark(boolean) -> theme.mode('light'|'dark'|'auto')
+	const _theme = loaded.render?.setting?.theme as { dark?: boolean; mode?: 'light' | 'dark' | 'auto' } | undefined;
+	if (_theme && _theme.dark !== undefined) {
+		_theme.mode = _theme.dark ? 'dark' : 'auto';
+		delete _theme.dark;
+	}
+
+	// 就地填充响应式空壳（顶层键覆盖；render/window/updater 等引用型子树整体替换）
+	for (const key of Object.keys(loaded)) {
+		Reflect.set(_store, key, (loaded as any)[key]);
+	}
 }
 
 /** 数据存储对象 */

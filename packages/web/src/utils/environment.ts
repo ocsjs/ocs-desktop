@@ -1,6 +1,6 @@
 import { getRemoteInfos } from '.';
 import { store } from '../store';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { Infos, ResourceFile, SUPPORTED_BROWSER_MAX_MAJOR } from '@ocs-desktop/common/web';
 import { ResourceLoader } from './resources.loader';
 import _get from 'lodash/get';
@@ -9,7 +9,10 @@ type Extension = ResourceFile & { installed?: boolean };
 
 /** 资源加载器 */
 const resourceLoader = new ResourceLoader({
-	resourceRootPath: store?.paths?.downloadFolder
+	// getter 延迟求值：同 resources.loader.ts 的说明，避免模块加载时固化 undefined
+	get resourceRootPath() {
+		return store?.paths?.downloadFolder;
+	}
 });
 
 export const Environment = {
@@ -33,23 +36,25 @@ export const Environment = {
 		return this.infos.value;
 	},
 	async getSupportedBrowser() {
-		// 检测有效的浏览器路径
-		let browsers = await Promise.all(
-			[
-				{
-					name: '默认设置浏览器',
-					path: store.render.setting.launchOptions.executablePath || ''
-				},
-				...(await remote.methods.call('getValidBrowsers'))
-			]
-				.filter((b) => b.path && remote.fs.callSync('existsSync', b.path))
-				.map(async (b) => {
+		// 检测有效的浏览器路径（existsSync 与主版本探测均按浏览器并行，替代原串行同步链）
+		const candidates = [
+			{
+				name: '默认设置浏览器',
+				path: store.render.setting.launchOptions.executablePath || ''
+			},
+			...(await bridge.methods.getValidBrowsers())
+		].filter((b) => b.path);
+		let browsers = (
+			await Promise.all(
+				candidates.map(async (b) => {
+					if (!(await bridge.fs.existsSync(b.path))) return undefined;
 					return {
 						...b,
-						major_version: await remote.methods.call('getBrowserMajorVersion', b.path)
+						major_version: await bridge.methods.getBrowserMajorVersion(b.path)
 					};
 				})
-		);
+			)
+		).filter((b): b is NonNullable<typeof b> => b !== undefined);
 
 		// 排序版本，从大到小
 		browsers = browsers.sort((a, b) => (b.major_version || 0) - (a.major_version || 0));
@@ -66,7 +71,7 @@ export const Environment = {
 	async isCurrentBrowserSupported() {
 		const current_browser_path = store.render.setting.launchOptions.executablePath;
 		if (!current_browser_path) return false;
-		const current_browser_version = await remote.methods.call('getBrowserMajorVersion', current_browser_path);
+		const current_browser_version = await bridge.methods.getBrowserMajorVersion(current_browser_path);
 		if (current_browser_version && current_browser_version <= SUPPORTED_BROWSER_MAX_MAJOR) {
 			return true;
 		}
@@ -94,21 +99,19 @@ export const Environment = {
 		for (const installed_extension of extensions.filter((e) => e.installed)) {
 			let manifest: any;
 			try {
-				const manifestPath = await remote.path.call(
-					'join',
-					await resourceLoader.getUnzippedPath('extensions', installed_extension),
+				const manifestPath = await bridge.path.join(await resourceLoader.getUnzippedPath('extensions', installed_extension),
 					'manifest.json'
 				);
 				// 先用 existsSync 探测：zip 已下载但未解压（或解压不完整）时 manifest.json 不存在，
 				// 直接 readFileSync 会经 remote 层弹出「remote 模块错误」通知，属于误报
-				if (!remote.fs.callSync('existsSync', manifestPath)) {
+				if (!await bridge.fs.existsSync(manifestPath)) {
 					continue;
 				}
 				// manifest.json 可能是目录（残留污染/异常压缩包产生），readFileSync 目录会抛 EISDIR 弹错
-				if (remote.methods.callSync('isDirectory', manifestPath)) {
+				if (await bridge.methods.isDirectory(manifestPath)) {
 					continue;
 				}
-				manifest = JSON.parse(String(await remote.fs.call('readFileSync', manifestPath, 'utf-8')));
+				manifest = JSON.parse(String(await bridge.fs.readFileSync(manifestPath, 'utf-8')));
 			} catch {
 				// manifest.json 不存在或解析失败（如 OCR 等非扩展文件夹），跳过该候选
 				continue;
@@ -123,18 +126,18 @@ export const Environment = {
 		// 兜底（2.x 移植）：远程资源列表未命中/网络异常时，直接扫描本地 extensions 目录
 		try {
 			// @ts-ignore
-			const paths: string[] = await remote.fs.call('readdirSync', store.paths.extensionsFolder);
+			const paths: string[] = await bridge.fs.readdirSync(store.paths.extensionsFolder);
 			for (const file of paths.filter((f) => f !== '.DS_Store')) {
-				const extensionPath = await remote.path.call('join', store.paths.extensionsFolder, file);
-				const isDirectory = remote.methods.callSync('isDirectory', extensionPath);
+				const extensionPath = await bridge.path.join(store.paths.extensionsFolder, file);
+				const isDirectory = await bridge.methods.isDirectory(extensionPath);
 				if (!isDirectory) continue;
-				const manifestPath = await remote.path.call('join', extensionPath, 'manifest.json');
-				const exists = await remote.fs.call('existsSync', manifestPath);
+				const manifestPath = await bridge.path.join(extensionPath, 'manifest.json');
+				const exists = await bridge.fs.existsSync(manifestPath);
 				if (!exists) continue;
 				// 同上：manifest.json 为目录时跳过，避免 readFileSync 抛 EISDIR 弹错
-				if (remote.methods.callSync('isDirectory', manifestPath)) continue;
+				if (await bridge.methods.isDirectory(manifestPath)) continue;
 
-				const manifest = JSON.parse(String(await remote.fs.call('readFileSync', manifestPath, 'utf-8')));
+				const manifest = JSON.parse(String(await bridge.fs.readFileSync(manifestPath, 'utf-8')));
 				if (_get(manifest, 'manifest_version', 2) >= 3) {
 					return {
 						id: file,

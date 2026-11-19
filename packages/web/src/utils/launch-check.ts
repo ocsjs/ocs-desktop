@@ -1,5 +1,5 @@
 import { Message } from '@arco-design/web-vue';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { processes } from './process';
 import { store } from '../store';
 import { Status } from './statusBar';
@@ -22,9 +22,9 @@ export interface LaunchGuardResult {
  * os.loadavg 在 Windows 恒为 0 不可用，采样法全平台有效。
  */
 async function sampleCpuUsage(intervalMs = 200): Promise<number> {
-	const cpus1 = await remote.os.call('cpus');
+	const cpus1 = await bridge.os.cpus();
 	await new Promise((resolve) => setTimeout(resolve, intervalMs));
-	const cpus2 = await remote.os.call('cpus');
+	const cpus2 = await bridge.os.cpus();
 	let idle = 0;
 	let total = 0;
 	for (let i = 0; i < Math.min(cpus1.length, cpus2.length); i++) {
@@ -48,7 +48,7 @@ export async function checkLaunchCapacity(): Promise<LaunchGuardResult> {
 	try {
 		const runningProcs = processes.filter((p) => p.status === 'launching' || p.status === 'launched');
 		const running = runningProcs.length;
-		const freeMB = Math.round((await remote.os.call('freemem')) / 1024 / 1024);
+		const freeMB = Math.round((await bridge.os.freemem()) / 1024 / 1024);
 
 		// 单实例占用：优先用运行中浏览器的真实内存均值（worker 经 CDP 取 PID + 系统 API 汇总，定时上报），
 		// 乘 1.2 预留新页面加载的增长空间；无实测数据（刚启动未上报/上报失败）时回退固定预估值。

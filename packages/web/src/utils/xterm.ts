@@ -1,6 +1,6 @@
 import { ITerminalOptions, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
-import { remote } from './remote';
+import { bridge } from './bridge';
 const fitAddon = new FitAddon();
 
 /**
@@ -30,7 +30,7 @@ export class XTerm extends Terminal {
 			const char = key.domEvent.key;
 			/** 复制内容 */
 			if (key.domEvent.ctrlKey && char === 'c') {
-				remote.webContents.call('copy');
+				bridge.webContents.copy();
 			}
 		});
 

@@ -377,7 +377,7 @@ import { Message, Modal } from '@arco-design/web-vue';
 import ScriptList from '../components/ScriptList.vue';
 import { ScriptSourceType, ScriptVersion } from '../types/user.script';
 import CommonSelector from '../components/CommonSelector.vue';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { isTransientNetworkError } from '../utils/errors';
 import { Status } from '../utils/statusBar';
 import UsageAlertCollapse from '../components/UsageAlertCollapse.vue';
@@ -652,7 +652,7 @@ async function updateAllInfo(force = false) {
 		store.render.scripts.map(async (script) => {
 			if (script.isLocalScript) {
 				// 检查本地脚本是否存在
-				const exists = remote.fs.callSync('existsSync', script.url);
+				const exists = await bridge.fs.existsSync(script.url);
 				if (!exists) {
 					Message.warning(`本地脚本 ${script.info?.name} （${script.info?.code_url}）已不存在，请检查文件路径`);
 					state.script_status[script.id] = 'not_found';

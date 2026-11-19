@@ -4,7 +4,7 @@ import { RouteRecordRaw } from 'vue-router';
 import page from '@/pages/index.vue';
 import bookmarks from '@/pages/bookmarks.vue';
 import { GreasyForkUserScript, ScriptCatUserScript, CommonUserScript } from '../types/user.script';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { ScriptSearchEngine } from '../types/search';
 import { StoreUserScript } from '../store';
 
@@ -108,9 +108,7 @@ export const config = reactive({
 				homepage: 'https://scriptcat.org',
 				search: async (keyword: string, page: number, size: number) => {
 					// 带磁盘缓存（5min）：脚本猫站点速度不稳定，弱网时回退过期缓存
-					const data = await remote.methods.call(
-						'cachedGet',
-						'https://scriptcat.org/api/v2/scripts?' +
+					const data = await bridge.methods.cachedGet('https://scriptcat.org/api/v2/scripts?' +
 							new URLSearchParams({
 								count: size.toString(),
 								page: page <= 0 ? '1' : page.toString(),
@@ -135,14 +133,12 @@ export const config = reactive({
 				},
 				infoGetter: async (script: CommonUserScript) => {
 					return (
-						await remote.methods.call('cachedGet', `https://scriptcat.org/api/v2/scripts/${script.id}`, 10 * 60 * 1000)
+						await bridge.methods.cachedGet(`https://scriptcat.org/api/v2/scripts/${script.id}`, 10 * 60 * 1000)
 					).data as ScriptCatUserScript;
 				},
 				transformToCommonByInfo,
 				versionProvider: async (script: StoreUserScript) => {
-					const data = await remote.methods.call(
-						'cachedGet',
-						`https://scriptcat.org/api/v2/scripts/${script.id}/versions`,
+					const data = await bridge.methods.cachedGet(`https://scriptcat.org/api/v2/scripts/${script.id}/versions`,
 						10 * 60 * 1000
 					);
 
@@ -187,9 +183,7 @@ export const config = reactive({
 				homepage: 'https://greasyfork.org',
 				search: async (keyword: string, page: number, size: number) => {
 					// 带磁盘缓存（5min）：GreasyFork 站点速度不稳定，弱网时回退过期缓存
-					const data = await remote.methods.call(
-						'cachedGet',
-						'https://greasyfork.org/zh-CN/scripts.json?' +
+					const data = await bridge.methods.cachedGet('https://greasyfork.org/zh-CN/scripts.json?' +
 							new URLSearchParams({
 								q: keyword,
 								page: page <= 0 ? '1' : page.toString()
@@ -213,18 +207,14 @@ export const config = reactive({
 				},
 				async infoGetter(script: CommonUserScript) {
 					return (
-						await remote.methods.call(
-							'cachedGet',
-							`https://greasyfork.org/zh-CN/scripts/${script.id}.json`,
+						await bridge.methods.cachedGet(`https://greasyfork.org/zh-CN/scripts/${script.id}.json`,
 							10 * 60 * 1000
 						)
 					).data as GreasyForkUserScript;
 				},
 				transformToCommonByInfo,
 				versionProvider: async (script: StoreUserScript) => {
-					const data: any[] = await remote.methods.call(
-						'cachedGet',
-						`https://greasyfork.org/zh-CN/scripts/${script.id}/versions.json`,
+					const data: any[] = await bridge.methods.cachedGet(`https://greasyfork.org/zh-CN/scripts/${script.id}/versions.json`,
 						10 * 60 * 1000
 					);
 					return data.map((item) => ({

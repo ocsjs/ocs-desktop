@@ -43,10 +43,14 @@
 					btn.style.cssText =
 						'padding:8px 24px;font-size:14px;border:none;border-radius:6px;background:#165dff;color:#fff;cursor:pointer;';
 					btn.onclick = function () {
-						// 主进程直连退出通道（nodeIntegration 开启时可用）：
+						// 主进程直连退出通道（preload 注入 window.ocs）：
 						// 渲染层致命错误时 window.close() 与标题栏按钮均被 close 流程拦截，走 IPC 强制退出
 						try {
-							require('electron').ipcRenderer.send('ocs-quit-app');
+							if (window.ocs && window.ocs.quitApp) {
+								window.ocs.quitApp();
+							} else {
+								window.close();
+							}
 						} catch (err) {
 							window.close();
 						}

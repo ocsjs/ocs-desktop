@@ -1,4 +1,4 @@
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { store, StoreUserScript } from '../store';
 
 /**
@@ -68,7 +68,7 @@ export async function fetchRemoteVersion(codeUrl: string): Promise<FetchVersionR
 	console.log('脚本更新 meta-url', metaUrl);
 	try {
 		// 5s 超时：弱网环境下避免单脚本检查长时间挂起（并行检查 overall 预算随之收敛）
-		const res = await remote.methods.call('getWithStatus', metaUrl, { timeout: 5000 });
+		const res = await bridge.methods.getWithStatus(metaUrl, { timeout: 5000 });
 		console.log('脚本更新 res', res);
 		// 区分 HTTP 状态码
 		const status: number | undefined = res?.status;

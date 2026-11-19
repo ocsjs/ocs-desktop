@@ -160,7 +160,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { store } from '../store';
 import { Browser } from '../fs/browser';
 import { Folder } from '../fs/folder';
@@ -249,7 +249,8 @@ function mousedown(e: MouseEvent) {
 
 function exec(id: string) {
 	if (typeof window === 'undefined') {
-		return remote.webContents.call(id as any);
+		// 受管浏览器内（无 DOM execCommand）：经主进程 webContents 执行
+		return bridge.webContents[id as 'copy' | 'cut' | 'paste' | 'undo' | 'redo']();
 	} else {
 		return document.execCommand(id);
 	}

@@ -1,9 +1,9 @@
 import { Modal } from '@arco-design/web-vue';
-import { remote } from './remote';
+import { bridge } from './bridge';
 
 /** 是否 electron-vite dev 开发模式（pnpm dev） */
-export function isDevMode(): boolean {
-	return remote.methods.callSync('isDevMode');
+export async function isDevMode(): Promise<boolean> {
+	return await bridge.methods.isDevMode();
 }
 
 /**
@@ -16,8 +16,8 @@ export function isDevMode(): boolean {
  *
  * @param reason 可选的前置说明（如「OCR 识别模块安装完成」）
  */
-export function restartAppGuarded(reason?: string): void {
-	if (isDevMode()) {
+export async function restartAppGuarded(reason?: string): Promise<void> {
+	if (await isDevMode()) {
 		Modal.confirm({
 			title: '开发模式提示',
 			content:
@@ -27,10 +27,10 @@ export function restartAppGuarded(reason?: string): void {
 			cancelText: '取消',
 			onOk: () => {
 				// dev 下 resetApp 已退化为仅退出（不 relaunch）
-				remote.methods.call('resetApp');
+				bridge.methods.resetApp();
 			}
 		});
 		return;
 	}
-	remote.methods.call('resetApp');
+	bridge.methods.resetApp();
 }

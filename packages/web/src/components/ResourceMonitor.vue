@@ -19,14 +19,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { processes } from '../utils/process';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { CpuIcon, MemoryStickIcon } from 'lucide-vue-next';
 
 /** 系统总内存（MB），挂载时获取一次即可（不变量） */
 const totalSystemMB = ref(0);
 onMounted(async () => {
 	try {
-		totalSystemMB.value = Math.round((await remote.os.call('totalmem')) / 1024 / 1024);
+		totalSystemMB.value = Math.round((await bridge.os.totalmem()) / 1024 / 1024);
 	} catch {}
 });
 

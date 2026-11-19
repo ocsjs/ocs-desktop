@@ -33,23 +33,36 @@ onMounted(() => {
 
 onUnmounted(() => {
 	resizeObserver?.disconnect();
+	// 移除 console 事件监听，防止组件反复挂载导致监听累积。
+	// 必须使用挂载时绑定的同一实例：浏览器关闭后 Process 已从 processes 移除，
+	// 重新 Process.from 查找会拿不到导致 off 静默失效
+	boundProcess?.off('console', onConsole);
+	boundProcess?.off('console-stderr', onConsoleStderr);
+	boundProcess = undefined;
 });
 
+const onConsole = (data: string) => xterm.write(data);
+const onConsoleStderr = (data: string) => xterm.write(`[错误] : ${data}`);
+
+/** 挂载时绑定的 Process 实例（卸载解绑用） */
+let boundProcess: Process | undefined;
+
 function openXTerm() {
-	const process = Process.from(props.uid);
+	boundProcess = Process.from(props.uid);
 
 	/** 绑定元素 */
 	xterm.open(xtermRef.value as HTMLElement);
 	xterm.clear();
 
 	/** 显示日志输出 */
-	for (const log of process?.logs || []) {
+	for (const log of boundProcess?.logs || []) {
 		xterm.write(log);
 	}
 
-	if (process?.shell) {
-		process.shell.stdout?.on('data', (data) => xterm.write(data));
-		process.shell.stderr?.on('data', (data) => xterm.write(`[错误] : ${data}`));
+	// worker stdio 由主进程转发（'script-worker' 频道 → Process console/console-stderr 事件）
+	if (boundProcess) {
+		boundProcess.on('console', onConsole);
+		boundProcess.on('console-stderr', onConsoleStderr);
 	}
 
 	xterm.fit();

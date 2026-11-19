@@ -2,14 +2,12 @@ import { h, ref } from 'vue';
 import { Button, Modal, Message, Notification, Space } from '@arco-design/web-vue';
 import type { RawAutomationScript } from '@ocs-desktop/common/web';
 import { store } from '../store';
-import { remote } from './remote';
-import { electron } from './node';
+import { bridge } from './bridge';
 import { resourceLoader } from './resources.loader';
 import { getRemoteInfos } from '.';
+import { onRendererEvent } from './ipc';
 import { notify } from './notify';
 import { restartAppGuarded } from './restart';
-
-const { ipcRenderer } = electron;
 
 /** 查询 OCR 识别模块的资源定义 */
 async function getOcrResourceFile() {
@@ -24,7 +22,7 @@ async function getOcrResourceFile() {
  * 避免下载到 win32 二进制导致「安装后仍检测不到」的假安装。
  */
 export async function isOcrSupported(): Promise<boolean> {
-	const platform = await remote.methods.call('getPlatform');
+	const platform = await bridge.methods.getPlatform();
 	if (platform === 'win32') return true;
 	const ocrFile = await getOcrResourceFile();
 	return !!ocrFile?.platforms?.some((p) => p.platform === platform);
@@ -43,7 +41,7 @@ export async function promptOcrChoiceBeforeLaunch(scripts?: RawAutomationScript[
 	if (!scripts?.some((s) => s.needOCR)) return;
 	// 已开启手动模式：不再提示
 	if (store.render.setting.browser.ocrManual) return;
-	if (await remote.methods.call('canOCR')) return;
+	if (await bridge.methods.canOCR()) return;
 	// 平台不支持（无安装入口）：不弹三选，沿用启动后通知的手动输入提示
 	if (!(await isOcrSupported())) return;
 
@@ -85,7 +83,7 @@ export async function notifyOcrMissingAfterLaunch(scripts?: RawAutomationScript[
 	if (!scripts?.some((s) => s.needOCR)) return;
 	// 手动模式：不再提示安装
 	if (store.render.setting.browser.ocrManual) return;
-	if (await remote.methods.call('canOCR')) return;
+	if (await bridge.methods.canOCR()) return;
 
 	// 平台不支持（如 Linux 无对应包）：不提供安装入口，只提示手动输入验证码，
 	// 避免引导用户安装一个在当前系统必然不可用的 win32 二进制
@@ -149,12 +147,11 @@ export async function installOcrWithProgress(): Promise<boolean> {
 		closable: false,
 		maskClosable: false
 	});
-	const listener = (_e: any, channel: string, rate: number) => {
+	const offDownload = onRendererEvent('download', (channel, rate) => {
 		if (channel === 'download-file-ocr') {
 			progressText.value = `下载中... ${rate}%`;
 		}
-	};
-	ipcRenderer.on('download', listener);
+	});
 	try {
 		await resourceLoader.download('apps', ocrFile);
 		progressText.value = '下载完成，正在解压安装...';
@@ -166,7 +163,7 @@ export async function installOcrWithProgress(): Promise<boolean> {
 		Message.error('OCR 识别模块安装失败：' + (e?.message || String(e)));
 		return false;
 	} finally {
-		ipcRenderer.removeListener('download', listener);
+		offDownload();
 		modal.close();
 	}
 }

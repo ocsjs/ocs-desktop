@@ -1,55 +1,64 @@
 <template>
 	<a-card
-		v-if="!allDone"
+		v-if="cardVisible"
 		class="beginner-guide mb-2"
 		:body-style="{ padding: '16px 20px' }"
 	>
-		<div class="d-flex align-items-center justify-content-between mb-3">
-			<div class="guide-title">
-				<a-space size="mini"><GraduationCapIcon /> 新手使用指引 </a-space>
+		<!-- 全部步骤完成：切换为成功结果提示，3s 后自动隐藏 -->
+		<a-result
+			v-if="justCompleted"
+			status="success"
+			:title="t('beginner_guide_finished', '你已完成新手指引')"
+			class="guide-result"
+		/>
+		<template v-else>
+			<div class="d-flex align-items-center justify-content-between mb-3">
+				<div class="guide-title">
+					<a-space size="mini"><GraduationCapIcon /> 新手使用指引 </a-space>
+				</div>
+				<a-tag
+					color="arcoblue"
+					size="small"
+				>
+					{{ doneCount }}/2
+				</a-tag>
 			</div>
-			<a-tag
-				color="arcoblue"
+			<!-- 不用 type="dot"：圆点模式不渲染 #icon 插槽，完成态的绿色打勾无法显示 -->
+			<a-steps
+				:current="currentStep"
 				size="small"
 			>
-				{{ doneCount }}/2
-			</a-tag>
-		</div>
-		<!-- 不用 type="dot"：圆点模式不渲染 #icon 插槽，完成态的绿色打勾无法显示 -->
-		<a-steps
-			:current="currentStep"
-			size="small"
-		>
-			<a-step
-				:title="t('beginner_guide_step1_title', '环境自动准备')"
-				:description="t('beginner_guide_step1_desc', '启动浏览器时将自动检测并补全环境')"
-				:status="step1Status"
-			>
-				<template #icon>
-					<component
-						:is="step1Done ? CheckIcon : SettingsIcon"
-						:color="step1Done ? '#52c41a' : undefined"
-					/>
-				</template>
-			</a-step>
-			<a-step
-				:title="t('beginner_guide_step2_title', '启动浏览器')"
-				:description="t('beginner_guide_step2_desc', '成功启动浏览器后即完成')"
-				:status="step2Status"
-			>
-				<template #icon>
-					<component
-						:is="step2Done ? CheckIcon : CirclePlayIcon"
-						:color="step2Done ? '#52c41a' : undefined"
-					/>
-				</template>
-			</a-step>
-		</a-steps>
+				<a-step
+					:title="t('beginner_guide_step1_title', '环境自动准备')"
+					:description="t('beginner_guide_step1_desc', '启动浏览器时将自动检测并补全环境')"
+					:status="step1Status"
+				>
+					<template #icon>
+						<component
+							:is="step1Done ? CheckIcon : SettingsIcon"
+							:color="step1Done ? '#52c41a' : undefined"
+						/>
+					</template>
+				</a-step>
+				<a-step
+					:title="t('beginner_guide_step2_title', '启动浏览器')"
+					:description="t('beginner_guide_step2_desc', '成功启动浏览器后即完成')"
+					:status="step2Status"
+				>
+					<template #icon>
+						<component
+							:is="step2Done ? CheckIcon : CirclePlayIcon"
+							:color="step2Done ? '#52c41a' : undefined"
+						/>
+					</template>
+				</a-step>
+			</a-steps>
+		</template>
 	</a-card>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { CheckIcon, SettingsIcon, CirclePlayIcon, GraduationCapIcon } from 'lucide-vue-next';
 import { store } from '../store';
 import { t } from '../utils/langs';
@@ -82,6 +91,32 @@ const step1Status = computed<'finish' | 'process' | 'wait'>(() => (step1Done.val
 const step2Status = computed<'finish' | 'process' | 'wait'>(() =>
 	step2Done.value ? 'finish' : step1Done.value ? 'process' : 'wait'
 );
+
+/** 本次会话中刚完成全部步骤（切换到成功结果提示） */
+const justCompleted = ref(false);
+/** 成功结果提示已到时隐藏 */
+const dismissed = ref(false);
+let dismissTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** 两步是否全部完成（含实时信号，用于捕获「完成」的瞬间） */
+const bothDone = computed(() => step1Done.value && step2Done.value);
+
+/** 卡片可见性：刚完成时展示结果提示，到时后隐藏；历史已完成用户直接隐藏 */
+const cardVisible = computed(() => (justCompleted.value ? !dismissed.value : !allDone.value));
+
+// 仅在「未完成 → 完成」的瞬间切换到结果提示；历史已完成用户启动时 bothDone 恒为 true 不会触发
+watch(bothDone, (v, old) => {
+	if (v && !old) {
+		justCompleted.value = true;
+		dismissTimer = setTimeout(() => {
+			dismissed.value = true;
+		}, 3000);
+	}
+});
+
+onUnmounted(() => {
+	clearTimeout(dismissTimer);
+});
 
 // 达成一次即永久标记完成（store watch 自动持久化）
 watch(
@@ -121,6 +156,19 @@ onMounted(() => {
 	}
 	:deep(.arco-steps-item-tail) {
 		overflow: hidden;
+	}
+
+	/* 成功结果提示：压缩默认内边距与图标尺寸，保持卡片轻盈 */
+	.guide-result {
+		padding: 8px 0;
+
+		:deep(.arco-result-icon) {
+			margin-bottom: 8px;
+			font-size: 40px;
+		}
+		:deep(.arco-result-title) {
+			font-size: 15px;
+		}
 	}
 }
 </style>

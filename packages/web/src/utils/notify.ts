@@ -1,8 +1,7 @@
 import { Button, Notification } from '@arco-design/web-vue';
 import { h, VNodeChild } from 'vue';
-import { electron } from './node';
+import { bridge } from './bridge';
 import { StringUtils } from '@ocs-desktop/common/web';
-const { clipboard } = electron;
 
 interface NotifyOptions {
 	type?: 'error' | 'success' | 'info' | 'warning';
@@ -220,7 +219,7 @@ function cerateCopyButton(title: string, msg: any, key: string, options?: Notify
 			type: 'primary',
 			size: 'small',
 			onClick: () => {
-				clipboard.writeText(title + '\n' + String(msg));
+				bridge.clipboard.writeText(title + '\n' + String(msg));
 
 				notify(title, msg, key, {
 					...options,

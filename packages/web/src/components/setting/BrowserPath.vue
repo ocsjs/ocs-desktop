@@ -25,7 +25,7 @@
 							<a-button
 								type="text"
 								size="mini"
-								@click="() => electron.shell.showItemInFolder(store.render.setting.launchOptions.executablePath)"
+								@click="() => bridge.shell.showItemInFolder(store.render.setting.launchOptions.executablePath)"
 							>
 								在文件夹中显示 <FileIcon />
 							</a-button>
@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { store } from '../../store';
-import { electron } from '../../utils/node';
+import { bridge } from '../../utils/bridge';
 import Description from '../Description.vue';
 import { CircleHelpIcon, FileIcon } from 'lucide-vue-next';
 </script>

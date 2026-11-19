@@ -178,6 +178,26 @@
 				</a-tooltip>
 			</Description>
 
+			<Description>
+				<template #label>
+					自定义代理
+					<a-popover>
+						<template #content>
+							<div style="max-width: 320px">
+								<div>手动指定 HTTP 代理（如 http://127.0.0.1:7890），软件的下载/请求全部经该代理。</div>
+								<div>优先级高于系统代理自动检测；留空则自动检测系统代理，代理失效时自动降级直连。</div>
+							</div>
+						</template>
+						<CircleHelpIcon class="label-help-icon" />
+					</a-popover>
+				</template>
+				<a-input
+					v-model="store.updater.proxyUrl"
+					placeholder="http://127.0.0.1:7890"
+					allow-clear
+				/>
+			</Description>
+
 			<Description label="手动检查更新">
 				<a-button
 					type="primary"
@@ -310,7 +330,7 @@ import Description from '../Description.vue';
 import Path from '../Path.vue';
 import { store, DEFAULT_RENDER } from '../../store';
 import { OCS_UPDATER, OCS_API, OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
-import { remote } from '../../utils/remote';
+import { bridge } from '../../utils/bridge';
 import { Message } from '@arco-design/web-vue';
 import { CircleHelpIcon } from 'lucide-vue-next';
 import cloneDeep from 'lodash/cloneDeep';
@@ -325,7 +345,7 @@ const systemScripts = ref<{ name: string; label?: string; phase: string; order: 
 
 async function openSystemScriptsModal() {
 	systemScriptsModalVisible.value = true;
-	systemScripts.value = await remote.methods.call('getSystemScripts');
+	systemScripts.value = await bridge.methods.getSystemScripts();
 }
 
 /** 缺省视为启用，显式 false 才停用 */
@@ -344,8 +364,8 @@ async function reset() {
 	// 同步保存，确保重置落盘后再重启（不依赖关闭流程的保存时序，避免强制退出时丢失）
 	// 加密受开发者设置「数据加密」开关控制（重置会恢复默认开启）
 	const shouldEncrypt =
-		store.render.setting.dev?.dataEncryption !== false && remote.methods.callSync('isEncryptionAvailable');
-	remote.methods.callSync('saveStore', JSON.stringify(store), shouldEncrypt);
+		store.render.setting.dev?.dataEncryption !== false && await bridge.methods.isEncryptionAvailable();
+	await bridge.methods.saveStore(JSON.stringify(store), shouldEncrypt);
 	// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
 	restartAppGuarded('设置已重置，需重启软件后生效。');
 }
@@ -355,7 +375,7 @@ async function onUserDataDirsFolderChange(previous: string, current: string) {
 	const browsers = Folder.from(store.render.browser.root.uid).findAll((e) => e.type === 'browser') as Browser[];
 	if (browsers.length > 0) {
 		for (const browser of browsers) {
-			browser.cachePath = await remote.path.call('join', current, browser.uid);
+			browser.cachePath = await bridge.path.join(current, browser.uid);
 		}
 	}
 
@@ -368,7 +388,7 @@ async function onCheckUpdate() {
 	checkingUpdate.value = true;
 	try {
 		// 直接携带最新配置（防抖持久化可能尚未落盘；reactive 代理无法跨 IPC 结构化克隆，需转为纯对象）
-		const result = await remote.methods.call('checkUpdate', JSON.parse(JSON.stringify(store.updater)));
+		const result = await bridge.methods.checkUpdate(JSON.parse(JSON.stringify(store.updater)));
 		if (!result) {
 			Message.error('检查更新失败，请查看日志或稍后重试');
 		} else if (result.hasUpdate) {

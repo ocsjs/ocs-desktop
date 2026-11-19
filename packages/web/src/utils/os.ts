@@ -1,8 +1,8 @@
-import { remote } from './remote';
+import { bridge } from './bridge';
 
 /** 获取 windows 版本号 */
 export async function getWindowsRelease() {
-	const release = await remote.os.call('release');
+	const release = await bridge.os.release();
 
 	if (release.startsWith('6.1')) {
 		return 'win7';

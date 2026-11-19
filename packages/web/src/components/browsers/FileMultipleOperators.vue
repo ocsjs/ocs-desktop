@@ -119,7 +119,7 @@ import FileOperators from './FileOperators.vue';
 import { BrowserOptions } from '../../fs/interface';
 import { inBrowser } from '../../utils/node';
 import { store } from '../../store';
-import { remote } from '../../utils/remote';
+import { bridge } from '../../utils/bridge';
 import { Entity } from '../../fs/entity';
 import { Col, InputNumber, Message, Modal, Row, Select, Tooltip } from '@arco-design/web-vue';
 import { Process } from '../../utils/process';
@@ -311,7 +311,7 @@ async function paste() {
 	for (const browser of browsers) {
 		const id = await Entity.uuid();
 		browser.uid = id;
-		browser.cachePath = inBrowser ? '' : await remote.path.call('join', store.paths.userDataDirsFolder, id);
+		browser.cachePath = inBrowser ? '' : await bridge.path.join(store.paths.userDataDirsFolder, id);
 		browser.parent = currentFolder.value.uid;
 		browser.checked = false;
 

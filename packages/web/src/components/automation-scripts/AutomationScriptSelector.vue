@@ -73,7 +73,7 @@
 import { reactive, computed } from 'vue';
 import { RawAutomationScript } from './index';
 import CommonSelector from '../CommonSelector.vue';
-import { remote } from '../../utils/remote';
+import { bridge } from '../../utils/bridge';
 import { iconUrl } from '../../utils';
 import { GlobeIcon } from 'lucide-vue-next';
 
@@ -99,7 +99,7 @@ const emits = defineEmits<{
 	(e: 'confirm', automationScripts: RawAutomationScript[]): void;
 }>();
 
-const RawScripts = remote.methods.callSync('getRawScripts');
+const RawScripts = await bridge.methods.getRawScripts();
 const scripts = computed<RawAutomationScript[]>(() => RawScripts.filter((s) => s.name.includes(state.search)));
 
 /** 最多展示的配置项数量 */

@@ -10,14 +10,14 @@
 </template>
 
 <script setup lang="ts">
-import { electron } from '../utils/node';
+import { bridge } from '../utils/bridge';
 
 defineProps<{
 	url: string;
 	title?: string;
 }>();
 
-const { shell } = electron;
+const shell = bridge.shell;
 
 function open(url: string) {
 	shell.openExternal(url);

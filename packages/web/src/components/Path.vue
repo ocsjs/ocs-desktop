@@ -20,9 +20,9 @@
 import { ref, toRefs, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import Description from './Description.vue';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { store } from '../store';
-import { electron } from '../utils/node';
+
 import { SettingsIcon } from 'lucide-vue-next';
 
 interface PathProps {
@@ -40,17 +40,17 @@ const emits = defineEmits<{
 }>();
 
 const { label, name, setting } = toRefs(props);
-const { shell } = electron;
+const shell = bridge.shell;
 
 const realPath = ref('');
 
 onMounted(async () => {
-	realPath.value = store.paths[name.value] ? await remote.path.call('resolve', store.paths[name.value]) : '无';
+	realPath.value = store.paths[name.value] ? await bridge.path.resolve(store.paths[name.value]) : '无';
 });
 
 async function change(name: keyof typeof store.paths) {
 	if (setting.value) {
-		const res = await remote.dialog.call('showOpenDialogSync', {
+		const res = await bridge.dialog.showOpenDialogSync({
 			properties: ['openDirectory'],
 			defaultPath: realPath.value
 		});
@@ -72,9 +72,9 @@ async function change(name: keyof typeof store.paths) {
 /** 目录可写性探测：尝试创建并删除一个临时文件（目录存在不代表可写） */
 async function testDirWritable(dir: string): Promise<boolean> {
 	try {
-		const probe = await remote.path.call('join', dir, `.ocs-write-test-${Date.now()}`);
-		await remote.fs.call('writeFileSync', probe, '');
-		await remote.fs.call('rmSync', probe, { force: true });
+		const probe = await bridge.path.join(dir, `.ocs-write-test-${Date.now()}`);
+		await bridge.fs.writeFileSync(probe, '');
+		await bridge.fs.rmSync(probe, { force: true });
 		return true;
 	} catch {
 		return false;

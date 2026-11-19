@@ -8,10 +8,9 @@ import { router } from '../route';
 import { Entity } from './entity';
 import { Folder, root } from './folder';
 import { BrowserOptions, BrowserOperateHistory, Tag, BrowserType, EntityOptions } from './interface';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { DEFAULT_SERVER_PORT, formatExtensionArguments } from '@ocs-desktop/common/web';
 import { RawAutomationScript } from '../components/automation-scripts';
-import { child_process } from '../utils/node';
 import { ensureEnvironmentReady } from '../utils/env-bootstrap';
 import { checkLaunchCapacity, warnLaunchBlocked } from '../utils/launch-check';
 
@@ -111,7 +110,7 @@ export class Browser extends Entity implements BrowserOptions {
 			return;
 		}
 		// 复用主进程 getExtensionPaths，确保与正常启动一致的过滤逻辑（仅含 manifest.json 的目录）
-		const extensionPaths: string[] = await remote.methods.call('getExtensionPaths', store.paths.extensionsFolder);
+		const extensionPaths: string[] = await bridge.methods.getExtensionPaths(store.paths.extensionsFolder);
 		// 起始页：启用自定义导航页时直接以导航页 URL 启动，否则为空白页。
 		const startPage =
 			store.render.setting.browser.bookmarkPage.enable !== false
@@ -119,17 +118,16 @@ export class Browser extends Entity implements BrowserOptions {
 						this.uid
 				  )}`
 				: 'about:blank';
-		const cmd = ` "${store.render.setting.launchOptions.executablePath}" ${[
+		// 参数数组形式（spawn）：无需 shell 引号转义，规避路径含空格的截断与注入问题
+		const args = [
 			'--window-position=0,0',
 			'--no-first-run',
 			'--no-default-browser-check',
-			`--user-data-dir="${this.cachePath}"`
-		]
-			// shell 字符串拼接：路径含空格（如「OCS 网课助手」目录）时必须加引号防参数截断
-			.concat(formatExtensionArguments(extensionPaths, { shellQuote: true }))
-			.join(' ')} "${startPage}"`;
-		console.log(cmd);
-		child_process.exec(cmd);
+			`--user-data-dir=${this.cachePath}`,
+			...formatExtensionArguments(extensionPaths),
+			startPage
+		];
+		await bridge.methods.launchBrowserDetached(store.render.setting.launchOptions.executablePath, args);
 	}
 
 	/** 重启浏览器 */
@@ -189,7 +187,7 @@ export class Browser extends Entity implements BrowserOptions {
 		const parent = Folder.from(this.parent);
 		Reflect.deleteProperty(parent?.children || {}, this.uid);
 
-		const exists = await remote.fs.call('existsSync', this.cachePath);
+		const exists = await bridge.fs.existsSync(this.cachePath);
 		if (exists) {
 			// 删除本地缓存。Chrome 子进程（crashpad/GPU/utility）退出明显滞后于主进程，
 			// 目录句柄可能数秒后才释放——渐进退避重试（累计最长约 7s），
@@ -198,7 +196,7 @@ export class Browser extends Entity implements BrowserOptions {
 			for (const wait of [1000, 2000, 3000]) {
 				if (wait) await sleep(wait);
 				try {
-					await remote.fs.call('rmSync', this.cachePath, { recursive: true, force: true });
+					await bridge.fs.rmSync(this.cachePath, { recursive: true, force: true });
 					lastErr = undefined;
 					break;
 				} catch (e) {
@@ -222,7 +220,7 @@ export class Browser extends Entity implements BrowserOptions {
 
 	async cleanCache() {
 		try {
-			await remote.fs.call('rmSync', this.cachePath, { recursive: true, force: true });
+			await bridge.fs.rmSync(this.cachePath, { recursive: true, force: true });
 		} catch (err) {
 			console.log(err);
 		}

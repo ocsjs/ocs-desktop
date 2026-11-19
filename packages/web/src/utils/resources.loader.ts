@@ -1,5 +1,5 @@
 import { store } from '../store';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { ResourceFile, ResourceLoaderOptions } from '@ocs-desktop/common/web';
 
 export interface LocalResourceFile {
@@ -14,20 +14,29 @@ export interface LocalResourceFile {
  *
  */
 export class ResourceLoader {
-	resourceRootPath: string;
+	private options: ResourceLoaderOptions;
 	constructor(options: ResourceLoaderOptions) {
-		this.resourceRootPath = options.resourceRootPath;
+		this.options = options;
+	}
+
+	/**
+	 * 延迟求值：实例可能在 store 异步初始化完成前创建（模块级实例，
+	 * 静态 import 链先于 initStore 求值），路径必须在每次使用时读取。
+	 * 构造方应传入带 getter 的 options（如 `{ get resourceRootPath() { return store.paths?.downloadFolder } }`）。
+	 */
+	get resourceRootPath(): string {
+		return this.options.resourceRootPath;
 	}
 
 	/** 返回本地绝对路径 */
 	async getPath(group_name: string, file: ResourceFile) {
-		return await remote.path.call('join', this.resourceRootPath, group_name, file.id);
+		return await bridge.path.join(this.resourceRootPath, group_name, file.id);
 	}
 
 	/** 判断是否存在 */
 	async isExists(group_name: string, file: ResourceFile) {
 		const path = await this.getPath(group_name, file);
-		return await remote.fs.call('existsSync', path);
+		return await bridge.fs.existsSync(path);
 	}
 
 	/** 是否为压缩包文件 */
@@ -37,30 +46,28 @@ export class ResourceLoader {
 
 	/** 获取解压缩后的文件路径 */
 	async getUnzippedPath(group_name: string, file: ResourceFile) {
-		return await remote.path.call('join', this.resourceRootPath, group_name, file.id);
+		return await bridge.path.join(this.resourceRootPath, group_name, file.id);
 	}
 
 	/** 判断压缩包是否存在 */
 	async isZipFileExists(group_name: string, file: ResourceFile) {
 		if (this.isZipFile(file)) {
 			const path = await this.getUnzippedPath(group_name, file);
-			return await remote.fs.call('existsSync', path);
+			return await bridge.fs.existsSync(path);
 		}
 		return false;
 	}
 
 	/** 下载资源 */
 	async download(group_name: string, file: ResourceFile) {
-		const downloadPath = await remote.path.call(
-			'join',
-			this.resourceRootPath,
+		const downloadPath = await bridge.path.join(this.resourceRootPath,
 			group_name,
 			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);
 
 		// 不预删已存在的文件：统一下载器会依据旁车元数据（url+size+etag）自动断点续传，
 		// 资源内容变化时元数据校验失败会自动全量重下
-		const platform = await remote.methods.call('getPlatform');
+		const platform = await bridge.methods.getPlatform();
 		let url: string | undefined;
 		if (platform === 'win32' || !file.platforms) {
 			// win32 使用默认包；无 platforms 声明的为平台无关资源
@@ -74,30 +81,28 @@ export class ResourceLoader {
 			}
 		}
 		// 下载
-		await remote.methods.call('download', 'download-file-' + file.id, url, downloadPath);
+		await bridge.methods.download('download-file-' + file.id, url, downloadPath);
 		return downloadPath;
 	}
 
 	/** 解压资源 */
 	async unzip(group_name: string, file: ResourceFile) {
-		const targetPath = await remote.path.call(
-			'join',
-			this.resourceRootPath,
+		const targetPath = await bridge.path.join(this.resourceRootPath,
 			group_name,
 			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);
 
-		const to = await remote.path.call('join', this.resourceRootPath, group_name, file.id);
+		const to = await bridge.path.join(this.resourceRootPath, group_name, file.id);
 		// 判断文件夹是否存在，如果存在则删除
-		if (await remote.fs.call('existsSync', to)) {
-			await remote.fs.call('rmSync', to, {
+		if (await bridge.fs.existsSync(to)) {
+			await bridge.fs.rmSync(to, {
 				recursive: true
 			});
 		}
-		await remote.methods.call('unzip', targetPath, to);
+		await bridge.methods.unzip(targetPath, to);
 		// 删除压缩包与断点续传旁车元数据
-		await remote.fs.call('unlinkSync', targetPath);
-		await remote.fs.call('rmSync', targetPath + '.ocsdl.json', { force: true });
+		await bridge.fs.unlinkSync(targetPath);
+		await bridge.fs.rmSync(targetPath + '.ocsdl.json', { force: true });
 		return to;
 	}
 
@@ -106,16 +111,16 @@ export class ResourceLoader {
 		if (this.isZipFile(file)) {
 			const path = await this.getUnzippedPath(group_name, file);
 			// 删除文件夹所有文件
-			await remote.fs.call('rmSync', path, {
+			await bridge.fs.rmSync(path, {
 				recursive: true
 			});
 			// 清理可能残留的压缩包与断点续传旁车元数据（下载中断场景）
-			const zipPath = await remote.path.call('join', this.resourceRootPath, group_name, file.id + '.zip');
-			await remote.fs.call('rmSync', zipPath, { force: true });
-			await remote.fs.call('rmSync', zipPath + '.ocsdl.json', { force: true });
+			const zipPath = await bridge.path.join(this.resourceRootPath, group_name, file.id + '.zip');
+			await bridge.fs.rmSync(zipPath, { force: true });
+			await bridge.fs.rmSync(zipPath + '.ocsdl.json', { force: true });
 		} else {
 			const path = await this.getPath(group_name, file);
-			await remote.fs.call('unlinkSync', path);
+			await bridge.fs.unlinkSync(path);
 		}
 	}
 
@@ -125,18 +130,18 @@ export class ResourceLoader {
 	async list() {
 		const files: LocalResourceFile[] = [];
 		// @ts-ignore
-		const groupnames: string[] = await remote.fs.call('readdirSync', this.resourceRootPath);
+		const groupnames: string[] = await bridge.fs.readdirSync(this.resourceRootPath);
 		// TODO 检测是否是文件夹，如果不是则忽略
 		for (const groupname of groupnames.filter((g) => g !== '.DS_Store')) {
-			const folder = await remote.path.call('join', this.resourceRootPath, groupname);
-			if (await remote.fs.call('existsSync', folder)) {
-				const isDirectory = await remote.methods.callSync('isDirectory', folder);
+			const folder = await bridge.path.join(this.resourceRootPath, groupname);
+			if (await bridge.fs.existsSync(folder)) {
+				const isDirectory = await await bridge.methods.isDirectory(folder);
 				if (!isDirectory) continue;
 				try {
 					// @ts-ignore
-					const filenames: string[] = await remote.fs.call('readdirSync', folder);
+					const filenames: string[] = await bridge.fs.readdirSync(folder);
 					for (const filename of filenames) {
-						const path = await remote.path.call('join', folder, filename);
+						const path = await bridge.path.join(folder, filename);
 						files.push({ groupname, filename, path });
 					}
 				} catch (e) {
@@ -150,6 +155,9 @@ export class ResourceLoader {
 
 /** 资源加载器 */
 export const resourceLoader = new ResourceLoader({
-	// 这里要加可选链，在浏览器环境中初始化时 store.paths 为 undefined
-	resourceRootPath: store.paths?.downloadFolder
+	// getter 延迟求值：store 异步初始化（initStore）完成后才能拿到真实 paths，
+	// 直接取值会在模块加载时固化为 undefined（store 空壳）
+	get resourceRootPath() {
+		return store.paths?.downloadFolder;
+	}
 });

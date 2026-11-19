@@ -1,6 +1,6 @@
 import { Message } from '@arco-design/web-vue';
 import { notify } from './notify';
-import { remote } from './remote';
+import { bridge } from './bridge';
 import { ResourceFile } from '@ocs-desktop/common/web';
 
 type Extension = ResourceFile & {
@@ -32,7 +32,7 @@ export async function installExtensions(
 		duration: 0
 	});
 
-	const filepath: string = await remote.methods.call('installBundledExtension', extension.id);
+	const filepath: string = await bridge.methods.installBundledExtension(extension.id);
 
 	notify('拓展安装', `${extension.name} 安装完成！`, 'download-file-' + extension.name, {
 		type: 'success',

@@ -93,7 +93,7 @@ import {
 	WatchStopHandle,
 	onDeactivated
 } from 'vue';
-import { remote } from '../utils/remote';
+import { bridge } from '../utils/bridge';
 import { store as Store } from '../store/index';
 import { t } from '../utils/langs';
 import { themeState } from '../utils';
@@ -303,7 +303,7 @@ function mountShadowWrapper() {
  */
 async function executeScript(code: string, name: string) {
 	await Promise.race([
-		remote.webContents.call('executeJavaScript', code),
+		bridge.webContents.executeJavaScript(code),
 		new Promise((resolve, reject) => setTimeout(() => reject(new Error(`${name} 执行超时（15s）`)), 15 * 1000))
 	]);
 }
@@ -356,14 +356,14 @@ async function loadOCS() {
 		if (globalThis.OCS === undefined) {
 			// 加载 OCS（开发者设置中可自定义脚本地址，留空用默认线上地址）
 			console.log('[OCSConfigs] 加载 OCS 脚本...');
-			const code = await remote.methods.call('get', Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
+			const code = await bridge.methods.get(Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
 			await executeScript(code, 'OCS 脚本');
 		}
 
 		if (state.css === '') {
 			// 加载样式
 			console.log('[OCSConfigs] 加载样式...');
-			state.css = await remote.methods.call('get', OCS_SCRIPT_RESOURCES.style);
+			state.css = await bridge.methods.get(OCS_SCRIPT_RESOURCES.style);
 		}
 
 		// @ts-ignore
