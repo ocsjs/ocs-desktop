@@ -11,13 +11,13 @@ export function getMetaUrl(codeUrl: string): string {
 	// 移除 ?version=xxx 查询参数，meta 只关心最新版本
 	const url = new URL(codeUrl);
 	url.searchParams.delete('version');
-	// 替换 .user.js 为 .meta.js
-	const href = url.toString();
-	if (href.endsWith('.user.js')) {
-		return href.replace(/\.user\.js$/, '.meta.js');
+	// 替换 .user.js 为 .meta.js（按 pathname 判定：携带其他查询参数时完整 href 不以 .user.js 结尾）
+	if (url.pathname.endsWith('.user.js')) {
+		url.pathname = url.pathname.replace(/\.user\.js$/, '.meta.js');
+		return url.toString();
 	}
 	// URL 不以 .user.js 结尾，可能不支持 meta.js 约定
-	return href;
+	return url.toString();
 }
 
 /**
