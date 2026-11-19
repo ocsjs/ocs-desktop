@@ -88,7 +88,9 @@ export function moveWindowToTop() {
 }
 
 export function getCurrentWebContents() {
-	return BrowserWindow.getAllWindows()[0].webContents;
+	// 窗口全灭（如退出流程中 worker exit 晚于窗口销毁）时 [0] 为 undefined，
+	// 直接访问 .webContents 会抛 TypeError；sendToRenderer 容忍 undefined
+	return BrowserWindow.getAllWindows()[0]?.webContents;
 }
 
 export function sleep(ms: number) {
