@@ -11,6 +11,7 @@ import { StoreData } from './src/store';
 import { globalListenerRegister } from './src/tasks/global.listener';
 import { isLinuxSandboxUnavailable, task } from './src/utils';
 import { handleError } from './src/tasks/error.handler';
+import { startCloseWatchdog } from './src/close.watchdog';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
@@ -123,13 +124,14 @@ function bootstrap() {
 						sendToRenderer(window.webContents, quitting ? 'quit' : 'close');
 						if (!quitting) {
 							// 渲染层无响应兜底（白屏/主线程阻塞导致 close 消息无人处理）：
-							// 3s 后窗口仍可见说明渲染层未能接管（既未隐藏托盘也未退出），强制销毁防僵尸窗口
-							setTimeout(() => {
+							// 3s 后窗口仍可见说明渲染层未能接管（既未隐藏托盘也未退出），强制销毁防僵尸窗口；
+							// 渲染层接管时经 methods.cancelCloseWatchdog 取消看门狗（见 close.watchdog.ts）
+							startCloseWatchdog(() => {
 								if (!window.isDestroyed() && window.isVisible()) {
 									console.warn('[window] 渲染层未响应关闭请求，强制销毁窗口');
 									window.destroy();
 								}
-							}, 3000);
+							});
 						}
 					}
 				});

@@ -42,6 +42,7 @@ import { iconCacheStats, clearIconCache } from '../tasks/startup.server';
 import { canOCR } from '../utils/ocr';
 import { sendToRenderer } from './events';
 import { scriptWorkerLaunch, scriptWorkerSend, scriptWorkerKill } from './worker.host';
+import { cancelCloseWatchdog } from '../close.watchdog';
 
 /**
  * 主进程 methods 远程调用实现（RemoteMethods 契约的唯一真相源）。
@@ -135,6 +136,8 @@ export const methods = {
 	quitApp: (code?: number) => quitApp(code),
 	/** 取消程序化退出，复位 isQuitting */
 	cancelQuit: () => cancelQuit(),
+	/** 渲染层开始处理 'close' 事件时调用，取消主进程无响应看门狗（3s 强制销毁窗口） */
+	cancelCloseWatchdog: () => cancelCloseWatchdog(),
 	/** 销毁托盘图标 */
 	destroyTray: () => destroyTray(),
 	/** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */

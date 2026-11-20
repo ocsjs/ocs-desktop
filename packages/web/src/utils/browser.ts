@@ -1,4 +1,4 @@
-import { h } from 'vue';
+import { h, ref } from 'vue';
 import { Button, Message, Modal, Space } from '@arco-design/web-vue';
 import { size, sleep } from '.';
 import { bridge } from './bridge';
@@ -252,7 +252,7 @@ export async function forceClearBrowserCache(title: string, userDataDirsFolder: 
 /**
  * 强制关闭所有正在运行的浏览器（不弹确认框，仅显示「关闭中」提示）。
  *
- * 最久 5 秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗。
+ * 最久 10 秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗。
  */
 export async function forceCloseAllBrowsers() {
 	if (!processes.length) return;
@@ -263,8 +263,8 @@ export async function forceCloseAllBrowsers() {
 		footer: false
 	});
 
-	// 最久5秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗
-	const timeout = setTimeout(() => bridge.methods.quitApp(0), 5000);
+	// 最久10秒后强制退出软件，避免浏览器无法关闭时卡住或重复弹窗
+	const timeout = setTimeout(() => bridge.methods.quitApp(0), 10000);
 	try {
 		for (const process of processes) {
 			await process.close();
@@ -308,8 +308,14 @@ export async function closeAllBrowser(skipConfirm = false) {
 	});
 }
 
+/** 关闭确认弹窗中「关闭并退出」按钮的倒计时秒数，归零后自动强制退出 */
+const FORCE_CLOSE_COUNTDOWN_SECONDS = 10;
+
 /**
  * 当「后台运行」未开启且仍有浏览器正在运行时，询问用户如何处理关闭操作。
+ *
+ * 「关闭并退出」按钮显示倒计时，倒计时归零后自动执行关闭并退出（强制关闭所有浏览器），
+ * 让用户明确知晓自动退出时间，避免弹窗长时间悬挂。
  *
  * @returns 'exit' 关闭并退出 | 'tray' 后台运行 | 'cancel' 取消
  */
@@ -317,9 +323,20 @@ export function askCloseOrTray() {
 	return new Promise<'exit' | 'tray' | 'cancel'>((resolve) => {
 		let settled = false;
 		let modal: { close: () => void } | null = null;
+
+		/** 「关闭并退出」按钮倒计时（秒），归零自动强制退出 */
+		const countdown = ref(FORCE_CLOSE_COUNTDOWN_SECONDS);
+		const countdownTimer = setInterval(() => {
+			countdown.value--;
+			if (countdown.value <= 0) {
+				done('exit');
+			}
+		}, 1000);
+
 		const done = (result: 'exit' | 'tray' | 'cancel') => {
 			if (settled) return;
 			settled = true;
+			clearInterval(countdownTimer);
 			modal?.close();
 			resolve(result);
 		};
@@ -335,7 +352,11 @@ export function askCloseOrTray() {
 				h(Space, null, [
 					h(Button, { onClick: () => done('cancel') }, '取消'),
 					h(Button, { type: 'primary', onClick: () => done('tray') }, '后台运行'),
-					h(Button, { type: 'primary', status: 'danger', onClick: () => done('exit') }, '关闭并退出')
+					h(
+						Button,
+						{ type: 'primary', status: 'danger', onClick: () => done('exit') },
+						`关闭并退出 (${countdown.value}s)`
+					)
 				])
 		});
 	});

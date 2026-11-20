@@ -69,6 +69,8 @@ export declare const methods: {
     quitApp: (code?: number) => void;
     /** 取消程序化退出，复位 isQuitting */
     cancelQuit: () => void;
+    /** 渲染层开始处理 'close' 事件时调用，取消主进程无响应看门狗（3s 强制销毁窗口） */
+    cancelCloseWatchdog: () => void;
     /** 销毁托盘图标 */
     destroyTray: () => void;
     /** 本地 OCR 识别模块是否可用（启动前环境检测：needOCR 的自动化程序依赖） */

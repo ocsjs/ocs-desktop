@@ -307,6 +307,9 @@ onMounted(async () => {
 	}
 
 	onRendererEvent('close', async () => {
+		// 取消主进程无响应看门狗（3s 强制销毁窗口）：渲染层已接管关闭流程，
+		// 保证 askCloseOrTray 倒计时与后续关浏览器/存数据流程有充足时间
+		bridge.methods.cancelCloseWatchdog();
 		// 防重入：避免重复点击关闭按钮或 window.close 循环导致并发触发关闭流程、重复弹窗
 		if (isExiting) return;
 		// 后台运行：关闭窗口时仅隐藏到系统托盘，浏览器与自动化任务保持运行，不退出应用
