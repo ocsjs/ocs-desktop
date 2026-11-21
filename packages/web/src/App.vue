@@ -161,7 +161,7 @@ async function saveStoreToLocal(_store: typeof store) {
 function saveStoreToLocalSync(_store: typeof store) {
 	try {
 		const shouldEncrypt = isEncryptionEnabled();
-		void bridge.methods.saveStore(JSON.stringify(_store), shouldEncrypt);
+		bridge.methods.saveStore(JSON.stringify(_store), shouldEncrypt);
 	} catch (e) {
 		console.error(e);
 	}

@@ -52,8 +52,13 @@ export type OcsBridge = {
 		error(...msg: any[]): void;
 	};
 	// 既有窄接口（preload 现有实现，非生成器产物）
-	shell: { openPath(p: string): Promise<string>; showItemInFolder(p: string): void; openExternal(url: string): Promise<void> };
+	shell: {
+		openPath(p: string): Promise<string>;
+		showItemInFolder(p: string): void;
+		openExternal(url: string): Promise<void>;
+	};
 	clipboard: { writeText(text: string): void };
+	// eslint-disable-next-line no-undef
 	platform: NodeJS.Platform;
 	quitApp(): void;
 	on(channel: string, cb: (...args: any[]) => void): () => void;

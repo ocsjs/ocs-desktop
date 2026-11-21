@@ -6,7 +6,8 @@ import { store, StoreUserScript } from '../store';
  * 添加并且解析本地脚本
  */
 export function addScriptFromFile() {
-	bridge.dialog.showOpenDialog({
+	bridge.dialog
+		.showOpenDialog({
 			title: '选择脚本文件，后缀必须为 (.user.js)',
 			buttonLabel: '添加脚本',
 			filters: [{ extensions: ['user.js'], name: '用户脚本' }]

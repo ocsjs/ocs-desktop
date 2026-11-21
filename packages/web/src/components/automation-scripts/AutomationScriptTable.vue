@@ -336,7 +336,8 @@ function exportTemplateExcel() {
 		template[config.label] = '';
 	}
 
-	bridge.methods.exportExcel([
+	bridge.methods.exportExcel(
+		[
 			{
 				sheetName: 'Sheet1',
 				list: [template]
@@ -364,7 +365,8 @@ function importTemplateExcelConfirm() {
 defineExpose({ state, arrayLikeConfigs, exportTemplateExcel, importTemplateExcelConfirm, onConfirm });
 
 function importTemplateExcel() {
-	bridge.dialog.showOpenDialog({
+	bridge.dialog
+		.showOpenDialog({
 			title: '选择表格进行导入',
 			buttonLabel: '导入',
 			filters: [{ extensions: ['xlsx', 'csv', 'xls'], name: 'excel表格' }]

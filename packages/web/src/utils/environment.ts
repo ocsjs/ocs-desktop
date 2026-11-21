@@ -99,12 +99,13 @@ export const Environment = {
 		for (const installed_extension of extensions.filter((e) => e.installed)) {
 			let manifest: any;
 			try {
-				const manifestPath = await bridge.path.join(await resourceLoader.getUnzippedPath('extensions', installed_extension),
+				const manifestPath = await bridge.path.join(
+					await resourceLoader.getUnzippedPath('extensions', installed_extension),
 					'manifest.json'
 				);
 				// 先用 existsSync 探测：zip 已下载但未解压（或解压不完整）时 manifest.json 不存在，
 				// 直接 readFileSync 会经 remote 层弹出「remote 模块错误」通知，属于误报
-				if (!await bridge.fs.existsSync(manifestPath)) {
+				if (!(await bridge.fs.existsSync(manifestPath))) {
 					continue;
 				}
 				// manifest.json 可能是目录（残留污染/异常压缩包产生），readFileSync 目录会抛 EISDIR 弹错

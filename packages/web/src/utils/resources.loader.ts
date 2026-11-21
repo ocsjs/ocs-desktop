@@ -60,7 +60,8 @@ export class ResourceLoader {
 
 	/** 下载资源 */
 	async download(group_name: string, file: ResourceFile) {
-		const downloadPath = await bridge.path.join(this.resourceRootPath,
+		const downloadPath = await bridge.path.join(
+			this.resourceRootPath,
 			group_name,
 			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);
@@ -87,7 +88,8 @@ export class ResourceLoader {
 
 	/** 解压资源 */
 	async unzip(group_name: string, file: ResourceFile) {
-		const targetPath = await bridge.path.join(this.resourceRootPath,
+		const targetPath = await bridge.path.join(
+			this.resourceRootPath,
 			group_name,
 			this.isZipFile(file) ? file.id + '.zip' : file.id
 		);

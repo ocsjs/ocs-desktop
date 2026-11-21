@@ -10,6 +10,7 @@ import { inBrowser } from './node';
  */
 
 /** 纯浏览器宿主下的平台推断（导航页 UI 适配用，精度要求低） */
+// eslint-disable-next-line no-undef
 function detectBrowserPlatform(): NodeJS.Platform {
 	const p = (typeof navigator !== 'undefined' && navigator.platform) || '';
 	if (/mac/i.test(p)) return 'darwin';

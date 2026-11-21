@@ -210,7 +210,8 @@ function promptPassword(options: { title: string; notice: string; placeholder: s
 }
 
 function importData() {
-	bridge.dialog.showOpenDialog({
+	bridge.dialog
+		.showOpenDialog({
 			title: '选择导入的数据文件',
 			buttonLabel: '导入',
 			filters: [{ extensions: ['ocsdata'], name: 'ocsdata' }]
@@ -234,14 +235,14 @@ function importData() {
 							});
 							if (password === null) return;
 							try {
-								decrypted = await bridge.methods.decryptExportString(renderStr, password) as string;
+								decrypted = (await bridge.methods.decryptExportString(renderStr, password)) as string;
 							} catch {
 								Message.error('密码错误或文件已损坏，导入失败。');
 								return;
 							}
 						} else {
 							// 本机加密格式：仅限在导出它的那台电脑上导入
-							decrypted = await bridge.methods.decryptRenderString(renderStr) as string;
+							decrypted = (await bridge.methods.decryptRenderString(renderStr)) as string;
 							const probe = JSON.parse(decrypted);
 							if (typeof probe !== 'object' || probe === null || Object.keys(probe).length === 0) {
 								Message.error('该文件由其他电脑加密导出，无法在本机解密。请在原电脑上导出时设置导出密码后重新导出。');
@@ -265,9 +266,7 @@ function importData() {
 									if (entity.type === 'folder') {
 										folders.push(entity as any);
 									} else if (entity.type === 'browser' && (entity as any).cachePath === '$CACHE_PATH') {
-										(entity as any).cachePath = await bridge.path.join(store.paths.userDataDirsFolder,
-											entity.uid
-										);
+										(entity as any).cachePath = await bridge.path.join(store.paths.userDataDirsFolder, entity.uid);
 									}
 								}
 							}
@@ -319,7 +318,8 @@ async function exportData() {
 		if (!confirmed) return;
 	}
 
-	bridge.dialog.showSaveDialog({
+	bridge.dialog
+		.showSaveDialog({
 			title: '选择导出位置',
 			buttonLabel: '导出',
 			defaultPath: `OCS软件数据导出_-${date(Date.now())}`
@@ -351,9 +351,10 @@ async function exportData() {
 
 				// 导出前加密 render 数据：设置导出密码时用密码加密（跨电脑可导入），留空则明文导出
 				if (password && typeof _store.render !== 'string') {
-					(_store as any).render = await bridge.methods.encryptExportString(JSON.stringify(_store.render),
+					(_store as any).render = (await bridge.methods.encryptExportString(
+						JSON.stringify(_store.render),
 						password
-					) as string;
+					)) as string;
 				}
 
 				// 删除多余数据

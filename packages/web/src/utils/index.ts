@@ -190,7 +190,8 @@ export function detectWeakNetwork(): Promise<boolean> {
 	if (_weakNetInflight) {
 		return _weakNetInflight;
 	}
-	_weakNetInflight = bridge.methods.getWithStatus(OCS_API.infos, { timeout: 3000 })
+	_weakNetInflight = bridge.methods
+		.getWithStatus(OCS_API.infos, { timeout: 3000 })
 		.then((res) => !((res?.status ?? 0) > 0))
 		.catch(() => true)
 		.then((weak) => {
@@ -326,7 +327,7 @@ export const themeState = reactive({ dark: false, systemDark: false });
 
 // 初始化系统深浅色：用主进程 nativeTheme.shouldUseDarkColors（比渲染层 matchMedia 更可靠）
 try {
-	themeState.systemDark = await bridge.methods.getSystemDark() as boolean;
+	themeState.systemDark = (await bridge.methods.getSystemDark()) as boolean;
 } catch (e) {
 	console.error('读取系统主题失败：' + e);
 }
@@ -361,7 +362,8 @@ export async function changeTheme() {
 	if (platform !== 'darwin') {
 		// height 与窗口创建时的 titleBarOverlay.height 保持一致（32 = --title-height），
 		// 否则主题切换后覆盖层高度被重置，Linux 下控制按钮渲染位置会太靠上
-		bridge.win.setTitleBarOverlay(themeState.dark
+		bridge.win.setTitleBarOverlay(
+			themeState.dark
 				? { color: '#2C2C2C', symbolColor: 'white', height: 32 }
 				: { color: '#fff', symbolColor: 'black', height: 32 }
 		);

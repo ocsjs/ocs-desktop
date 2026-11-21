@@ -320,7 +320,7 @@ export class Process extends EventEmitter {
 				if (this.status === 'launching') {
 					this.status = 'closed';
 					// 启动失败复检：内置浏览器文件被杀毒软件破坏时引导修复，成功后自动重新启动
-					void handleBuiltinChromeLaunchFailure(this.browser);
+					handleBuiltinChromeLaunchFailure(this.browser);
 				}
 				// 开启预览图显示时，保留最后一帧作为"浏览器关闭后的预览图"，由界面层展示/关闭
 				if (store.render.setting.browser.screenshotPreview && this.frameUrl) {
@@ -500,8 +500,7 @@ export class Process extends EventEmitter {
 			// 远程脚本：一次性批量预下载（主进程内部并行），避免逐个串行等待（最坏 N×60s → 60s 封顶）
 			if (remoteItems.length > 0) {
 				Status.loading(`正在并行下载 ${remoteItems.length} 个脚本...`);
-				const results = await bridge.methods.downloadUserscripts(remoteItems.map((r) => r.remoteUrl)
-				);
+				const results = await bridge.methods.downloadUserscripts(remoteItems.map((r) => r.remoteUrl));
 				for (let i = 0; i < remoteItems.length; i++) {
 					const { item, remoteUrl } = remoteItems[i];
 					const r = results?.[i];
@@ -553,7 +552,8 @@ export class Process extends EventEmitter {
 							const data = JSON.parse(String(await bridge.fs.readFileSync(managedPath, 'utf-8')));
 							existing = Array.isArray(data.names) ? data.names : [];
 						}
-						await bridge.fs.writeFileSync(managedPath,
+						await bridge.fs.writeFileSync(
+							managedPath,
 							JSON.stringify({ names: [...new Set([...existing, ...succeededNames])] })
 						);
 					} catch (e) {
@@ -563,7 +563,8 @@ export class Process extends EventEmitter {
 				// 本次请求的脚本全部安装成功 → 写入 profile 安装标记；
 				// 有失败则不写标记，下次启动该 profile 按全新处理重试全部
 				if (allSucceeded) {
-					bridge.fs.writeFileSync(scriptMarkerPath, JSON.stringify({ time: Date.now(), count: results.length }))
+					bridge.fs
+						.writeFileSync(scriptMarkerPath, JSON.stringify({ time: Date.now(), count: results.length }))
 						.catch(() => {});
 				}
 				Status.clear();

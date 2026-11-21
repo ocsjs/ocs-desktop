@@ -364,7 +364,7 @@ async function reset() {
 	// 同步保存，确保重置落盘后再重启（不依赖关闭流程的保存时序，避免强制退出时丢失）
 	// 加密受开发者设置「数据加密」开关控制（重置会恢复默认开启）
 	const shouldEncrypt =
-		store.render.setting.dev?.dataEncryption !== false && await bridge.methods.isEncryptionAvailable();
+		store.render.setting.dev?.dataEncryption !== false && (await bridge.methods.isEncryptionAvailable());
 	await bridge.methods.saveStore(JSON.stringify(store), shouldEncrypt);
 	// dev 感知重启：pnpm dev 下提示手动重跑终端（见 utils/restart.ts）
 	restartAppGuarded('设置已重置，需重启软件后生效。');

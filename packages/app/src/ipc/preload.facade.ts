@@ -41,7 +41,10 @@ function unwrapInvoke(payload: any): any {
 /** 按命名空间生成 facade（自省清单驱动，统一 -call 异步通道） */
 function makeNamespace(ns: string, names: string[]) {
 	return Object.fromEntries(
-		names.map((name) => [name, async (...args: any[]) => unwrapInvoke(await ipcRenderer.invoke(`${ns}-call`, [name, ...args]))])
+		names.map((name) => [
+			name,
+			async (...args: any[]) => unwrapInvoke(await ipcRenderer.invoke(`${ns}-call`, [name, ...args]))
+		])
 	);
 }
 
@@ -61,7 +64,12 @@ export function createBridge() {
 		}
 		if (ns === 'logger') {
 			bridge.logger = Object.fromEntries(
-				names.map((level) => [level, (...msg: any[]) => void ipcRenderer.invoke('logger-call', [level, ...msg]).catch(() => {})])
+				names.map((level) => [
+					level,
+					(...msg: any[]) => {
+						ipcRenderer.invoke('logger-call', [level, ...msg]).catch(() => {});
+					}
+				])
 			);
 			continue;
 		}

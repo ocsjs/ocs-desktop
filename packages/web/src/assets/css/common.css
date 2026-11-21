@@ -11,7 +11,6 @@ html,
 	min-height: 300px;
 	--title-height: 32px;
 }
-
 /* 仅桌面端禁止 body 滚动：布局为 100vh + 内部滚动容器，
    防止右键菜单等挂载在 body 下的绝对定位弹层撑高文档，产生外层滚动条并挤压整个渲染区域。
    浏览器环境（html.in-browser，如快捷导航页）依赖文档流滚动，必须排除 */
@@ -154,7 +153,116 @@ body .arco-tree-iconEle.arco-tree-icon__customize {
 body .arco-tree li span.arco-tree-switcher {
 	width: 18px;
 }
-/* 暗色模式全局覆盖（滚动条、a-alert、entity、sider 等）已迁移至 assets/less/theme.less 集中管理 */
+body[arco-theme='dark'] {
+	color: #cccccc;
+	background-color: #2c2c2c;
+	/* 暗色模式滚动槽 */
+	/* 暗色模式滚动条滑块 */
+	/* 暗色模式滚动条箭头按钮 - 通过 filter 反色适配暗色 */
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-track {
+	background: rgba(255, 255, 255, 0.288);
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.589);
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.87);
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment {
+	background: rgba(255, 255, 255, 0.671) no-repeat center center;
+	background-size: 14px;
+	filter: invert(1);
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement:hover,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment:hover,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement:hover,
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment:hover {
+	background-color: rgba(255, 255, 255, 0.342);
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:start:decrement {
+	background-image: url('../img/scrollbar/up.svg');
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:vertical:end:increment {
+	background-image: url('../img/scrollbar/down.svg');
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:start:decrement {
+	background-image: url('../img/scrollbar/left.svg');
+}
+body[arco-theme='dark'] ::-webkit-scrollbar-button:horizontal:end:increment {
+	background-image: url('../img/scrollbar/right.svg');
+}
+body[arco-theme='dark'] .text-secondary {
+	color: #aaaaaa !important;
+}
+body[arco-theme='dark'] .title {
+	color: #cccccc;
+	background-color: #2c2c2c;
+	border-bottom: 1px solid #4b4848;
+}
+body[arco-theme='dark'] #title ul li {
+	color: #cccccc;
+}
+body[arco-theme='dark'] a,
+body[arco-theme='dark'] a.link {
+	color: #61a5e4 !important;
+}
+body[arco-theme='dark'] .border-end,
+body[arco-theme='dark'] .border-start,
+body[arco-theme='dark'] .border-bottom,
+body[arco-theme='dark'] .border-top {
+	border-color: #4b4848 !important;
+}
+body[arco-theme='dark'] * {
+	box-shadow: none !important;
+}
+body[arco-theme='dark'] .entity:hover {
+	background: #3b3b3b !important;
+}
+body[arco-theme='dark'] .screenshot-item {
+	border: 1px solid;
+	border-color: #4b4848 !important;
+}
+body[arco-theme='dark'] .breadcrumb {
+	background-color: #2c2c2c;
+	border: 1px solid #4b4848;
+}
+body[arco-theme='dark'] .path-item {
+	color: #cccccc;
+}
+body[arco-theme='dark'] .entity {
+	border-bottom: 1px solid #4b4848;
+}
+body[arco-theme='dark'] .entity-properties {
+	background-color: #4b4b4b;
+	color: #aaaaaa;
+}
+body[arco-theme='dark'] .sider-item.active {
+	background-color: #4b4b4b;
+}
+body[arco-theme='dark'] .sider {
+	border-right: 1px solid #4b4848;
+}
+body[arco-theme='dark'] .sider .sider-item {
+	border-left: 6px solid #2c2c2c;
+}
+body[arco-theme='dark'] .sider .sider-item.active {
+	background-color: #4b4b4b;
+	border-left: 6px solid #4898e2;
+}
+body[arco-theme='dark'] .ps-table .ps-body-cell {
+	border: 1px solid #4b4848;
+}
+body[arco-theme='dark'] .ps-table .ps-body-cell .arco-input-wrapper {
+	background: #4b4b4b;
+}
+body[arco-theme='dark'] .ps-table .arco-table-tr .ps-table-index {
+	background-color: #4b4b4b;
+	color: #aaaaaa;
+}
 .arco-trigger-popup {
 	animation-duration: 0s !important;
 	animation: none !important;
@@ -185,5 +293,5 @@ body .arco-tree li span.arco-tree-switcher {
 .user-script-search-modal {
 	max-width: 1200px;
 	min-width: 600px;
-	overflow: auto;
+	margin: 12px 0px !important;
 }

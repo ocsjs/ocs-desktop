@@ -8,3 +8,5 @@ public
 stats.html
 .md
 .chrome-temp/*
+# IPC 契约生成产物（tsc 声明发射原始输出，格式化会导致 gen:contract:check 判漂移）
+packages/common/src/types/*.generated.ts

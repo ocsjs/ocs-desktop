@@ -87,7 +87,7 @@ window.addEventListener('unhandledrejection', function (e) {
 
 	// store 异步启动门：磁盘配置（含加密 render 解密）读取完成后才挂载，
 	// 避免组件在 store 响应式空壳阶段渲染出默认设置闪烁
-	void (async () => {
+	(async () => {
 		const { initStore } = await import('./store');
 		await initStore();
 		createApp(App)

@@ -1,12 +1,10 @@
-import { store, StoreUserScript } from '../store';
+import { store } from '../store';
 import { bridge } from './bridge';
 import { Environment } from './environment';
 import { installExtensions } from './extension';
 import { addScriptFromUrl } from './user-scripts';
 import { useEnvironmentDetect } from '../composables/useEnvironmentDetect';
 import { Status } from './statusBar';
-import { notify } from './notify';
-import { config } from '../config';
 import { onRendererEvent } from './ipc';
 /**
  * 环境被动检测与自动补全（启动浏览器时由 Browser.launch 调用）。
@@ -25,7 +23,6 @@ import { onRendererEvent } from './ipc';
 /** 并发启动共享的进行中 Promise */
 let inFlight: Promise<void> | null = null;
 
-
 /** 启动前确保环境就绪（浏览器二进制/脚本管理器拓展/官方用户脚本） */
 export function ensureEnvironmentReady(): Promise<void> {
 	if (!inFlight) {
@@ -40,7 +37,8 @@ async function doEnsure(): Promise<void> {
 	// 内置拓展完整性校验（asar 基准）：每次启动浏览器前对已释放拓展重算指纹，
 	// 篡改/损坏自动从 asar 重释放；失败仅告警不阻断（检测环节会兜底按需安装）
 	try {
-		const results: { id: string; status: string; error?: string }[] = await bridge.methods.ensureBuiltinExtensionsIntegrity();
+		const results: { id: string; status: string; error?: string }[] =
+			await bridge.methods.ensureBuiltinExtensionsIntegrity();
 		for (const r of results || []) {
 			if (r.status === 'repaired') console.warn(`内置拓展 ${r.id} 已被篡改/损坏，已自动修复`);
 			if (r.status === 'failed') console.error(`内置拓展 ${r.id} 完整性修复失败：${r.error}`);
@@ -57,7 +55,6 @@ async function doEnsure(): Promise<void> {
 	if (offline) {
 		console.warn('[env-bootstrap] 远程资源信息不可用（离线/弱网），降级为本地环境检测');
 	}
-
 
 	// 先静默检测，全部就绪则零打扰直接返回
 	const [browserSupported, supportedExtension, officialScript] = await Promise.all([
