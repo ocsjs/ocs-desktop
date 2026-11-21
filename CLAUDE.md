@@ -1,1 +1,1 @@
-@.claude/skills/project-context.md
+@AGENTS.md
