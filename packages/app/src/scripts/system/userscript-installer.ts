@@ -180,9 +180,24 @@ async function clickInstallButton(installPage: Page): Promise<boolean> {
 	const btn = handle.asElement();
 	if (!btn) return false;
 	// 滚动到可视区域 + 涟漪提示点击位置（visualClickElement 内置涟漪与延迟）
-	await btn.scrollIntoViewIfNeeded().catch(() => {});
-	await visualClickElement(installPage, btn);
+	try {
+		await btn.scrollIntoViewIfNeeded().catch(() => {});
+		await visualClickElement(installPage, btn);
+	} catch (e) {
+		// Tampermonkey 默认行为：点击安装后安装页立即自行关闭（即安装成功）。
+		// 点击序列（悬停/涟漪延迟/按下）中途页面被关闭时 elementHandle.click 抛
+		// Target closed——视为点击已生效而非失败，由 waitForInstallSuccess 的
+		// isClosed 分支最终判定成功，避免"装上了却报错"的误报。
+		if (isTargetClosedError(e)) return true;
+		throw e;
+	}
 	return true;
+}
+
+/** 判定 Target closed 类异常（页面/上下文/浏览器已关闭） */
+function isTargetClosedError(e: unknown): boolean {
+	const msg = e instanceof Error ? e.message : String(e);
+	return /Target (page, context or browser )?(has been )?closed/i.test(msg);
 }
 
 /**
