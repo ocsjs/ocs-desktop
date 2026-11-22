@@ -32,7 +32,7 @@ export async function installExtensions(
 		duration: 0
 	});
 
-	const filepath: string = await bridge.methods.installBundledExtension(extension.id);
+	const filepath: string = await bridge.bundledExtensions.install(extension.id);
 
 	notify('拓展安装', `${extension.name} 安装完成！`, 'download-file-' + extension.name, {
 		type: 'success',

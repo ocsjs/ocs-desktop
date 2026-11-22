@@ -37,8 +37,7 @@ async function doEnsure(): Promise<void> {
 	// 内置拓展完整性校验（asar 基准）：每次启动浏览器前对已释放拓展重算指纹，
 	// 篡改/损坏自动从 asar 重释放；失败仅告警不阻断（检测环节会兜底按需安装）
 	try {
-		const results: { id: string; status: string; error?: string }[] =
-			await bridge.methods.ensureBuiltinExtensionsIntegrity();
+		const results = await bridge.bundledExtensions.verifyIntegrity();
 		for (const r of results || []) {
 			if (r.status === 'repaired') console.warn(`内置拓展 ${r.id} 已被篡改/损坏，已自动修复`);
 			if (r.status === 'failed') console.error(`内置拓展 ${r.id} 完整性修复失败：${r.error}`);
@@ -103,11 +102,11 @@ async function doEnsure(): Promise<void> {
 		if (!supportedExtension) {
 			setProgress('正在安装脚本管理器拓展...');
 			try {
-				const bundled: { id: string }[] = await bridge.methods.getBundledExtensions();
+				const bundled = await bridge.bundledExtensions.list();
 				if (offline) {
 					// 离线：远程资源清单不可用，直接释放首个内置拓展（asar 释放为纯本地操作）
 					if (!bundled.length) throw new Error('无可用内置脚本管理器');
-					await bridge.methods.installBundledExtension(bundled[0].id);
+					await bridge.bundledExtensions.install(bundled[0].id);
 				} else {
 					const extensions = await Environment.getExtensions();
 					// 默认安装远程列表中首个有内置包的拓展（当前为 ScriptCat）
