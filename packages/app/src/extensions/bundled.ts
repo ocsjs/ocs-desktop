@@ -205,6 +205,19 @@ async function downloadBundledExtensionFallback(manifest: BundledExtensionManife
 	throw new Error(`内置拓展 ${manifest.name} 远程下载兜底失败：\n${errors.join('\n')}`);
 }
 
+/** 卸载内置拓展：删除本地释放目录（仅允许内置清单内的 id，防任意目录删除） */
+export function removeBundledExtension(id: string): void {
+	if (!listBundledExtensions().some((m) => m.id === id)) {
+		throw new Error(`「${id}」不是内置拓展，无法卸载`);
+	}
+	fs.rmSync(extensionDir(id), { recursive: true, force: true });
+}
+
+/** 内置拓展是否已安装（本地释放目录存在且含 manifest.json） */
+export function isBundledExtensionInstalled(id: string): boolean {
+	return fs.existsSync(path.join(extensionDir(id), 'manifest.json'));
+}
+
 /** 按需安装指定内置拓展（环境补全/应用中心切换脚本管理器），返回拓展目录 */
 export async function installBundledExtension(id: string): Promise<string> {
 	const manifest = listBundledExtensions().find((m) => m.id === id);

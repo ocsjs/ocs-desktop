@@ -114,6 +114,24 @@ export interface BundledExtensionInfo {
 	icon?: string;
 }
 
+/**
+ * 内置拓展命名空间 API（bridge.bundledExtensions.* 的契约）。
+ * 实现见 app src/extensions/api.ts（实现即真相源；键集由 bundledExtensionsWhitelist 收敛）。
+ * 注意：此处声明主进程实现侧的同步/异步原貌签名，渲染端经 Asyncify 统一 Promise 化。
+ */
+export interface BundledExtensionsApi {
+	/** 内置拓展清单（构建期官方源钉版，随 App 发版更新） */
+	list(): BundledExtensionInfo[];
+	/** 按需安装指定内置拓展（asar 释放 + 完整性校验），返回拓展目录 */
+	install(extensionId: string): Promise<string>;
+	/** 卸载内置拓展（删除本地释放目录，仅允许内置清单内的 id） */
+	remove(extensionId: string): void;
+	/** 是否已安装（本地释放目录存在且含 manifest.json） */
+	isInstalled(extensionId: string): boolean;
+	/** 完整性校验：快检 → 全量哈希 → 篡改自动重释放（仅处理已安装的拓展） */
+	verifyIntegrity(): Promise<ExtensionIntegrityResult[]>;
+}
+
 /** 内置拓展完整性校验单项结果 */
 export interface ExtensionIntegrityResult {
 	id: string;
