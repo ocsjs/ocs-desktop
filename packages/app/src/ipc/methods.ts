@@ -312,7 +312,7 @@ export const methods = {
 	},
 	scriptWorkerLaunch: (uid: string) => scriptWorkerLaunch(uid),
 	scriptWorkerSend: (...args: Parameters<typeof scriptWorkerSend>) => scriptWorkerSend(...args),
-	scriptWorkerKill: (uid: string) => scriptWorkerKill(uid),
+	scriptWorkerKill: (uid: string, expectedPid?: number) => scriptWorkerKill(uid, expectedPid),
 	shellOpenPath: (p: string) => shell.openPath(p),
 	shellShowItemInFolder: (p: string) => shell.showItemInFolder(p),
 	shellOpenExternal: (url: string) => shell.openExternal(url),

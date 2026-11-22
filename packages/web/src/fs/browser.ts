@@ -74,11 +74,16 @@ export class Browser extends Entity implements BrowserOptions {
 			Message.error('环境准备失败，已取消启动：' + (e?.message || String(e)));
 			return;
 		}
-		const process = new Process(this, {
-			executablePath: store.render.setting.launchOptions.executablePath,
-			headless: false
-		});
-		processes.push(process);
+		// 去重：同 uid 已存在实例则复用——每次 launch 无条件 new Process 会产生双实例残留
+		// （Process.remove 只删第一个匹配，残留实例的过期 close 兜底可误杀新 worker）
+		let process = Process.from(this.uid);
+		if (!process) {
+			process = new Process(this, {
+				executablePath: store.render.setting.launchOptions.executablePath,
+				headless: false
+			});
+			processes.push(process);
+		}
 		const reactiveProcess = Process.from(this.uid);
 		if (reactiveProcess) {
 			await reactiveProcess.init(console.log);

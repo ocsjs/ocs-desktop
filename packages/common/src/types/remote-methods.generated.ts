@@ -149,12 +149,12 @@ export declare const methods: {
         error: any;
     })[]>;
     launchBrowserDetached: (executablePath: string, args: string[]) => void;
-    scriptWorkerLaunch: (uid: string) => Promise<void>;
+    scriptWorkerLaunch: (uid: string) => Promise<number>;
     scriptWorkerSend: (uid: string, message: {
         event: string;
         args: any[];
     }) => void;
-    scriptWorkerKill: (uid: string) => void;
+    scriptWorkerKill: (uid: string, expectedPid?: number) => void;
     shellOpenPath: (p: string) => Promise<string>;
     shellShowItemInFolder: (p: string) => void;
     shellOpenExternal: (url: string) => Promise<void>;

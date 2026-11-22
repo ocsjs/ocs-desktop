@@ -26,7 +26,7 @@ const spawned = new Set<string>();
  * 注意：utilityProcess 子进程通信走 process.parentPort（MessagePort），
  * 与 child_process.fork 的 process.send 不兼容——worker 侧由 worker/parent-channel.ts 双兼容适配。
  */
-export async function scriptWorkerLaunch(uid: string): Promise<void> {
+export async function scriptWorkerLaunch(uid: string): Promise<number> {
 	// 存在同 uid 残留 worker（上次关闭挂起未退出）：先终止再启动，
 	// 否则直接 return 会导致重启静默失败（浏览器永远起不来）
 	if (workers.has(uid)) {
@@ -64,20 +64,32 @@ export async function scriptWorkerLaunch(uid: string): Promise<void> {
 	child.stdout?.on('data', (data) => push({ uid, kind: 'stdout', chunk: String(data) }));
 	child.stderr?.on('data', (data) => push({ uid, kind: 'stderr', chunk: String(data) }));
 	child.on('message', (msg: any) => push({ uid, kind: 'message', event: msg?.event, args: msg?.args }));
-	child.on('exit', (code) => {
+	(child as any).on('exit', (code: number | null, signal: string | null) => {
 		// 竞态防护：kill→重launch 后旧进程的 exit 晚到时，不得误删新 worker 的注册项、
 		// spawn 标记，也不得向渲染端推送伪造的退出事件（会导致新 worker 消息全部黑洞）
 		if (workers.get(uid) !== child) return;
 		workers.delete(uid);
 		spawned.delete(uid);
+		// 异常退出（非 0 退出码/信号终止）落盘告警；正常退出（code 0）属预期路径不打扰
+		if (code !== 0 || signal) {
+			logger.warn('script worker 异常退出', { uid, pid: child.pid, code, signal });
+		}
 		push({ uid, kind: 'exit', code });
 	});
+
+	// 返回 pid 供调用方做代际校验（见 scriptWorkerKill 的 expectedPid）
+	return child.pid ?? -1;
 }
 
 /** 向指定 worker 发送消息（worker 不存在时静默忽略，对齐原 shell.connected 守卫语义） */
 export function scriptWorkerSend(uid: string, message: { event: string; args: any[] }): void {
 	const child = workers.get(uid);
-	if (!child) return;
+	if (!child) {
+		// 消息静默丢弃必须留痕：worker 提前退出/未注册时的消息丢失曾导致
+		// 「浏览器无响应且无任何报错」的排查困境
+		logger.warn('script worker 不存在，消息被丢弃', { uid, event: message?.event });
+		return;
+	}
 	const doSend = () => {
 		try {
 			child.postMessage(message);
@@ -90,10 +102,22 @@ export function scriptWorkerSend(uid: string, message: { event: string; args: an
 	else child.once('spawn', doSend);
 }
 
-/** 终止指定 worker */
-export function scriptWorkerKill(uid: string): void {
+/**
+ * 终止指定 worker。
+ * expectedPid（代际校验）：仅终止该 pid 的 worker——过期的 close 兜底定时器
+ * 会在浏览器重启后误杀同 uid 的新实例（曾导致「重启后浏览器 5s 自动关闭」）。
+ */
+export function scriptWorkerKill(uid: string, expectedPid?: number): void {
+	const child = workers.get(uid);
+	if (!child) return;
+	if (expectedPid !== undefined && child.pid !== expectedPid) {
+		logger.warn('scriptWorkerKill 已跳过（pid 代际不匹配，保护新实例）', { uid, expectedPid, actualPid: child.pid });
+		return;
+	}
+	// kill 必须留痕（属非正常操作）
+	logger.warn('scriptWorkerKill', { uid, pid: child.pid });
 	try {
-		workers.get(uid)?.kill();
+		child.kill();
 	} catch {}
 	workers.delete(uid);
 	// 同步清理 spawn 标记：kill 后立即重 launch 时，不等旧进程 exit 再清

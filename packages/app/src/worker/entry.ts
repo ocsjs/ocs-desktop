@@ -33,6 +33,12 @@ process.on('unhandledRejection', (reason) => {
 	console.error('worker unhandledRejection：', reason);
 });
 
+// uncaughtException 兜底：同步异常不使进程静默崩溃（打印后仍退出，保留现场于 stderr → 转发渲染端）
+process.on('uncaughtException', (err) => {
+	console.error('worker uncaughtException：', err);
+	process.exit(1);
+});
+
 /**
  * 自我回收：尽力关闭浏览器（含 Chromium）后退出。
  *

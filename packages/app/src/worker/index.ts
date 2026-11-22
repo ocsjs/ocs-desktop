@@ -239,6 +239,22 @@ export class ScriptWorker implements ScriptWorkerContract {
 				onLaunch: (browser) => {
 					this.browser = browser;
 
+					// 捕获 Chromium 主进程 PID（browser.close() 挂起/异常路径的强杀兜底，
+					// 防孤儿进程占用 userDataDir 单例锁导致下次启动静默自杀）
+					browser
+						.browser()
+						?.newBrowserCDPSession()
+						.then(async (session) => {
+							try {
+								const info = await session.send('SystemInfo.getProcessInfo');
+								const pid = info.processInfo?.find((p: any) => p.type === 'browser')?.id;
+								if (typeof pid === 'number') this.browserPid = pid;
+							} finally {
+								session.detach().catch(() => {});
+							}
+						})
+						.catch(() => {});
+
 					// 页面列表实时跟踪（新页面/关闭/导航时广播 pages-changed 给渲染进程）
 					this.setupPageListTracking(browser);
 
@@ -400,9 +416,14 @@ export class ScriptWorker implements ScriptWorkerContract {
 		this.stopPageListTracking();
 		// 仅内部停止推流（detach session），不发 screencast-cleared：
 		// 渲染进程在 browser-closed 时保留最后一帧，用于"浏览器关闭后的预览图"展示
-		await this.stopScreencastInternal().catch(() => {});
-		// 兜底：browser.close() 挂起（如与在途推流操作竞争）时不阻塞退出，
-		// worker 进程退出后管道断开，Chromium 会随之自行退出
+		// detach 也可能挂起（在途帧背压），加 3s 超时防 close 流程整体卡死
+		await Promise.race([
+			this.stopScreencastInternal().catch(() => {}),
+			new Promise((resolve) => setTimeout(resolve, 3 * 1000))
+		]);
+		// 兜底：browser.close() 挂起（如与在途推流操作竞争）时不阻塞退出——
+		// 超时后按启动时捕获的 PID 强杀 Chromium（孤儿进程持有 userDataDir 的
+		// SingletonLock，会导致同目录下次启动的浏览器单例协商后静默自杀、无报错日志）
 		await Promise.race([
 			(async () => {
 				try {
@@ -411,10 +432,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 			})(),
 			new Promise((resolve) => setTimeout(resolve, 10 * 1000))
 		]);
+		this.forceKillBrowserProcess();
 		this.browser = undefined;
 		send('browser-closed');
 		// postMessage 为异步，立即 exit 可能丢弃在途消息；延迟退出确保 browser-closed 送达
-		setTimeout(() => process.exit(), 100);
+		setTimeout(() => process.exit(), 300);
 	}
 
 	/**
@@ -434,7 +456,20 @@ export class ScriptWorker implements ScriptWorkerContract {
 		try {
 			await this.browser?.close();
 		} catch {}
+		this.forceKillBrowserProcess();
 		this.browser = undefined;
+	}
+
+	/** Chromium 主进程 PID（启动时经 CDP SystemInfo 捕获；close 挂起/异常路径的强杀兜底） */
+	browserPid?: number;
+
+	/** 强杀 Chromium 主进程（幂等：进程已退出时静默失败） */
+	private forceKillBrowserProcess() {
+		if (!this.browserPid) return;
+		try {
+			process.kill(this.browserPid);
+		} catch {}
+		this.browserPid = undefined;
 	}
 
 	/**
@@ -623,6 +658,12 @@ export class ScriptWorker implements ScriptWorkerContract {
 			if (!this.screencastParams || page.isClosed() || this.closing) return;
 
 			try {
+				// 附着新会话前显式 detach 旧会话：否则旧会话在 Chromium 侧持续产帧
+				// （worker 仅忽略帧不停止流），重复推流会持续占用资源并竞争 browser.close()
+				if (this.screencastSession) {
+					await this.screencastSession.detach().catch(() => {});
+					this.screencastSession = undefined;
+				}
 				const session = await page.context().newCDPSession(page);
 				const sess = session;
 
@@ -836,6 +877,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 	}
 
 	kill() {
+		// 退出前强杀 Chromium（kill 事件即终态指令，不再走 browser.close() 优雅路径）
+		this.forceKillBrowserProcess();
 		process.exit();
 	}
 
@@ -1075,7 +1118,7 @@ export async function launchBrowser({
 	store?: AppStore;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
-	return new Promise<void>((resolve, reject) => {
+	return new Promise<void>(async (resolve, reject) => {
 		// 启动前把浏览器 profile 的默认下载目录指向软件"文件下载"目录（原生下载行为落盘位置）
 		prepareDownloadPreferences(userDataDir, downloadsPath);
 
@@ -1567,7 +1610,8 @@ function handleBrowserClose(browser: BrowserContext) {
 	browser.once('close', () => {
 		send('browser-closed');
 		// postMessage 为异步，立即 exit 可能丢弃在途消息；延迟退出确保 browser-closed 送达
-		setTimeout(() => process.exit(), 100);
+		// （100ms 曾实测竞态丢失，放宽到 300ms）
+		setTimeout(() => process.exit(), 300);
 	});
 }
 

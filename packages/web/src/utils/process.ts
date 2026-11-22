@@ -120,6 +120,8 @@ export class Process extends EventEmitter {
 	/** worker 事件订阅的取消函数（主进程转发 'script-worker' 频道） */
 	private _offWorkerEvent?: () => void;
 	worker?: RemoteScriptWorker;
+	/** 当前 worker 的进程 pid（scriptWorkerLaunch 返回；关闭兜底代际校验用） */
+	workerPid?: number;
 	/** 状态 */
 	status: 'closed' | 'closing' | 'launching' | 'launched' = 'closed';
 	/** 浏览器实体信息 */
@@ -135,6 +137,12 @@ export class Process extends EventEmitter {
 		if (this.logs.length > Process.MAX_LOGS) {
 			this.logs.splice(0, this.logs.length - Process.MAX_LOGS);
 		}
+	}
+
+	/** 追加外部来源日志（渲染端 console/全局错误转发用），并实时推送到日志面板 */
+	appendExternalLog(text: string) {
+		this.appendLog(text);
+		this.emit('console', text);
 	}
 
 	/** 日志保留上限（超过后丢弃最早的条目） */
@@ -341,6 +349,8 @@ export class Process extends EventEmitter {
 
 		// worker 的消息/stdio/退出由主进程经 'script-worker' 频道统一转发，按 uid 过滤。
 		// 订阅必须先于 fork：注册前的推送会丢失（包括 worker 启动失败的 exit 与最早期 stdout 报错）
+		// 实例复用（Browser.launch 去重）时先退订旧监听，防止重复订阅导致事件双发
+		this._offWorkerEvent?.();
 		this._offWorkerEvent = onRendererEvent('script-worker', (payload) => {
 			if (payload.uid !== this.uid) return;
 			if (payload.kind === 'stdout') {
@@ -360,6 +370,11 @@ export class Process extends EventEmitter {
 					type: 'error'
 				});
 			} else if (payload.kind === 'exit') {
+				// 异常退出（非 0 退出码）必须可见：崩溃时浏览器静默消失，无此日志无从定位
+				if (payload.code !== 0) {
+					console.warn('script worker 异常退出', this.uid, payload.code);
+					this.appendExternalLog(`[worker] 异常退出 code=${payload.code}`);
+				}
 				this.emit('exit', payload.code);
 				// 兜底清理：worker 崩溃/被强杀时 browser-closed 业务消息可能丢失，
 				// 此处做与 browser-closed 等价的幂等清理，防止订阅泄漏、状态滞留与 processes 残留
@@ -383,7 +398,8 @@ export class Process extends EventEmitter {
 
 		// 主进程托管 fork：环境变量在主进程组装（process.env 完整），
 		// 渲染进程不再需要 child_process.fork 与 globalThis.process 拆行 hack
-		await bridge.methods.scriptWorkerLaunch(this.uid);
+		// 记录 worker pid 供关闭兜底做代际校验（防止过期兜底误杀重启后的新实例）
+		this.workerPid = await bridge.methods.scriptWorkerLaunch(this.uid);
 		this.worker = createRemoteScriptWorker(this.uid);
 
 		// 初始化进程数据
@@ -629,17 +645,22 @@ export class Process extends EventEmitter {
 		// 标记为 closing ，使监控页面，以及操作栏的图标可以判断状态
 		this.status = 'closing';
 		return new Promise<void>((resolve) => {
-			this.once('browser-closed', resolve);
-			// 兜底：worker 异常（如 browser.close 与推流竞争挂起、进程崩溃）时
-			// 15s 后强制回落 closed，避免卡片永久转圈、重启/关闭流程悬挂；
-			// 同时强制终止 worker：残留 worker 会让 scriptWorkerLaunch 因同 uid 占位直接 return，重启静默失败
-			setTimeout(() => {
+			// 兜底定时器必须可取消：browser-closed 正常到达后仍让它存活满 15s，
+			// 期间若发生重启，过期触发将面对全新的 worker（只能靠 pid 代际校验兜底）
+			const fallback = setTimeout(() => {
 				if (this.status === 'closing') {
+					console.warn('[process] 关闭超时，强制回落并终止 worker', this.uid);
 					this.status = 'closed';
-					bridge.methods.scriptWorkerKill(this.uid).catch(() => {});
+					// 代际校验：仅杀本实例启动的 worker——过期兜底（browser-closed 丢失/陈旧实例）
+					// 不得在浏览器重启后误杀同 uid 的新 worker（host 侧按 pid 比对）
+					bridge.methods.scriptWorkerKill(this.uid, this.workerPid).catch(() => {});
 					resolve();
 				}
 			}, 15 * 1000);
+			this.once('browser-closed', () => {
+				clearTimeout(fallback);
+				resolve();
+			});
 			// 关闭进程
 			this.worker?.('close');
 		});
@@ -745,7 +766,46 @@ function createRemoteScriptWorker(uid: string) {
 		// structured clone 不支持 Proxy（报 "An object could not be cloned"）；
 		// 且迁移前 child_process.send 本身就是 JSON 序列化，语义保持一致
 		const message = JSON.parse(JSON.stringify({ event, args }));
-		// worker 不存在时主进程静默忽略（对齐原 shell.connected 守卫语义）
-		bridge.methods.scriptWorkerSend(uid, message).catch(() => {});
+		// worker 不存在时主进程静默忽略（对齐原 shell.connected 守卫语义）；
+		// 但发送失败本身必须可见——全部吞掉会让「浏览器无响应」完全无迹可查
+		bridge.methods.scriptWorkerSend(uid, message).catch((e) => {
+			console.error(`[script-worker] 消息发送失败 event=${String(message?.event)} uid=${uid}:`, e);
+		});
 	};
 }
+
+/**
+ * 渲染端错误与 console 输出转发到浏览器日志面板（XTerm）。
+ *
+ * 背景：bridge 迁移后异步错误（facade reject / unhandledRejection）只在 DevTools 控制台可见，
+ * 日志面板完全看不到，导致「浏览器异常但无任何报错」的排查假象。
+ * 转发范围：console.error / console.warn / window.onerror / unhandledrejection。
+ */
+(function forwardRendererErrorsToProcessLog() {
+	const stringify = (v: any): string => {
+		if (typeof v === 'string') return v;
+		if (v instanceof Error) return v.stack || v.message;
+		try {
+			return JSON.stringify(v);
+		} catch {
+			return String(v);
+		}
+	};
+	const sink = (level: string, args: any[]) => {
+		const text = `[render:${level}] ${args.map(stringify).join(' ')}`;
+		for (const p of processes) {
+			p.appendExternalLog(text);
+		}
+	};
+	for (const level of ['error', 'warn'] as const) {
+		const orig = console[level].bind(console);
+		console[level] = (...args: any[]) => {
+			orig(...args);
+			try {
+				sink(level, args);
+			} catch {}
+		};
+	}
+	window.addEventListener('unhandledrejection', (e) => sink('unhandledrejection', [e.reason]));
+	window.addEventListener('error', (e) => sink('error', [e.message, e.error]));
+})();
