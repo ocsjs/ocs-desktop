@@ -116,6 +116,8 @@ function buildManifest(ext, zipBuf) {
 		license: ext.license,
 		sourceUrl: ext.sourceUrl,
 		homepage: ext.homepage,
+		description: ext.description,
+		icon: ext.icon,
 		sha256: sha256(zipBuf),
 		// 带入运行时：asar 释放失败时远程下载兜底（钉值校验不变）
 		format: ext.format,

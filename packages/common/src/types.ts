@@ -101,7 +101,7 @@ export interface DownloadUserscriptResult {
 	error?: string;
 }
 
-/** 内置拓展清单信息（供渲染进程能力探测；实现见 app src/extensions/bundled.ts） */
+/** 内置拓展清单信息（供渲染进程能力探测与展示；实现见 app src/extensions/bundled.ts） */
 export interface BundledExtensionInfo {
 	id: string;
 	name: string;
@@ -109,6 +109,9 @@ export interface BundledExtensionInfo {
 	license: string;
 	sourceUrl: string;
 	homepage: string;
+	/** 展示元数据（构建期 lock 清单透传） */
+	description?: string;
+	icon?: string;
 }
 
 /** 内置拓展完整性校验单项结果 */

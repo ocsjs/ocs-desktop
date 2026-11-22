@@ -41,6 +41,9 @@ export interface BundledExtensionManifest {
 	license: string;
 	sourceUrl: string;
 	homepage: string;
+	/** 展示元数据（构建期 lock 清单透传，供应用中心「内置拓展」卡片展示） */
+	description?: string;
+	icon?: string;
 	/** 打入 asar 的 zip 字节 SHA256 */
 	sha256: string;
 	/** 包格式（crx 运行时兜底下载后需剥头；zip 直接使用） */
@@ -86,13 +89,15 @@ export function listBundledExtensions(): BundledExtensionManifest[] {
 }
 
 export function getBundledExtensions(): BundledExtensionInfo[] {
-	return listBundledExtensions().map(({ id, name, version, license, sourceUrl, homepage }) => ({
+	return listBundledExtensions().map(({ id, name, version, license, sourceUrl, homepage, description, icon }) => ({
 		id,
 		name,
 		version,
 		license,
 		sourceUrl,
-		homepage
+		homepage,
+		description,
+		icon
 	}));
 }
 
