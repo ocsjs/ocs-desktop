@@ -32,6 +32,7 @@ const browserFallbackBridge: OcsBridge = {
 	app: new Proxy({}, { get: () => noopAsync }) as any,
 	dialog: new Proxy({}, { get: () => noopAsync }) as any,
 	electronStore: { get: () => Promise.resolve(undefined) },
+	bundledExtensions: new Proxy({}, { get: () => noopAsync }) as any,
 	logger: { info: () => {}, warn: () => {}, error: () => {} },
 	platform: detectBrowserPlatform(),
 	shell: {

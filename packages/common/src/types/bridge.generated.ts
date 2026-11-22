@@ -14,8 +14,8 @@
  * 三方一致由构造保证，无漂移可能。electron 域复用官方类型（参数随 Electron 升级自动跟随）。
  */
 import type { BrowserWindow, WebContents, App, Dialog } from 'electron';
-import type { RemoteMethods } from '@ocs-desktop/common';
-import { fsWhitelist, pathWhitelist, osWhitelist, winWhitelist, webContentsWhitelist, appWhitelist, dialogWhitelist } from '@ocs-desktop/common';
+import type { RemoteMethods, BundledExtensionsApi } from '@ocs-desktop/common';
+import { fsWhitelist, pathWhitelist, osWhitelist, winWhitelist, webContentsWhitelist, appWhitelist, dialogWhitelist, bundledExtensionsWhitelist } from '@ocs-desktop/common';
 /** 同步签名 → 异步（Promise 包装返回类型；已是 Promise/非函数的不重复包装） */
 type Asyncify<T> = {
     [K in keyof T]: T[K] extends (...args: infer A) => infer R ? R extends Promise<any> ? T[K] : (...args: A) => Promise<R> : T[K];
@@ -34,6 +34,8 @@ export type OcsBridge = {
     webContents: Asyncify<Pick<WebContents, (typeof webContentsWhitelist)[number]>>;
     app: Asyncify<Pick<App, (typeof appWhitelist)[number]>>;
     dialog: Pick<Dialog, (typeof dialogWhitelist)[number]>;
+    /** 内置拓展域（列举/安装/卸载/检测/完整性校验，实现见 app src/extensions/api.ts） */
+    bundledExtensions: Asyncify<Pick<BundledExtensionsApi, (typeof bundledExtensionsWhitelist)[number]>>;
     /** electron-store 域（机械转驼峰；整树读取经 methods.getStore 异步实现；
      *  写路径统一走 methods.saveStore（含加密），故不提供 set） */
     electronStore: {

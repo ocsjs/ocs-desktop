@@ -26,7 +26,6 @@ import { AutomationScripts } from '../scripts';
 import { SystemScripts } from '../scripts/system';
 import { getBrowserMajorVersion, getExtensionPaths } from '../utils/browser';
 import { installBuiltinChrome } from '../tasks/init.chrome';
-import { ensureExtensionsIntegrity, installBundledExtension, getBundledExtensions } from '../extensions/bundled';
 import type { AppStore, RawAutomationScript } from '@ocs-desktop/common';
 import {
 	encryptRenderString,
@@ -107,10 +106,7 @@ export const methods = {
 	getValidBrowsers: () => getValidBrowsers(),
 	getBrowserMajorVersion: (executablePath: string) => getBrowserMajorVersion(executablePath),
 	getExtensionPaths: (extensionsFolder: string) => getExtensionPaths(extensionsFolder),
-	// 内置拓展（构建期打入 asar）：完整性校验/按需释放/清单查询
-	ensureBuiltinExtensionsIntegrity: () => ensureExtensionsIntegrity(),
-	installBundledExtension: (extensionId: string) => installBundledExtension(extensionId),
-	getBundledExtensions: () => getBundledExtensions(),
+	// 内置拓展 API 已收敛至独立命名空间（bridge.bundledExtensions.*，见 extensions/api.ts）
 	/** 系统自动化程序清单（开发者设置-自动化程序管理展示） */
 	getSystemScripts: () => SystemScripts.map((s) => ({ name: s.name, label: s.label, phase: s.phase, order: s.order })),
 	/**

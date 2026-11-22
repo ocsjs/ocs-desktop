@@ -26,9 +26,6 @@ export declare const methods: {
     getValidBrowsers: () => import("@ocs-desktop/common").ValidBrowser[];
     getBrowserMajorVersion: (executablePath: string) => number | undefined;
     getExtensionPaths: (extensionsFolder: string) => string[];
-    ensureBuiltinExtensionsIntegrity: () => Promise<import("@ocs-desktop/common").ExtensionIntegrityResult[]>;
-    installBundledExtension: (extensionId: string) => Promise<string>;
-    getBundledExtensions: () => import("@ocs-desktop/common").BundledExtensionInfo[];
     /** 系统自动化程序清单（开发者设置-自动化程序管理展示） */
     getSystemScripts: () => {
         name: string;

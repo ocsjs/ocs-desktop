@@ -18,6 +18,9 @@ export const dialogWhitelist = ['showOpenDialog', 'showSaveDialog', 'showOpenDia
 export const electronStoreWhitelist = ['store'] as const;
 export const loggerWhitelist = ['error', 'info'] as const;
 
+/** 内置拓展域（bridge.bundledExtensions.*）：安装/卸载/检测/列举/完整性校验 */
+export const bundledExtensionsWhitelist = ['list', 'install', 'remove', 'isInstalled', 'verifyIntegrity'] as const;
+
 /** 命名空间 → 白名单数组的映射（guard 与自省通道共用） */
 export const remoteWhitelists = {
 	'electron-store': electronStoreWhitelist,
@@ -28,5 +31,6 @@ export const remoteWhitelists = {
 	webContents: webContentsWhitelist,
 	app: appWhitelist,
 	dialog: dialogWhitelist,
-	logger: loggerWhitelist
+	logger: loggerWhitelist,
+	bundledExtensions: bundledExtensionsWhitelist
 } as const;

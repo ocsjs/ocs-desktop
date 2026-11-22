@@ -8,6 +8,7 @@ import { StoreData } from '../store';
 import { initHttpCache } from '../utils/http-cache';
 import { sendToRenderer } from './events';
 import { methods } from './methods';
+import { bundledExtensionsApi } from '../extensions/api';
 import { remoteWhitelists } from '@ocs-desktop/common';
 
 /**
@@ -108,6 +109,8 @@ export function remoteRegister(_win: BrowserWindow) {
 	registerRemoteEvent('dialog', dialog);
 	registerRemoteEvent('methods', methods);
 	registerRemoteEvent('logger', Logger('render'));
+	// 内置拓展域（bridge.bundledExtensions.*）：列举/安装/卸载/检测/完整性校验
+	registerRemoteEvent('bundledExtensions', bundledExtensionsApi);
 
 	/**
 	 * 自省通道：preload facade 生成器启动时取「命名空间 → 方法名清单」。
