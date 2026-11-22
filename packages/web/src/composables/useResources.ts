@@ -1,5 +1,5 @@
 import { reactive, ref } from 'vue';
-import { ResourceFile, ResourceGroup } from '@ocs-desktop/common/web';
+import { ResourceGroup } from '@ocs-desktop/common/web';
 import { resourceLoader } from '../utils/resources.loader';
 import { getRemoteInfos } from '../utils';
 import { Message } from '@arco-design/web-vue';
@@ -18,7 +18,6 @@ export type FileState = Record<string, FileStateItem>;
 
 const resourceGroups = ref<ResourceGroup[]>([]);
 const fileStatus = reactive<FileState>({});
-const downloadingExtensionsFiles = ref<ResourceFile[]>([]);
 
 const state = reactive({
 	/** 首次加载中 */
@@ -43,8 +42,8 @@ async function loadResources() {
 		const result = await getRemoteInfos();
 		resourceGroups.value = result.resourceGroups.filter((g) => g.showInResourcePage);
 
-		// 加载状态
-		for (const group of result.resourceGroups) {
+		// 加载状态（跳过 extensions 组：内置拓展已改由 asar 清单驱动，不再经远程资源组展示/跟踪）
+		for (const group of result.resourceGroups.filter((g) => g.name !== 'extensions')) {
 			for (const file of group.files) {
 				fileStatus[file.url] = {
 					exists: resourceLoader.isZipFile(file)
@@ -101,7 +100,6 @@ export function useResources() {
 	return {
 		resourceGroups,
 		fileStatus,
-		downloadingExtensionsFiles,
 		state,
 		loadResources,
 		refreshFileStatus

@@ -23,7 +23,7 @@
 				<a-button
 					size="mini"
 					type="text"
-					@click="() => (otherExtensionsAddVisible = !otherExtensionsAddVisible)"
+					@click="() => (state.otherExtensionsAddVisible = !state.otherExtensionsAddVisible)"
 				>
 					<template #icon>
 						<CircleHelpIcon />
@@ -34,7 +34,7 @@
 		</template>
 
 		<a-modal
-			v-model:visible="otherExtensionsAddVisible"
+			v-model:visible="state.otherExtensionsAddVisible"
 			title="其他拓展加载方法"
 			:footer="false"
 			:closable="true"
@@ -60,6 +60,92 @@
 				"
 			/>
 
+			<!-- ============ 内置拓展（随包发版，官方源构建期钉版，不依赖远程资源） ============ -->
+			<div class="resource-group-title">
+				内置拓展
+				<a-tooltip
+					position="top"
+					content="内置拓展来自官方发布渠道，随软件一同自动构建、与更新，安全可靠。"
+				>
+					<CircleHelpIcon class="help-icon" />
+				</a-tooltip>
+			</div>
+			<div class="extension-select-wrapper mb-2">
+				<a-radio-group
+					v-model="state.selectedBundledId"
+					class="extension-radio-group"
+				>
+					<div
+						v-for="ext of state.bundledExtensions"
+						:key="ext.id"
+						class="resource-item extension-selectable"
+						@click="state.selectedBundledId = ext.id"
+					>
+						<a-radio :value="ext.id">
+							<div class="resource-icon">
+								<img
+									v-if="ext.icon"
+									:src="ext.icon"
+								/>
+								<LayoutGridIcon v-else />
+							</div>
+						</a-radio>
+						<div class="resource-info">
+							<a
+								v-if="ext.homepage"
+								class="resource-name"
+								:href="ext.homepage"
+								target="_blank"
+							>
+								{{ ext.name }}
+							</a>
+							<span
+								v-else
+								class="resource-name"
+							>
+								{{ ext.name }}
+							</span>
+							<a-tag
+								size="small"
+								color="arcoblue"
+								class="ms-1"
+							>
+								v{{ ext.version }}
+							</a-tag>
+							<a-tag
+								size="small"
+								color="gray"
+								class="ms-1"
+							>
+								{{ ext.license }}
+							</a-tag>
+							<div
+								v-if="ext.description"
+								class="resource-desc"
+							>
+								<a-tooltip :content="ext.description">
+									<span>{{ ext.description }}</span>
+								</a-tooltip>
+							</div>
+						</div>
+						<!-- 状态 -->
+						<div class="resource-action">
+							<template v-if="state.bundledStatus[ext.id]?.installing">
+								<span class="text-secondary">安装中...</span>
+							</template>
+							<template v-else-if="state.bundledStatus[ext.id]?.exists">
+								<a-tag
+									size="small"
+									color="green"
+								>
+									已安装
+								</a-tag>
+							</template>
+						</div>
+					</div>
+				</a-radio-group>
+			</div>
+
 			<template v-if="resState.loading && !resState.initialized">
 				<a-skeleton
 					animation
@@ -71,8 +157,9 @@
 					/>
 				</a-skeleton>
 			</template>
-			<template v-else-if="resourceGroups.length === 0">
+			<template v-else-if="displayGroups.length === 0">
 				<a-empty
+					v-if="state.bundledExtensions.length === 0"
 					class="my-4"
 					description="暂无资源，请尝试重启软件重新加载"
 				/>
@@ -80,170 +167,90 @@
 
 			<template v-else>
 				<template
-					v-for="(group, index) of resourceGroups"
-					:key="index"
+					v-for="group of displayGroups"
+					:key="group.name"
 				>
-					<div
-						class="resource-group-title"
-						:class="{ 'mt-3': index > 0 }"
-					>
+					<div class="resource-group-title mt-3">
 						{{ group.description }}
 					</div>
 
-					<!-- ============ extensions 组：单选模式 ============ -->
-					<template v-if="group.name === 'extensions'">
-						<div class="extension-select-wrapper">
-							<a-radio-group
-								v-model="selectedExtensionUrl"
-								class="extension-radio-group"
-							>
-								<div
-									v-for="(file, i) of group.files"
-									:key="i"
-									class="resource-item extension-selectable"
-									@click="selectedExtensionUrl = file.url"
-								>
-									<a-radio :value="file.url">
-										<div class="resource-icon">
-											<img
-												v-if="file.icon"
-												:src="file.icon"
-											/>
-											<LayoutGridIcon v-else />
-										</div>
-									</a-radio>
-									<div class="resource-info">
-										<a
-											v-if="file.homepage"
-											class="resource-name"
-											:href="file.homepage"
-											target="_blank"
-										>
-											{{ file.name }}
-										</a>
-										<span
-											v-else
-											class="resource-name"
-										>
-											{{ file.name }}
-										</span>
-										<div
-											v-if="file.description"
-											class="resource-desc"
-										>
-											<a-tooltip :content="file.description">
-												<span>{{ file.description }}</span>
-											</a-tooltip>
-										</div>
-									</div>
-									<!-- 状态 -->
-									<div
-										v-if="fileStatus[file.url]"
-										class="resource-action"
-									>
-										<template v-if="fileStatus[file.url].exists">
-											<a-tag
-												size="small"
-												color="green"
-											>
-												已安装
-											</a-tag>
-										</template>
-										<template v-else-if="fileStatus[file.url].downloadRate !== 0">
-											<a-progress
-												size="mini"
-												status="normal"
-												:percent="Math.round(fileStatus[file.url].downloadRate * 100) / 10000"
-											/>
-										</template>
-										<template v-else-if="fileStatus[file.url].unzipping">
-											<span class="text-secondary">解压中...</span>
-										</template>
-									</div>
-								</div>
-							</a-radio-group>
+					<!-- ============ 远程资源组：原模式 ============ -->
+					<div
+						v-for="(file, i) of group.files"
+						:key="i"
+						class="resource-item"
+					>
+						<div class="resource-icon">
+							<img
+								v-if="file.icon"
+								:src="file.icon"
+							/>
+							<LayoutGridIcon v-else />
 						</div>
-					</template>
-
-					<!-- ============ 非 extensions 组：原模式 ============ -->
-					<template v-else>
-						<div
-							v-for="(file, i) of group.files"
-							:key="i"
-							class="resource-item"
-						>
-							<div class="resource-icon">
-								<img
-									v-if="file.icon"
-									:src="file.icon"
-								/>
-								<LayoutGridIcon v-else />
-							</div>
-							<div class="resource-info">
-								<a
-									v-if="file.homepage"
-									class="resource-name"
-									:href="file.homepage"
-									target="_blank"
-								>
-									{{ file.name }}
-								</a>
-								<span
-									v-else
-									class="resource-name"
-								>
-									{{ file.name }}
-								</span>
-								<div
-									v-if="file.description"
-									class="resource-desc"
-								>
-									<a-tooltip :content="file.description">
-										<span>{{ file.description }}</span>
-									</a-tooltip>
-								</div>
-							</div>
+						<div class="resource-info">
+							<a
+								v-if="file.homepage"
+								class="resource-name"
+								:href="file.homepage"
+								target="_blank"
+							>
+								{{ file.name }}
+							</a>
+							<span
+								v-else
+								class="resource-name"
+							>
+								{{ file.name }}
+							</span>
 							<div
-								v-if="fileStatus[file.url]"
-								class="resource-action"
+								v-if="file.description"
+								class="resource-desc"
 							>
-								<template v-if="fileStatus[file.url].exists || fileStatus[file.url].downloadRate === 100">
-									<a-button
-										type="outline"
-										status="danger"
-										@click="remove(group.name, file)"
-									>
-										卸载
-									</a-button>
-								</template>
-								<template v-else>
-									<a-progress
-										v-if="fileStatus[file.url].downloadRate !== 0"
-										status="normal"
-										:percent="Math.round(fileStatus[file.url].downloadRate * 100) / 10000"
-									/>
-									<span
-										v-else-if="fileStatus[file.url].unzipping"
-										class="text-secondary"
-									>
-										解压中...
-									</span>
-									<a-tooltip
-										v-else
-										:content="isFileSupported(file) ? '点击安装该应用' : '该资源暂不支持当前系统'"
-									>
-										<a-button
-											type="primary"
-											:disabled="!isFileSupported(file)"
-											@click="download(group.name, file)"
-										>
-											安装
-										</a-button>
-									</a-tooltip>
-								</template>
+								<a-tooltip :content="file.description">
+									<span>{{ file.description }}</span>
+								</a-tooltip>
 							</div>
 						</div>
-					</template>
+						<div
+							v-if="fileStatus[file.url]"
+							class="resource-action"
+						>
+							<template v-if="fileStatus[file.url].exists || fileStatus[file.url].downloadRate === 100">
+								<a-button
+									type="outline"
+									status="danger"
+									@click="remove(group.name, file)"
+								>
+									卸载
+								</a-button>
+							</template>
+							<template v-else>
+								<a-progress
+									v-if="fileStatus[file.url].downloadRate !== 0"
+									status="normal"
+									:percent="Math.round(fileStatus[file.url].downloadRate * 100) / 10000"
+								/>
+								<span
+									v-else-if="fileStatus[file.url].unzipping"
+									class="text-secondary"
+								>
+									解压中...
+								</span>
+								<a-tooltip
+									v-else
+									:content="isFileSupported(file) ? '点击安装该应用' : '该资源暂不支持当前系统'"
+								>
+									<a-button
+										type="primary"
+										:disabled="!isFileSupported(file)"
+										@click="download(group.name, file)"
+									>
+										安装
+									</a-button>
+								</a-tooltip>
+							</template>
+						</div>
+					</div>
 				</template>
 			</template>
 
@@ -260,8 +267,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onActivated, onBeforeUnmount, watch, nextTick } from 'vue';
-import { ResourceFile } from '@ocs-desktop/common/web';
+import { ref, reactive, computed, onMounted, onActivated, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ResourceFile, BundledExtensionInfo } from '@ocs-desktop/common/web';
 import { resourceLoader } from '../utils/resources.loader';
 import UsageAlertCollapse from './UsageAlertCollapse.vue';
 import { store, uiSession } from '../store/index';
@@ -274,46 +281,37 @@ import { useResources } from '../composables/useResources';
 import { promptRestartAfterOcrInstall } from '../utils/ocr';
 import { FolderIcon, CircleHelpIcon, LayoutGridIcon } from 'lucide-vue-next';
 
-const {
-	resourceGroups,
-	fileStatus,
-	downloadingExtensionsFiles,
-	state: resState,
-	loadResources,
-	refreshFileStatus
-} = useResources();
+const { resourceGroups, fileStatus, state: resState, loadResources, refreshFileStatus } = useResources();
 
-// 卡片内容根节点，用作可见性监听目标
+/**
+ * 组件状态（统一 reactive 管理，集中声明便于总览）。
+ * 例外：contentRef 为模板引用（须顶层 ref）、intersectionObserver 为非响应式原生对象，单独声明。
+ */
+const state = reactive({
+	/** 「其他拓展加载方法」教程弹窗显隐 */
+	otherExtensionsAddVisible: false,
+	/** 当前选中的内置拓展 id（单选，数据源为主进程 asar 清单，不再使用远程资源组） */
+	selectedBundledId: '',
+	/** 脚本管理器是否正在安装中（安装期间显示蒙版禁止操作） */
+	extensionInstalling: false,
+	/** 进行中的安装/卸载操作计数（>0 时整卡遮罩，禁止任何其他操作） */
+	operationCount: 0,
+	/** 当前系统平台（用于平台专属资源的安装可用性判断） */
+	currentPlatform: '',
+	/** 内置拓展清单（构建期官方源钉版，随 App 发版更新；主进程 asar 清单） */
+	bundledExtensions: [] as BundledExtensionInfo[],
+	/** 内置拓展安装状态（exists=已释放到本地，installing=安装中） */
+	bundledStatus: {} as Record<string, { exists?: boolean; installing?: boolean }>
+});
+
+// 卡片内容根节点，用作可见性监听目标（模板 ref，须顶层独立声明）
 const contentRef = ref<HTMLElement | null>(null);
-const otherExtensionsAddVisible = ref(false);
-
-// 会话级跳转请求（如 CRX 检测通知的「如何加载其他拓展？」按钮）：自动打开教程弹窗并复位标记。
-// watch 覆盖两种场景：标记先于挂载置位（immediate）与已挂载后再次触发
-watch(
-	() => uiSession.appCenterGuide,
-	(v) => {
-		if (v) {
-			uiSession.appCenterGuide = false;
-			otherExtensionsAddVisible.value = true;
-		}
-	},
-	{ immediate: true }
-);
-
-// ======== 脚本管理器单选 ========
-const selectedExtensionUrl = ref('');
-
-/** 脚本管理器是否正在安装中（安装期间显示蒙版禁止操作） */
-const extensionInstalling = ref(false);
-
-/** 进行中的安装/卸载操作计数（>0 时整卡遮罩，禁止任何其他操作） */
-const operationCount = ref(0);
 
 /** 是否有任何安装/卸载/解压进行中（覆盖全部资源组，含脚本管理器与 OCR 等） */
 const anyBusy = computed(
 	() =>
-		extensionInstalling.value ||
-		operationCount.value > 0 ||
+		state.extensionInstalling ||
+		state.operationCount > 0 ||
 		Object.values(fileStatus).some((s) => s.downloading || s.unzipping)
 );
 
@@ -330,33 +328,69 @@ const overlayText = computed(() => {
 	return '正在刷新资源状态...';
 });
 
-/** 当前选中的脚本管理器 */
-const selectedExtension = computed(() => {
-	const group = resourceGroups.value.find((g) => g.name === 'extensions');
-	if (!group) return undefined;
-	return group.files.find((f) => f.url === selectedExtensionUrl.value);
-});
-
-/** 初始化选中状态：选中已安装的，否则选中第一个 */
-function initExtensionSelection() {
-	const group = resourceGroups.value.find((g) => g.name === 'extensions');
-	if (!group || group.files.length === 0) return;
-	const installed = group.files.find((f) => fileStatus[f.url]?.exists);
-	selectedExtensionUrl.value = installed ? installed.url : group.files[0].url;
-}
-
-// 资源加载/刷新后自动更新选中状态
-watch(
-	() => resState.initialized,
-	(val) => {
-		if (val) initExtensionSelection();
-	}
-);
+/** 远程资源组（extensions 组已废弃——内置拓展改由 asar 清单驱动，不再展示远程组） */
+const displayGroups = computed(() => resourceGroups.value.filter((g) => g.name !== 'extensions'));
 
 let intersectionObserver: IntersectionObserver | null = null;
 
-/** 当前系统平台（用于平台专属资源的安装可用性判断） */
-const currentPlatform = ref('');
+// 会话级跳转请求（如 CRX 检测通知的「如何加载其他拓展？」按钮）：自动打开教程弹窗并复位标记。
+// watch 覆盖两种场景：标记先于挂载置位（immediate）与已挂载后再次触发
+watch(
+	() => uiSession.appCenterGuide,
+	(v) => {
+		if (v) {
+			uiSession.appCenterGuide = false;
+			state.otherExtensionsAddVisible = true;
+		}
+	},
+	{ immediate: true }
+);
+
+/** 刷新内置拓展安装状态 */
+async function refreshBundledStatus() {
+	for (const ext of state.bundledExtensions) {
+		const exists = await bridge.bundledExtensions.isInstalled(ext.id).catch(() => false);
+		state.bundledStatus[ext.id] = { ...state.bundledStatus[ext.id], exists: !!exists };
+	}
+}
+
+/** 初始化选中状态：选中已安装的，否则选中第一个 */
+function initBundledSelection() {
+	if (state.bundledExtensions.length === 0) return;
+	const installed = state.bundledExtensions.find((e) => state.bundledStatus[e.id]?.exists);
+	state.selectedBundledId = (installed || state.bundledExtensions[0]).id;
+}
+
+/** 切换内置拓展时自动安装（先卸载其他已安装的脚本管理器，单选语义） */
+watch(
+	() => state.selectedBundledId,
+	async (newId, oldId) => {
+		if (!newId || newId === oldId || !oldId) return;
+		const ext = state.bundledExtensions.find((e) => e.id === newId);
+		if (!ext || state.bundledStatus[newId]?.installing || state.bundledStatus[newId]?.exists) return;
+
+		state.bundledStatus[newId] = { ...state.bundledStatus[newId], installing: true };
+		state.extensionInstalling = true;
+		try {
+			// 先卸载其他已安装的脚本管理器
+			for (const other of state.bundledExtensions) {
+				if (other.id !== newId && state.bundledStatus[other.id]?.exists) {
+					await bridge.bundledExtensions.remove(other.id).catch(() => {});
+					state.bundledStatus[other.id] = { ...state.bundledStatus[other.id], exists: false };
+				}
+			}
+			// 从 asar 释放安装（官方源构建期钉版，无网络下载）
+			await bridge.bundledExtensions.install(newId);
+			Message.success(`${ext.name} 安装完成`);
+		} catch (e: any) {
+			Message.error(`${ext.name} 安装失败：${e?.message || String(e)}`);
+		} finally {
+			await refreshBundledStatus();
+			state.bundledStatus[newId] = { ...state.bundledStatus[newId], installing: false };
+			state.extensionInstalling = false;
+		}
+	}
+);
 
 /**
  * 资源是否支持当前系统：
@@ -367,16 +401,21 @@ const currentPlatform = ref('');
  */
 function isFileSupported(file: ResourceFile): boolean {
 	if (!file.platforms) return true;
-	return currentPlatform.value === 'win32' || file.platforms.some((p) => p.platform === currentPlatform.value);
+	return state.currentPlatform === 'win32' || file.platforms.some((p) => p.platform === state.currentPlatform);
 }
 
-onMounted(() => {
-	bridge.methods.getPlatform().then((p) => (currentPlatform.value = p));
+onMounted(async () => {
+	bridge.methods.getPlatform().then((p) => (state.currentPlatform = p));
+	// 内置拓展清单（主进程 asar 清单）→ 状态刷新与选中初始化
+	try {
+		state.bundledExtensions = (await bridge.bundledExtensions.list()) || [];
+		await refreshBundledStatus();
+		initBundledSelection();
+	} catch {}
 	if (!resState.initialized) {
 		loadResources();
 	} else {
 		refreshFileStatus();
-		initExtensionSelection();
 	}
 	if (contentRef.value && typeof IntersectionObserver !== 'undefined') {
 		intersectionObserver = new IntersectionObserver((entries) => {
@@ -390,6 +429,8 @@ onMounted(() => {
 
 onActivated(() => {
 	refreshFileStatus();
+	// 后台链路（启动浏览器时的环境补全）可能已自动安装内置拓展，回到应用中心时同步状态
+	refreshBundledStatus();
 });
 
 onBeforeUnmount(() => {
@@ -405,46 +446,17 @@ watch(
 			// 会话级跳转请求（如 CRX 检测通知的「如何加载其他拓展？」按钮）：自动打开教程弹窗并复位标记
 			if (uiSession.appCenterGuide) {
 				uiSession.appCenterGuide = false;
-				otherExtensionsAddVisible.value = true;
+				state.otherExtensionsAddVisible = true;
 			}
 		});
 	}
 );
 
-/** 切换脚本管理器时自动安装（先卸载已有的） */
-watch(selectedExtensionUrl, async (newUrl, oldUrl) => {
-	if (!newUrl || newUrl === oldUrl) return;
-	// 初始化选中（initExtensionSelection 从 '' 赋值为首个/已安装项）不触发自动安装，
-	// 否则仅打开设置页就会自动下载脚本管理器，并与环境检测并发产生 manifest ENOENT 误报
-	if (!oldUrl) return;
-	const file = selectedExtension.value;
-	if (!file || fileStatus[file.url]?.downloading || fileStatus[file.url]?.unzipping) return;
-	// 已安装则跳过
-	if (fileStatus[file.url]?.exists) return;
-
-	extensionInstalling.value = true;
-	try {
-		// 先卸载已安装的其他脚本管理器
-		const group = resourceGroups.value.find((g) => g.name === 'extensions');
-		if (group) {
-			for (const f of group.files) {
-				if (f.url !== file.url && fileStatus[f.url]?.exists) {
-					await remove('extensions', f);
-				}
-			}
-		}
-
-		downloadingExtensionsFiles.value.push(file);
-		await download('extensions', file);
-		downloadingExtensionsFiles.value = downloadingExtensionsFiles.value.filter((f) => f.url !== file.url);
-	} finally {
-		extensionInstalling.value = false;
-	}
-});
+/** 旧版远程 extensions 组的切换自动安装已废弃：内置拓展的切换逻辑见上方 selectedBundledId watch */
 
 async function download(group_name: string, file: ResourceFile) {
 	console.log('download app', group_name, file);
-	operationCount.value++;
+	state.operationCount++;
 	try {
 		const files = await resourceLoader.list();
 
@@ -463,17 +475,14 @@ async function download(group_name: string, file: ResourceFile) {
 			}
 		});
 		try {
+			// 注：extensions 组已废弃（内置拓展经 selectedBundledId watch 从 asar 安装），
+			// 此函数仅服务远程资源组（OCR 等），不含 extensions 特判
 			fileStatus[file.url].downloading = true;
-			if (group_name === 'extensions') {
-				// 内置拓展随包发版：从 asar 释放（官方源构建期获取 + 逐文件完整性校验），无网络下载
-				await bridge.methods.installBundledExtension(file.id);
-			} else {
-				await resourceLoader.download(group_name, file);
-			}
+			await resourceLoader.download(group_name, file);
 			fileStatus[file.url].downloading = false;
 			fileStatus[file.url].downloadRate = 0;
 
-			if (group_name !== 'extensions' && resourceLoader.isZipFile(file)) {
+			if (resourceLoader.isZipFile(file)) {
 				fileStatus[file.url].unzipping = true;
 				Message.info(`正在解压：${file.name}`);
 				await resourceLoader.unzip(group_name, file);
@@ -497,13 +506,13 @@ async function download(group_name: string, file: ResourceFile) {
 		// @ts-ignore
 		Message.error('下载错误 ' + err.message);
 	} finally {
-		operationCount.value--;
+		state.operationCount--;
 	}
 }
 
 async function remove(group_name: string, file: ResourceFile) {
 	console.log('remove app', group_name, file);
-	operationCount.value++;
+	state.operationCount++;
 	try {
 		await resourceLoader.remove(group_name, file);
 		fileStatus[file.url].exists = false;
@@ -512,7 +521,7 @@ async function remove(group_name: string, file: ResourceFile) {
 	} catch (err) {
 		Message.error('删除错误 ' + String(err));
 	} finally {
-		operationCount.value--;
+		state.operationCount--;
 	}
 }
 
@@ -530,6 +539,14 @@ function openDownloadFolder() {
 		color: rgb(var(--gray-7));
 		padding: 4px 4px 6px;
 		letter-spacing: 0.3px;
+
+		.help-icon {
+			font-size: 13px;
+			margin-left: 4px;
+			vertical-align: -2px;
+			color: rgb(var(--gray-5));
+			cursor: pointer;
+		}
 	}
 
 	.resource-item {
