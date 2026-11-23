@@ -86,8 +86,10 @@ export type WebStore = {
 				enableSearch: boolean;
 				/** 是否启用导航页快捷平台访问 */
 				enableQuickAccess: boolean;
-				/** 自定义网站列表（加载在快捷访问上方） */
+				/** 自定义网站列表 */
 				customSites: { name: string; url: string }[];
+				/** 自定义网站分组显示位置：顶部（快捷访问上方）/ 底部（快捷访问下方，默认） */
+				customSitePosition: 'top' | 'bottom';
 			};
 		};
 		/** 开发者设置（界面仅在「工具 → 开发者工具」点击后显示，开关本身对所有用户生效） */
@@ -205,7 +207,8 @@ export const DEFAULT_RENDER = {
 				enable: true,
 				enableSearch: true,
 				enableQuickAccess: true,
-				customSites: []
+				customSites: [],
+				customSitePosition: 'bottom' as const
 			}
 		},
 		// 开发者设置：三项默认开启（与历史行为一致），关闭用于 mac 卡顿等场景排查

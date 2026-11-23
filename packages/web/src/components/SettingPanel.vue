@@ -275,6 +275,17 @@
 						管理自定义网站
 					</a-button>
 				</Description>
+
+				<Description label="自定义网站位置">
+					<a-select
+						v-model="store.render.setting.browser.bookmarkPage.customSitePosition"
+						size="small"
+						style="width: 200px"
+					>
+						<a-option value="bottom">底部（快捷访问下方）</a-option>
+						<a-option value="top">顶部（快捷访问上方）</a-option>
+					</a-select>
+				</Description>
 			</div>
 		</a-card>
 

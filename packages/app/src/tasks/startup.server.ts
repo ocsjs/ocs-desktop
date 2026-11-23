@@ -352,7 +352,8 @@ export async function startupServer() {
 		res.json({
 			enableSearch: bookmarkPage?.enableSearch !== false,
 			enableQuickAccess: bookmarkPage?.enableQuickAccess !== false,
-			customSites: Array.isArray(bookmarkPage?.customSites) ? bookmarkPage.customSites : []
+			customSites: Array.isArray(bookmarkPage?.customSites) ? bookmarkPage.customSites : [],
+			customSitePosition: bookmarkPage?.customSitePosition === 'top' ? 'top' : 'bottom'
 		});
 	});
 

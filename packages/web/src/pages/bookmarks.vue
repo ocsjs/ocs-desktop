@@ -237,57 +237,54 @@
 					</div>
 				</div>
 
-				<!-- 自定义网站提示小字（无论是否存在自定义网站都显示） -->
+				<!-- 自定义网站（提示小字 + 小卡片 + 添加按钮；显示位置可在设置中调整：顶部/底部，flex order 控制） -->
 				<div
 					v-if="!showEmptyResult"
-					class="bookmarks-caption"
+					class="custom-sites-wrapper"
+					:class="pageSettings.customSitePosition === 'top' ? 'pos-top' : 'pos-bottom'"
 				>
-					自定义网站
-				</div>
+					<div class="bookmarks-caption">自定义网站</div>
 
-				<!-- 自定义网站小卡片 + 添加按钮（加载在快捷访问上方，不使用分组卡片布局） -->
-				<div
-					v-if="!showEmptyResult"
-					class="custom-sites"
-				>
-					<a
-						v-for="(site, idx) of pageSettings.customSites"
-						:key="site.url + idx"
-						:href="site.url"
-						target="_blank"
-						class="bookmark-item custom-site-card"
-						:style="{ '--item-index': idx, '--group-index': 0 }"
-					>
-						<img
-							class="icon"
-							loading="lazy"
-							:src="localIcon(site.url)"
-						/>
-						<span class="bookmark-name">{{ site.name }}</span>
-						<a-tooltip
-							background-color="rgba(20, 20, 30, 0.95)"
-							:content="site.url"
-							position="top"
+					<div class="custom-sites">
+						<a
+							v-for="(site, idx) of pageSettings.customSites"
+							:key="site.url + idx"
+							:href="site.url"
+							target="_blank"
+							class="bookmark-item custom-site-card"
+							:style="{ '--item-index': idx, '--group-index': 0 }"
 						>
-							<div class="bookmark-tooltip-trigger"></div>
-						</a-tooltip>
-					</a>
+							<img
+								class="icon"
+								loading="lazy"
+								:src="localIcon(site.url)"
+							/>
+							<span class="bookmark-name">{{ site.name }}</span>
+							<a-tooltip
+								background-color="rgba(20, 20, 30, 0.95)"
+								:content="site.url"
+								position="top"
+							>
+								<div class="bookmark-tooltip-trigger"></div>
+							</a-tooltip>
+						</a>
 
-					<!-- 添加按钮：不执行添加，仅提示前往软件设置中添加 -->
-					<button
-						class="bookmark-item add-site-btn"
-						title="添加自定义网站"
-						@click="notifyAddSite"
-					>
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
+						<!-- 添加按钮：不执行添加，仅提示前往软件设置中添加 -->
+						<button
+							class="bookmark-item add-site-btn"
+							title="添加自定义网站"
+							@click="notifyAddSite"
 						>
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-					</button>
+							<svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path d="M12 5v14M5 12h14" />
+							</svg>
+						</button>
+					</div>
 				</div>
 
 				<!-- 平台列表提示 -->
@@ -349,7 +346,7 @@
 											:data-img-src="bookmark?.icon || ''"
 											class="icon"
 											loading="lazy"
-											:src="iconUrl(bookmark?.icon)"
+											:src="iconUrl(bookmark?.icon || bookmark?.url)"
 										/>
 										<span class="bookmark-name">{{ bookmark?.name }}</span>
 										<a-tooltip
@@ -572,7 +569,9 @@ const state = reactive({
 const pageSettings = reactive({
 	enableSearch: true,
 	enableQuickAccess: true,
-	customSites: [] as { name: string; url: string }[]
+	customSites: [] as { name: string; url: string }[],
+	/** 自定义网站分组显示位置：顶部/底部（默认） */
+	customSitePosition: 'bottom' as 'top' | 'bottom'
 });
 
 /** 两个功能都未开启且无自定义网站时，显示 a-result 结果页 */
@@ -662,6 +661,7 @@ onMounted(async () => {
 					pageSettings.enableSearch = settings.enableSearch !== false;
 					pageSettings.enableQuickAccess = settings.enableQuickAccess !== false;
 					pageSettings.customSites = Array.isArray(settings.customSites) ? settings.customSites : [];
+					pageSettings.customSitePosition = settings.customSitePosition === 'top' ? 'top' : 'bottom';
 				}
 			} catch (e) {
 				console.error('获取导航页设置失败', e);
@@ -903,9 +903,37 @@ function openInApp() {
 	}
 }
 
-// 主体内容区域
+// 主体内容区域（flex 排序，支持自定义网站分组顶部/底部位置切换）
 .main-content {
+	display: flex;
+	flex-direction: column;
 	padding-top: 24px;
+
+	> .tips-section,
+	> .empty-result {
+		order: 0;
+	}
+
+	> .search-section {
+		order: 1;
+	}
+
+	> .bookmarks-caption,
+	> .bookmarks-grid {
+		order: 3;
+	}
+
+	> .custom-sites-wrapper {
+		&.pos-top {
+			order: 2;
+			margin-bottom: 24px;
+		}
+
+		&.pos-bottom {
+			order: 4;
+			margin-top: 24px;
+		}
+	}
 }
 
 // 提示 banner（a-alert，全宽不受 container 限制）
@@ -1028,7 +1056,7 @@ function openInApp() {
 	position: relative;
 	z-index: 10;
 	max-width: 760px;
-	margin: 0 auto 40px auto;
+	margin: 0 auto 24px auto;
 	animation: fadeInUp 0.6s ease backwards;
 }
 
@@ -1248,17 +1276,17 @@ function openInApp() {
 .bookmarks-caption {
 	width: 100%;
 	max-width: 760px;
-	margin: 0 auto 16px auto;
-	font-size: 13px;
+	margin: 0 auto 10px auto;
+	font-size: 12px;
 	color: @text-muted;
 	letter-spacing: 1px;
 }
 
-// 书签网格（宽度对齐搜索区域，居中显示）
+// 书签网格（宽度对齐搜索区域，居中显示，紧凑间距）
 .bookmarks-grid {
 	display: flex;
 	flex-direction: column;
-	gap: 32px;
+	gap: 20px;
 	width: 100%;
 	max-width: 760px;
 	margin: 0 auto;
@@ -1269,21 +1297,21 @@ function openInApp() {
 	background: @card-bg;
 	border: 1px solid @card-border;
 	border-radius: 16px;
-	padding: 24px;
+	padding: 16px;
 
 	:deep(.arco-skeleton-line-row) {
 		background-color: rgba(255, 255, 255, 0.08);
 	}
 }
 
-// 自定义网站小卡片（位于快捷访问上方，直接渲染不使用分组卡片布局）
+// 自定义网站小卡片（直接渲染不使用分组卡片布局，紧凑样式）
 .custom-sites {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 10px;
+	gap: 8px;
 	width: 100%;
 	max-width: 760px;
-	margin: 0 auto 32px auto;
+	margin: 0 auto;
 }
 
 // 自定义网站小卡片：加深描边，防止与背景颜色重合
@@ -1324,12 +1352,12 @@ function openInApp() {
 	}
 }
 
-// 书签分组卡片
+// 书签分组卡片（紧凑内边距）
 .bookmark-group {
 	background: @card-bg;
 	border: 1px solid @card-border;
 	border-radius: 16px;
-	padding: 24px;
+	padding: 16px;
 	backdrop-filter: blur(20px);
 	transition: border-color 0.3s ease, box-shadow 0.3s ease;
 	animation: fadeInUp 0.6s ease backwards;
@@ -1358,13 +1386,13 @@ function openInApp() {
 	align-items: center;
 	gap: 12px;
 	margin-bottom: 4px;
-	padding-bottom: 14px;
+	padding-bottom: 10px;
 	border-bottom: 1px solid @card-border;
 }
 
 .group-title {
 	margin: 0;
-	font-size: 18px;
+	font-size: 16px;
 	font-weight: 600;
 	color: @text-primary;
 }
@@ -1373,7 +1401,7 @@ function openInApp() {
 	margin-left: auto;
 	font-size: 12px;
 	color: @text-muted;
-	padding: 4px 12px;
+	padding: 2px 10px;
 	background: rgba(255, 255, 255, 0.05);
 	border-radius: 20px;
 }
@@ -1382,17 +1410,17 @@ function openInApp() {
 .group-items {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 10px;
+	gap: 8px;
 	width: 100%;
 }
 
-// 平台小卡片
+// 平台小卡片（紧凑样式）
 .bookmark-item {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
-	gap: 10px;
-	padding: 10px 16px;
+	gap: 8px;
+	padding: 6px 12px;
 	background: rgba(255, 255, 255, 0.04);
 	border: 1px solid @card-border;
 	border-radius: 12px;
@@ -1434,7 +1462,7 @@ function openInApp() {
 }
 
 .bookmark-name {
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 500;
 	color: @text-primary;
 	transition: color 0.2s ease;
@@ -1480,7 +1508,7 @@ function openInApp() {
 	}
 
 	.search-section {
-		margin-bottom: 28px;
+		margin-bottom: 20px;
 	}
 
 	.engine-btn {
@@ -1502,11 +1530,11 @@ function openInApp() {
 	}
 
 	.bookmark-item {
-		padding: 8px 12px;
+		padding: 6px 10px;
 	}
 
 	.bookmark-name {
-		font-size: 13px;
+		font-size: 12px;
 	}
 }
 
@@ -1694,10 +1722,10 @@ body:not([arco-theme='dark']) & {
 	}
 }
 
-// 平台图标：无圆角、无边框
+// 平台图标：无圆角、无边框（紧凑尺寸）
 .icon {
-	width: 28px;
-	height: 28px;
+	width: 22px;
+	height: 22px;
 	display: block;
 	object-fit: contain;
 	flex-shrink: 0;
