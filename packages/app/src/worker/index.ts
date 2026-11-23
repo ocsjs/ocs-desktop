@@ -263,14 +263,15 @@ export class ScriptWorker implements ScriptWorkerContract {
 						const match = page.url().match(/ocs-action_(.+)/);
 						if (match?.[1]) {
 							const action = match[1];
-							const actions: any = {
+							const actions: Record<string, () => void> = {
 								'bring-to-top': () => {
 									// 通过命令行打开此页面后会置顶浏览器，并自动关闭当前事件页面
 									page.close();
 								}
 							};
 
-							actions[action]();
+							// 未知 action 不抛错（用户/脚本可构造任意 ocs-action_ 前缀 URL）
+							actions[action]?.();
 						}
 					});
 
