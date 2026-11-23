@@ -40,8 +40,8 @@
 							.sort((a, b) => (a.name === state.pin_projects ? -1 : 1))"
 						:key="project.name"
 						class="ocs-project-item"
-						:class="{ active: Store.render.setting.ocs.currentProjectName === project.name }"
-						@click="Store.render.setting.ocs.currentProjectName = project.name"
+						:class="{ active: AppStore.render.setting.ocs.currentProjectName === project.name }"
+						@click="AppStore.render.setting.ocs.currentProjectName = project.name"
 					>
 						{{ project.name }}
 					</div>
@@ -91,10 +91,12 @@ import {
 	computed,
 	markRaw,
 	WatchStopHandle,
-	onDeactivated
+	onDeactivated,
+	onUnmounted
 } from 'vue';
+import { Status } from '../utils/statusBar';
 import { bridge } from '../utils/bridge';
-import { store as Store } from '../store/index';
+import { store as AppStore } from '../store/index';
 import { t } from '../utils/langs';
 import { themeState } from '../utils';
 import { OCS_SCRIPT_RESOURCES } from '@ocs-desktop/common/web';
@@ -133,7 +135,7 @@ const state = reactive({
 
 /** 当前项目下可配置的脚本列表 */
 const visibleScripts = computed(() => {
-	const project = state.projects.find((p) => p.name === Store.render.setting.ocs.currentProjectName);
+	const project = state.projects.find((p) => p.name === AppStore.render.setting.ocs.currentProjectName);
 	if (!project) {
 		return [] as any[];
 	}
@@ -166,7 +168,7 @@ let expandTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** 切换项目时延迟 200ms 自动展开第一项配置（避免频繁切换时的渲染抖动） */
 watch(
-	() => [Store.render.setting.ocs.currentProjectName],
+	() => [AppStore.render.setting.ocs.currentProjectName],
 	() => {
 		clearTimeout(expandTimer);
 		expandTimer = setTimeout(expandFirstScript, 200);
@@ -190,9 +192,37 @@ watch(
 	(dark) => wrapper?.classList.toggle('ocs-dark', dark)
 );
 
-state.watchStopHandle = watch(store, () => {
-	emits('update:store', store.value);
-});
+/** 配置是否被修改过（离开界面时据此提示已同步） */
+let configDirty = false;
+/** 首次加载是否完成（加载期的内部写入不视为用户修改） */
+let initialized = false;
+
+/**
+ * 深度监听 ocs store：检测到任何 set 更改（配置被修改）时，
+ * 自动开启 OCS 配置同步（等同于按下「同步配置到各浏览器」按钮），并记录脏标记。
+ */
+state.watchStopHandle = watch(
+	store,
+	() => {
+		emits('update:store', store.value);
+		if (!initialized) {
+			return;
+		}
+		configDirty = true;
+		if (!AppStore.render.setting.ocs.openSync) {
+			AppStore.render.setting.ocs.openSync = true;
+		}
+	},
+	{ deep: true }
+);
+
+/** 离开脚本配置界面时：若本次有配置修改，通过 StatusBar 提示配置已同步 */
+function notifySyncedOnLeave() {
+	if (configDirty) {
+		Status.success(t('setting_ocs_config_synced_tip', '检测到配置修改，已自动同步 OCS 脚本配置'));
+		configDirty = false;
+	}
+}
 
 let wrapper = null as HTMLElement | null;
 let root = null as ShadowRoot | null;
@@ -339,6 +369,8 @@ function mountEasyUsGlobal() {
 async function loadOCS() {
 	state.loading = true;
 	emits('loading');
+	// 加载期间的内部写入（配置代理初始化等）不视为用户修改
+	initialized = false;
 	const stopMaskWatch = watchStrayModalMasks();
 	try {
 		// easy-us 为本地依赖，先行挂载供 OCS 脚本执行时引用
@@ -356,7 +388,7 @@ async function loadOCS() {
 		if (globalThis.OCS === undefined) {
 			// 加载 OCS（开发者设置中可自定义脚本地址，留空用默认线上地址）
 			console.log('[OCSConfigs] 加载 OCS 脚本...');
-			const code = await bridge.methods.get(Store.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
+			const code = await bridge.methods.get(AppStore.scriptResources.index || OCS_SCRIPT_RESOURCES.index);
 			await executeScript(code, 'OCS 脚本');
 		}
 
@@ -415,7 +447,7 @@ async function loadOCS() {
 		if (state.projects.length) {
 			// 打开界面时默认选中 pin_projects（如「通用」），找不到则回退到首个项目
 			const preferred = state.projects.find((p) => p.name === state.pin_projects);
-			Store.render.setting.ocs.currentProjectName = (preferred || state.projects[0]).name;
+			AppStore.render.setting.ocs.currentProjectName = (preferred || state.projects[0]).name;
 		}
 	} catch (err) {
 		state.err = String(err);
@@ -431,6 +463,8 @@ async function loadOCS() {
 		mountShadowWrapper();
 		// 加载后 DOM 已重建（原面板随之销毁），自动展开第一项配置
 		expandFirstScript();
+		// 加载完成后的 store 变更才视为用户修改（自动开启同步的判定起点）
+		initialized = true;
 	});
 }
 
@@ -446,6 +480,13 @@ onDeactivated(() => {
 	// 注意：不能在此停止 store 的 watch（update:store 回传链路）——
 	// keep-alive 失活后 watch 停止且 onActivated 不重建，会导致配置修改永久不再回传父组件
 	clearTimeout(expandTimer);
+	// 路由级离开设置界面（keep-alive 失活）
+	notifySyncedOnLeave();
+});
+
+onUnmounted(() => {
+	// 设置页内切换子菜单（脚本配置面板被卸载）
+	notifySyncedOnLeave();
 });
 
 /** 加载自定义元素 */
