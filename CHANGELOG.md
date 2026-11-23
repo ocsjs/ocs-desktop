@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.9.1](https://github.com/ocsjs/ocs-desktop/compare/v3.9.0...v3.9.1) (2026-11-03)
+
+
+### 🐛 问题修复
+
+* 修复后台运行无法关闭、以及托盘图标模糊的问题 ([6dae148](https://github.com/ocsjs/ocs-desktop/commit/6dae1482173250bc164b6195bda33b6cca373ba4))
+
+
+### ⚡ 优化改进
+
+* 优化错误信息处理 ([d20e4cd](https://github.com/ocsjs/ocs-desktop/commit/d20e4cd3d4b2eced587d8c56c492cd2339cfda1d))
+* 增加网络缓存文件夹显示按钮 ([531c5a7](https://github.com/ocsjs/ocs-desktop/commit/531c5a7878bf3911b951c3d9f655d2e41448868c))
+* 更新软件信息接口为V2 ([0898776](https://github.com/ocsjs/ocs-desktop/commit/08987763e8ddf0be0bfed1aec132e10fb0f37730))
+* 移除可用浏览器检测，并禁用切换浏览器功能，固定路径为内置浏览器 ([7d81cc9](https://github.com/ocsjs/ocs-desktop/commit/7d81cc99b1d8167187d5946cd993672bc2a337bb))
+* 移除更新日志头部changelog字样 ([d994521](https://github.com/ocsjs/ocs-desktop/commit/d9945216bb608c4054fba661fd64309bdf734b0b))
+
 ## [3.9.0](https://github.com/ocsjs/ocs-desktop/compare/v3.8.0...v3.9.0) (2026-11-02)
 
 
