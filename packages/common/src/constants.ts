@@ -55,7 +55,10 @@ export const CACHEABLE_SITES: CacheableSite[] = [
 	{ id: 'tampermonkey', name: 'Tampermonkey 油猴', hosts: ['tampermonkey.net'] },
 	{ id: 'greasyfork', name: 'GreasyFork 油叉', hosts: ['greasyfork.org'] },
 	{ id: 'zhihuishu', name: '智慧树', hosts: ['zhihuishu.com'] },
-	{ id: 'chaoxing', name: '超星', hosts: ['chaoxing.com'] }
+	{ id: 'chaoxing', name: '超星', hosts: ['chaoxing.com'] },
+	{ id: 'icourse163', name: '中国大学MOOC', hosts: ['icourse163.org'] },
+	{ id: 'icve', name: '智慧职教/职教云', hosts: ['icve.com.cn'] },
+	{ id: 'yuketang', name: '雨课堂', hosts: ['yuketang.cn'] }
 ];
 
 /** 按 URL 匹配可缓存站点（未命中返回 undefined） */
