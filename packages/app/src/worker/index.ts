@@ -1121,158 +1121,161 @@ export async function launchBrowser({
 	store?: AppStore;
 	onLaunch?: (browser: BrowserContext) => void;
 }) {
-	return new Promise<void>(async (resolve, reject) => {
-		// 启动前把浏览器 profile 的默认下载目录指向软件"文件下载"目录（原生下载行为落盘位置）
-		prepareDownloadPreferences(userDataDir, downloadsPath);
+	return new Promise<void>((resolve, reject) => {
+		// 启动流程主体（async IIFE）：executor 保持同步，满足 no-async-promise-executor
+		(async () => {
+			// 启动前把浏览器 profile 的默认下载目录指向软件"文件下载"目录（原生下载行为落盘位置）
+			prepareDownloadPreferences(userDataDir, downloadsPath);
 
-		// Linux 显示环境诊断：worker 由渲染进程 fork，沙箱清理后可能丢失 DISPLAY，
-		// 记录实际环境变量与据此选择的 ozone 平台（经 worker stdout 回流到浏览器日志面板）
-		if (process.platform === 'linux') {
-			console.log(
-				'[display]',
-				`DISPLAY=${process.env.DISPLAY || '(空)'}`,
-				`WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || '(空)'}`,
-				`XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '(空)'}`,
-				'→',
-				process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
-			);
-		}
+			// Linux 显示环境诊断：worker 由渲染进程 fork，沙箱清理后可能丢失 DISPLAY，
+			// 记录实际环境变量与据此选择的 ozone 平台（经 worker stdout 回流到浏览器日志面板）
+			if (process.platform === 'linux') {
+				console.log(
+					'[display]',
+					`DISPLAY=${process.env.DISPLAY || '(空)'}`,
+					`WAYLAND_DISPLAY=${process.env.WAYLAND_DISPLAY || '(空)'}`,
+					`XDG_SESSION_TYPE=${process.env.XDG_SESSION_TYPE || '(空)'}`,
+					'→',
+					process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
+				);
+			}
 
-		chromium
-			.launchPersistentContext(userDataDir, {
-				headless,
-				viewport: null,
-				executablePath,
-				ignoreHTTPSErrors: true,
-				acceptDownloads: true,
-				ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
-				args: [
-					'--window-position=0,0',
-					'--no-first-run',
-					'--no-default-browser-check',
-					'--allow-file-access-from-files',
-					// Linux：ignoreDefaultArgs 移除了 Playwright 默认的 --no-sandbox（沙箱启用），
-					// 而解压分发的 chrome-sandbox 无法满足 setuid root 要求，
-					// 且 Ubuntu 23.10+ AppArmor 限制非受限程序创建 user namespace（兜底方案同样被封堵），
-					// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）；
-					// --disable-setuid-sandbox 一并关闭 setuid 沙箱助手（2.x AppImage 修复移植）
-					...(process.platform === 'linux'
-						? [
-								'--no-sandbox',
-								'--disable-setuid-sandbox',
-								// 显示平台按环境探测：纯 Wayland 会话无 DISPLAY，Chrome 默认走 X11
-								// 报 "Missing X server" → 强制 Wayland；有 DISPLAY 走 X11 正常路径
-								process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
-						  ]
-						: []),
-					// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
-					...formatBrowserEnhancementArgs(config),
-					...args
-				]
-			})
-			.then(async (browser) => {
-				// 恢复浏览器原生下载行为（behavior:'default'，保留 download 事件）：
-				// 下载气泡显示真实文件名、文件原生落盘到"文件下载"目录；
-				// 事件仍触发，供 page.on('download') 截胡转发到本地默认浏览器（取消失败时原生落盘兜底）
-				// 「文件下载优化」开关关闭时跳过：保持 Playwright 托管下载（由 saveAs 兜底落盘）
-				const nativeDownloadRestored =
-					config?.download_optimization === false ? false : await restoreNativeDownloadBehavior(browser);
+			chromium
+				.launchPersistentContext(userDataDir, {
+					headless,
+					viewport: null,
+					executablePath,
+					ignoreHTTPSErrors: true,
+					acceptDownloads: true,
+					ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
+					args: [
+						'--window-position=0,0',
+						'--no-first-run',
+						'--no-default-browser-check',
+						'--allow-file-access-from-files',
+						// Linux：ignoreDefaultArgs 移除了 Playwright 默认的 --no-sandbox（沙箱启用），
+						// 而解压分发的 chrome-sandbox 无法满足 setuid root 要求，
+						// 且 Ubuntu 23.10+ AppArmor 限制非受限程序创建 user namespace（兜底方案同样被封堵），
+						// 显式禁用沙箱避免内置浏览器无法启动（与主进程 --no-sandbox 行为一致）；
+						// --disable-setuid-sandbox 一并关闭 setuid 沙箱助手（2.x AppImage 修复移植）
+						...(process.platform === 'linux'
+							? [
+									'--no-sandbox',
+									'--disable-setuid-sandbox',
+									// 显示平台按环境探测：纯 Wayland 会话无 DISPLAY，Chrome 默认走 X11
+									// 报 "Missing X server" → 强制 Wayland；有 DISPLAY 走 X11 正常路径
+									process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
+							  ]
+							: []),
+						// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
+						...formatBrowserEnhancementArgs(config),
+						...args
+					]
+				})
+				.then(async (browser) => {
+					// 恢复浏览器原生下载行为（behavior:'default'，保留 download 事件）：
+					// 下载气泡显示真实文件名、文件原生落盘到"文件下载"目录；
+					// 事件仍触发，供 page.on('download') 截胡转发到本地默认浏览器（取消失败时原生落盘兜底）
+					// 「文件下载优化」开关关闭时跳过：保持 Playwright 托管下载（由 saveAs 兜底落盘）
+					const nativeDownloadRestored =
+						config?.download_optimization === false ? false : await restoreNativeDownloadBehavior(browser);
 
-				// 浏览器初始化：反检测注入 / 无页面自动关闭 / 关闭事件处理
-				injectAntiDetection(browser);
-				watchNoPagesAutoClose(browser);
-				handleBrowserClose(browser);
+					// 浏览器初始化：反检测注入 / 无页面自动关闭 / 关闭事件处理
+					injectAntiDetection(browser);
+					watchNoPagesAutoClose(browser);
+					handleBrowserClose(browser);
 
-				// 每个页面（含后续新建）的弹窗与下载处理
-				const pageHandle = (page: Page) => {
-					handlePageDialogs(page, config?.enable_dialog);
-					handlePageDownload(page, {
-						downloadsPath,
-						nativeDownloadRestored,
-						download_optimization: config?.download_optimization,
-						uid
-					});
-				};
-				for (const page of browser.pages()) {
-					pageHandle(page);
-				}
-				browser.on('page', pageHandle);
-
-				// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）；
-				// 仅「文件下载优化」开启时启用（关闭后下载流程完全由 Playwright 托管，不监听目录）
-				if (config?.download_optimization !== false) {
-					watchDownloadFolder(uid, downloadsPath);
-				}
-
-				// 浏览器增强：注入静音音频保活脚本（防休眠/防冻结，未开启时内部直接跳过）
-				await injectEnhancementKeepalive(browser, config);
-
-				try {
-					// 加载起始页：自定义导航页（localhost URL）或浏览器默认新标签页，启动即导航
-					const [blankPage] = browser.pages();
-					await blankPage?.goto(startPage).catch(() => {});
-
-					// 显示步骤提示（渲染到导航页，兼容新标签页扩展 iframe）
-					const step = createStepFunction(blankPage, serverPort);
-
-					// 系统自动化程序上下文（静态流程统一编排，见 scripts/system/）
-					const sysCtx: SystemScriptContext = {
-						browser,
-						uid,
-						store,
-						send,
-						step,
-						executablePath,
-						extensionPaths,
-						userDataDir,
-						userscripts,
-						enabledScriptCount,
-						closeableExtensionHomepages
+					// 每个页面（含后续新建）的弹窗与下载处理
+					const pageHandle = (page: Page) => {
+						handlePageDialogs(page, config?.enable_dialog);
+						handlePageDownload(page, {
+							downloadsPath,
+							nativeDownloadRestored,
+							download_optimization: config?.download_optimization,
+							uid
+						});
 					};
+					for (const page of browser.pages()) {
+						pageHandle(page);
+					}
+					browser.on('page', pageHandle);
 
-					// 关键路径系统流程：开发者模式 → 用户脚本权限 → 拓展加载验证（失败中断启动）
-					await runSystemScripts(sysCtx, 'launch');
-
-					// 监听网络请求（注册快且自动化程序依赖，放关键段）
-					// 「软件辅助」开关关闭时不注册路由：脚本不再识别为软件环境，自动化增强不可用
-					if (config?.script_assistance === false) {
-						console.log('软件辅助已关闭：跳过浏览器路由监听，脚本自动化增强不可用');
-					} else {
-						browserNetworkRoute(authToken, browser);
+					// 监听下载目录，新文件出现时通知渲染进程（原生落盘 / saveAs 兜底落盘的文件）；
+					// 仅「文件下载优化」开启时启用（关闭后下载流程完全由 Playwright 托管，不监听目录）
+					if (config?.download_optimization !== false) {
+						watchDownloadFolder(uid, downloadsPath);
 					}
 
-					// 关键路径就绪：立即通知渲染进程浏览器已可用（launched）。
-					// 用户脚本安装与自动化登录耗时随网络波动大（弱网可达分钟级），转入后台执行，
-					// 进度仍通过 step 提示渲染到导航页，不再阻塞浏览器可用状态。
-					onLaunch?.(browser);
-					resolve();
+					// 浏览器增强：注入静音音频保活脚本（防休眠/防冻结，未开启时内部直接跳过）
+					await injectEnhancementKeepalive(browser, config);
 
-					// 后台段系统流程：脚本安装/更新 → 拓展主页清理 → 脚本列表双向同步；
-					// 随后运行用户自动化程序（失败不影响浏览器可用状态，仅提示）
-					(async () => {
-						try {
-							await runSystemScripts(sysCtx, 'post');
-							await runAutomationScripts({
-								browser,
-								automationScripts,
-								serverPort,
-								step,
-								uid,
-								ocrManual: !!(store as any)?.render?.setting?.browser?.ocrManual
-							});
-							await step(['浏览器初始化完成。'], { loading: false });
-						} catch (err) {
-							// 后台任务异常（如浏览器被用户提前关闭）：仅记录，不再中断启动流程
-							console.warn('后台初始化任务中断：', err instanceof Error ? err.message : String(err));
+					try {
+						// 加载起始页：自定义导航页（localhost URL）或浏览器默认新标签页，启动即导航
+						const [blankPage] = browser.pages();
+						await blankPage?.goto(startPage).catch(() => {});
+
+						// 显示步骤提示（渲染到导航页，兼容新标签页扩展 iframe）
+						const step = createStepFunction(blankPage, serverPort);
+
+						// 系统自动化程序上下文（静态流程统一编排，见 scripts/system/）
+						const sysCtx: SystemScriptContext = {
+							browser,
+							uid,
+							store,
+							send,
+							step,
+							executablePath,
+							extensionPaths,
+							userDataDir,
+							userscripts,
+							enabledScriptCount,
+							closeableExtensionHomepages
+						};
+
+						// 关键路径系统流程：开发者模式 → 用户脚本权限 → 拓展加载验证（失败中断启动）
+						await runSystemScripts(sysCtx, 'launch');
+
+						// 监听网络请求（注册快且自动化程序依赖，放关键段）
+						// 「软件辅助」开关关闭时不注册路由：脚本不再识别为软件环境，自动化增强不可用
+						if (config?.script_assistance === false) {
+							console.log('软件辅助已关闭：跳过浏览器路由监听，脚本自动化增强不可用');
+						} else {
+							browserNetworkRoute(authToken, browser);
 						}
-					})();
-				} catch (err) {
+
+						// 关键路径就绪：立即通知渲染进程浏览器已可用（launched）。
+						// 用户脚本安装与自动化登录耗时随网络波动大（弱网可达分钟级），转入后台执行，
+						// 进度仍通过 step 提示渲染到导航页，不再阻塞浏览器可用状态。
+						onLaunch?.(browser);
+						resolve();
+
+						// 后台段系统流程：脚本安装/更新 → 拓展主页清理 → 脚本列表双向同步；
+						// 随后运行用户自动化程序（失败不影响浏览器可用状态，仅提示）
+						(async () => {
+							try {
+								await runSystemScripts(sysCtx, 'post');
+								await runAutomationScripts({
+									browser,
+									automationScripts,
+									serverPort,
+									step,
+									uid,
+									ocrManual: !!(store as any)?.render?.setting?.browser?.ocrManual
+								});
+								await step(['浏览器初始化完成。'], { loading: false });
+							} catch (err) {
+								// 后台任务异常（如浏览器被用户提前关闭）：仅记录，不再中断启动流程
+								console.warn('后台初始化任务中断：', err instanceof Error ? err.message : String(err));
+							}
+						})();
+					} catch (err) {
+						reject(err);
+					}
+				})
+				.catch((err) => {
 					reject(err);
-				}
-			})
-			.catch((err) => {
-				reject(err);
-			});
+				});
+		})().catch(reject);
 	});
 }
 

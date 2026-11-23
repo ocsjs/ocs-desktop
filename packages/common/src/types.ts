@@ -112,6 +112,14 @@ export interface BundledExtensionInfo {
 	icon?: string;
 }
 
+/** 内置拓展完整性校验单项结果 */
+export interface ExtensionIntegrityResult {
+	id: string;
+	/** ok=校验通过；repaired=校验失败已从 asar 重释放；skipped=未安装（按需安装，不强制释放）；failed=修复失败 */
+	status: 'ok' | 'repaired' | 'skipped' | 'failed';
+	error?: string;
+}
+
 /**
  * 内置拓展命名空间 API（bridge.bundledExtensions.* 的契约）。
  * 实现见 app src/extensions/api.ts（实现即真相源；键集由 bundledExtensionsWhitelist 收敛）。
@@ -128,14 +136,6 @@ export interface BundledExtensionsApi {
 	isInstalled(extensionId: string): boolean;
 	/** 完整性校验：快检 → 全量哈希 → 篡改自动重释放（仅处理已安装的拓展） */
 	verifyIntegrity(): Promise<ExtensionIntegrityResult[]>;
-}
-
-/** 内置拓展完整性校验单项结果 */
-export interface ExtensionIntegrityResult {
-	id: string;
-	/** ok=校验通过；repaired=校验失败已从 asar 重释放；skipped=未安装（按需安装，不强制释放）；failed=修复失败 */
-	status: 'ok' | 'repaired' | 'skipped' | 'failed';
-	error?: string;
 }
 
 /**
