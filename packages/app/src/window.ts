@@ -49,9 +49,12 @@ export function createWindow() {
 			// 关闭拼写矫正
 			spellcheck: false,
 			webSecurity: true,
-			// 开启node
-			nodeIntegration: true,
-			contextIsolation: false
+			// 阶段 C 安全基线：preload + contextIsolation + sandbox，
+			// 渲染进程仅可访问 window.ocs 白名单 API（见 src/preload/index.ts）
+			preload: path.join(__dirname, '../preload/index.js'),
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: true
 		}
 	});
 
