@@ -1,12 +1,15 @@
 /**
  * 应用启动初始化状态共享模块。
  *
- * 用于在主进程 initChrome 阶段记录初始化进度，供渲染进程的 loading 闪屏页
- * 通过本地服务器 `GET /api/init/status` 轮询拉取展示。
+ * 用于在主进程 initChrome 阶段记录初始化进度，经 IPC 推送到 loading 闪屏页
+ * （preload 暴露 window.ocsInit，通道前缀 ocs-init:*；历史上为本地服务器轮询，已废弃）。
  *
  * 每次调用 setInitStatus 会在 logs 中追加一条日志条目（前一条 active 自动转为 done），
  * 这样弹窗可以展示完整流程日志（准备、解压、查找、移动、清理、配置、重启等）。
  */
+
+import { app, ipcMain } from 'electron';
+import type { BrowserWindow } from 'electron';
 
 export type InitStatus = 'idle' | 'loading' | 'done' | 'error' | 'restart';
 export type InitLogState = 'done' | 'active' | 'error';
@@ -18,7 +21,8 @@ export interface InitLogEntry {
 	index: number;
 }
 
-interface InitStatusState {
+/** loading 页订阅的状态载荷（经 ocs-init:status 推送 / ocs-init:get-status 返回） */
+export interface InitStatusState {
 	status: InitStatus;
 	message: string;
 	logs: InitLogEntry[];
@@ -51,6 +55,7 @@ export function setInitStatus(partial: { status: InitStatus; message: string }):
 	}
 	initStatus.status = partial.status;
 	initStatus.message = partial.message;
+	pushInitStatus();
 }
 
 /**
@@ -63,6 +68,7 @@ export function updateInitLogText(text: string): void {
 	if (last && last.state === 'active') {
 		last.text = text;
 		initStatus.message = text;
+		pushInitStatus();
 	}
 }
 
@@ -81,4 +87,43 @@ export function resetInitStatus(): void {
 	initStatus.message = '';
 	initStatus.logs = [];
 	logIndex = 0;
+}
+
+/** 初始化 loading 窗口引用（供 ocs-init:close 通道关闭、状态推送定位） */
+let initLoadingWindow: BrowserWindow | undefined;
+
+/** ocs-init:* 通道是否已注册（懒注册：首次创建 loading 窗口时挂载，避免重复） */
+let initIpcRegistered = false;
+
+/**
+ * 注册初始化 loading 窗口（initChrome 创建窗口后调用，重建时需重新注册）。
+ * 同时懒注册 ocs-init:* 通道（get-status 读取 / close 关闭）。
+ */
+export function setInitLoadingWindow(win: BrowserWindow | undefined): void {
+	initLoadingWindow = win;
+	if (win && !initIpcRegistered) {
+		initIpcRegistered = true;
+		ipcMain.handle('ocs-init:get-status', () => getInitStatus());
+		ipcMain.on('ocs-init:close', () => closeInitLoadingWindow());
+		ipcMain.on('ocs-init:force-quit', () => {
+			// 用户在初始化期间确认放弃：立即停止初始化流程并退出软件（不重启，
+			// 与初始化成功路径的 relaunch 相反；进程退出即在途下载/解压一并中止）
+			closeInitLoadingWindow();
+			app.exit(0);
+		});
+	}
+}
+
+/** 状态变化时推送到 loading 窗口（IPC 推送，替代原 HTTP 轮询） */
+function pushInitStatus(): void {
+	if (initLoadingWindow && !initLoadingWindow.isDestroyed()) {
+		initLoadingWindow.webContents.send('ocs-init:status', getInitStatus());
+	}
+}
+
+/** 关闭初始化 loading 窗口（loading 页内关闭按钮经 ocs-init:close 通道调用） */
+export function closeInitLoadingWindow(): void {
+	if (initLoadingWindow && !initLoadingWindow.isDestroyed()) {
+		initLoadingWindow.destroy();
+	}
 }

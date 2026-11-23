@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { sleep, unzip, moveDirWithRetry, isDevMode } from '../utils';
@@ -7,24 +7,14 @@ import { glob } from 'glob';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
 import { StoreData } from '../store';
 import { createLoadingWindow } from '../window';
-import { setInitStatus, updateInitLogText } from './init.status';
+import { setInitStatus, updateInitLogText, setInitLoadingWindow } from './init.status';
 import { downloadBuiltinChromeZip } from './chrome.downloader';
+import type { BuiltinChromeInstallProgress } from '@ocs-desktop/common';
 
 const logger = Logger('chrome-init');
 
-/**
- * 内置浏览器安装进度回调（阶段 + 可选下载进度）。
- * 供前端 Setup「环境修复」实时展示。
- */
-export interface BuiltinChromeInstallProgress {
-	phase: 'download' | 'extract' | 'configure';
-	/** 下载阶段才有：源名/进度 */
-	sourceName?: string;
-	sourceIndex?: number;
-	sourceCount?: number;
-	rate?: number;
-	message: string;
-}
+/** 兼容旧引用：类型定义已上移至 @ocs-desktop/common types.ts（跨进程事件契约） */
+export type { BuiltinChromeInstallProgress };
 
 /**
  * 解压内置浏览器压缩包并完成配置（移动、chmod、旧路径迁移）。
@@ -135,9 +125,11 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 
 		fs.mkdirSync(chromeRuntimePath, { recursive: true });
 
-		// 仅在需要解压/下载时才创建并显示透明 loading 闪屏窗口，进度由 /api/init/status 拉取
-		const loadingWin = createLoadingWindow();
+		// 仅在需要解压/下载时才创建并显示透明 loading 闪屏窗口，进度经 IPC（ocs-init:*）推送
+		let loadingWin = createLoadingWindow();
 		loadingWin.once('ready-to-show', () => loadingWin.show());
+		// 注册窗口引用：loading 页内关闭按钮经 ocs-init:close 通道关闭窗口（无边框无系统按钮）
+		setInitLoadingWindow(loadingWin);
 		setInitStatus({ status: 'loading', message: '正在准备初始化环境...' });
 		try {
 			// 本地压缩包优先：resources（旧版完整包/开发模式）→ userData（上次下载完成但解压中断的残留，下载时已通过校验）
@@ -158,25 +150,25 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 						);
 					});
 				} catch (e) {
-					// 全部下载源失败/网络不可用：引导用户加群联系客服手动获取浏览器文件
+					// 全部下载源失败/网络不可用：错误展示在初始化窗口内（替代原生弹窗，避免被
+					// alwaysOnTop 的 loading 窗口遮挡导致弹窗按钮无法点击），等待用户主动关闭
 					logger.error('内置浏览器下载失败，所有下载源均不可用', e);
-					setInitStatus({ status: 'error', message: '内置浏览器下载失败，请检查网络后重启软件重试' });
-					// @ts-ignore
-					const { response } = await dialog.showMessageBox(null, {
-						title: '内置浏览器下载失败',
-						message:
-							'内置浏览器下载失败，所有下载源均不可用。\n\n' +
-							'请检查网络连接后重启软件重试；若仍无法下载，请前往官方网站找到软件交流群并加入，联系管理员。\n\n' +
-							'你也可以暂时使用系统中已安装的其他浏览器。',
-						detail: String(e),
-						type: 'error',
-						noLink: true,
-						defaultId: 0,
-						buttons: ['我知道了', '复制错误信息']
-					});
-					if (response === 1) {
-						clipboard.writeText(String(e));
+					const detail = e instanceof Error && e.message ? e.message : String(e);
+					// 用户可能在下载期间已关闭窗口：重建并重新注册，用于展示错误
+					if (loadingWin.isDestroyed()) {
+						loadingWin = createLoadingWindow();
+						loadingWin.once('ready-to-show', () => loadingWin.show());
+						setInitLoadingWindow(loadingWin);
 					}
+					setInitStatus({
+						status: 'error',
+						message:
+							'内置浏览器下载失败：所有下载源均不可用。\n' +
+							'请检查网络连接（若开启了代理/VPN 软件，请确认其正在正常运行）后重启软件重试；' +
+							'也可以暂时使用系统中已安装的其他浏览器。\n\n' +
+							detail
+					});
+					await waitInitWindowClosed(loadingWin);
 					return false;
 				}
 				setInitStatus({ status: 'loading', message: '内置浏览器下载完成' });
@@ -212,7 +204,8 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 		} catch (e) {
 			logger.error('初始化谷歌浏览器失败', e);
 			setInitStatus({ status: 'error', message: '初始化谷歌浏览器失败：' + String(e) });
-			dialog.showErrorBox('初始化谷歌浏览器失败', String(e));
+			// 同样改为初始化窗口内展示错误并等待关闭，不再使用原生弹窗
+			await waitInitWindowClosed(loadingWin);
 			return false;
 		} finally {
 			// 应用即将 quit 时销毁无碍；错误分支也需关闭闪屏
@@ -225,6 +218,17 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 		dialog.showErrorBox('初始化谷歌浏览器失败', String(e));
 		return false;
 	}
+}
+
+/**
+ * 等待用户点击初始化窗口的关闭按钮（ocs-init:close 通道触发 destroy 后 'closed' 事件）；
+ * 窗口已被销毁（用户下载期间已关闭）时立即返回
+ */
+function waitInitWindowClosed(win: BrowserWindow): Promise<void> {
+	if (win.isDestroyed()) {
+		return Promise.resolve();
+	}
+	return new Promise((resolve) => win.once('closed', () => resolve()));
 }
 
 function ensureChromeExecutablePermission(chromeFinalPath: string) {

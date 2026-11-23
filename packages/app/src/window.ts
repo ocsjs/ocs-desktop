@@ -3,8 +3,6 @@ import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import path from 'path';
 import url from 'url';
 import fs from 'fs';
-import { store } from './store';
-import { DEFAULT_SERVER_PORT } from '@ocs-desktop/common';
 
 /**
  * 窗口图标路径：
@@ -81,7 +79,7 @@ export function createWindow() {
  *
  * 仅在内置 Chrome 需要解压（首次运行）时由 initChrome 创建并显示，
  * 加载独立的 public/loading.html（不依赖 web/Vue 项目），背景透明、只显示一个 loading 弹窗。
- * 进度文案由 loading.html 内轮询 /api/init/status 拉取，端口通过 query 注入。
+ * 状态经 IPC 推送（preload 暴露 window.ocsInit，通道 ocs-init:*），无网络能力。
  */
 export function createLoadingWindow(): BrowserWindow {
 	const win = new BrowserWindow({
@@ -104,18 +102,14 @@ export function createLoadingWindow(): BrowserWindow {
 			zoomFactor: 1,
 			spellcheck: false,
 			webSecurity: true,
-			nodeIntegration: true,
-			contextIsolation: false
+			// loading 专用窄接口 preload（window.ocsInit，与主窗口 window.ocs 隔离）
+			preload: path.join(__dirname, '../preload/loading.js'),
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: true
 		}
 	});
 
-	// 加载独立 loading.html（file://），端口由 store 读取并注入 query，默认 15319。
-	// 开发模式：loading.html 源文件位于 web 项目 packages/web/public/（vite publicDir），
-	//   打包时由 vite 复制到 packages/app/public/；故两模式下分别从对应位置以 file:// 加载，
-	//   不依赖 vite dev server，且打包不会被 vite 覆盖（源文件受 web 项目管理）。
-	const port = (store.store.server?.port as number | undefined) || DEFAULT_SERVER_PORT;
-	// 渲染产物经 electron-vite 输出到 out/renderer（含 publicDir 拷贝的 loading.html）；
-	// dev 模式直接读 web 源文件（vite publicDir），不依赖 dev server。
 	// 加载独立 loading.html（file://）。按形态探测首个存在的路径：
 	// 1. 打包（asar 根下 out/renderer，publicDir 拷贝产物）
 	// 2. 构建产物直跑（getAppPath=out/main，上一级即 out/renderer）
@@ -126,7 +120,7 @@ export function createLoadingWindow(): BrowserWindow {
 		path.join(app.getAppPath(), '..', 'web', 'public', 'loading.html')
 	];
 	const loadingHtmlPath = loadingHtmlCandidates.find((p) => fs.existsSync(p)) ?? loadingHtmlCandidates[1];
-	win.loadURL(url.pathToFileURL(loadingHtmlPath).href + `?port=${port}`);
+	win.loadURL(url.pathToFileURL(loadingHtmlPath).href);
 
 	return win;
 }

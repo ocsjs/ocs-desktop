@@ -20,5 +20,7 @@ contextBridge.exposeInMainWorld('ocsInit', {
 	/** 主动读取当前状态（页面加载时拉取一次，覆盖订阅前已产生的进度） */
 	getStatus: (): Promise<InitStatusState> => ipcRenderer.invoke('ocs-init:get-status'),
 	/** 关闭初始化窗口 */
-	close: () => ipcRenderer.send('ocs-init:close')
+	close: () => ipcRenderer.send('ocs-init:close'),
+	/** 立即停止初始化流程并退出软件（不重启），经页面内确认后调用 */
+	forceQuit: () => ipcRenderer.send('ocs-init:force-quit')
 });

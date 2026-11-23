@@ -6,7 +6,7 @@
 			http-equiv="Content-Security-Policy"
 			content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src http://localhost:*; img-src file: data:"
 		/>
-		<title>OCS - 初始化</title>
+		<title>OCS桌面版 - 初始化</title>
 		<style>
 			* {
 				margin: 0;
@@ -26,66 +26,93 @@
 				display: flex;
 				align-items: center;
 				justify-content: center;
+				/* 上下留白：给加深后的阴影留出展示空间，避免卡片贴边被窗口裁剪 */
+				padding: 16px 0;
 			}
 
-			/* ===== Arco Design Modal ===== */
-			.arco-modal-wrapper {
+			/* ===== a-result 风格整体布局 ===== */
+			.result-wrapper {
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
 				width: 420px;
+				padding: 28px 20px 16px;
 				background-color: #fff;
-				border-radius: 4px;
-				box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08),
-					0 3px 6px -4px rgba(0, 0, 0, 0.12),
-					0 9px 28px 8px rgba(0, 0, 0, 0.05);
+				border: 1px solid #d9dce1;
+				/* 与软件卡片级圆角对齐（8px） */
+				border-radius: 8px;
+				box-shadow: 0 8px 24px 0 rgba(0, 0, 0, 0.16),
+					0 4px 10px -4px rgba(0, 0, 0, 0.2),
+					0 12px 40px 8px rgba(0, 0, 0, 0.12);
 				overflow: hidden;
 				user-select: none;
+				/* 无边框窗口：整卡可拖拽移动，鼠标显示为移动样式（交互元素单独排除） */
+				-webkit-app-region: drag;
+				cursor: move;
+			}
+			/* 可交互/可滚动区域排除拖拽并恢复默认光标 */
+			.result-wrapper button,
+			.result-wrapper a,
+			.result-close,
+			.log-list,
+			.confirm-overlay {
+				-webkit-app-region: no-drag;
+				cursor: default;
 			}
 
-			.arco-modal-header {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				padding: 16px 20px;
-			}
-			.header-left {
-				display: flex;
-				align-items: center;
-				gap: 8px;
-			}
-			.header-icon {
-				width: 24px;
-				height: 24px;
-				border-radius: 6px;
-				object-fit: contain;
-				flex-shrink: 0;
-				display: block;
-			}
-			.arco-modal-title {
-				font-size: 16px;
-				line-height: 1.5;
-				font-weight: 500;
-				color: #1d2129;
-			}
-			.arco-icon-close {
+			/* 右上角常驻关闭按钮 */
+			.result-close {
+				position: absolute;
+				top: 12px;
+				right: 12px;
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
 				width: 16px;
 				height: 16px;
 				color: #c9cdd4;
-				cursor: not-allowed;
+				cursor: pointer;
 			}
-			.arco-icon-close svg {
+			.result-close:hover {
+				color: #4e5969;
+			}
+			.result-close svg {
 				width: 100%;
 				height: 100%;
 				display: block;
 			}
 
-			.arco-modal-body {
-				padding: 8px 20px 16px;
+			/* a-result icon 插槽 */
+			.result-icon {
+				margin-bottom: 12px;
 			}
+			.result-icon img {
+				width: 48px;
+				height: 48px;
+				border-radius: 10px;
+				object-fit: contain;
+				display: block;
+			}
+			/* a-result title（初始化状态） */
+			.result-title {
+				font-size: 16px;
+				line-height: 1.5;
+				font-weight: 500;
+				color: #1d2129;
+				text-align: center;
+				margin-bottom: 16px;
+				cursor: inherit;
+			}
+			/* a-result 内容区（步骤列表） */
+			.result-content {
+				width: 100%;
+				padding: 24px 0px;
+			}
+
 			.log-list {
 				list-style: none;
-				max-height: 180px;
+				max-height: 160px;
 				overflow-y: auto;
 				display: flex;
 				flex-direction: column;
@@ -142,6 +169,8 @@
 			.log-text {
 				color: #86909c;
 				word-break: break-word;
+				/* 支持多行错误详情（各下载源失败原因逐行展示） */
+				white-space: pre-line;
 			}
 			.log-item.active .log-text {
 				color: #1d2129;
@@ -151,10 +180,9 @@
 				color: #f53f3f;
 			}
 
-			.arco-modal-footer {
-				padding: 12px 20px;
-				text-align: right;
-				border-top: 1px solid #e5e6eb;
+			/* 底部操作区（仅出错时显示） */
+			.result-footer {
+				margin-top: 16px;
 			}
 			.arco-btn {
 				height: 32px;
@@ -163,17 +191,67 @@
 				font-size: 14px;
 				line-height: 1.5715;
 				border: 1px solid transparent;
-				cursor: not-allowed;
+				cursor: pointer;
 			}
-			.arco-btn-primary {
-				background-color: #94bfff;
-				border-color: #94bfff;
-				color: #fff;
+			.arco-btn-secondary {
+				background-color: #f2f3f5;
+				border-color: #f2f3f5;
+				color: #1d2129;
+			}
+			.arco-btn-secondary:hover {
+				background-color: #e5e6eb;
+				border-color: #e5e6eb;
 			}
 			.arco-btn-danger {
-				background-color: #fdcbdc;
-				border-color: #fdcbdc;
+				background-color: #f53f3f;
+				border-color: #f53f3f;
 				color: #fff;
+			}
+			.arco-btn-danger:hover {
+				background-color: #f76560;
+				border-color: #f76560;
+			}
+
+			/* ===== 关闭确认弹窗（初始化期间点击关闭时展示） ===== */
+			.confirm-overlay {
+				/* 覆盖整个窗口（不显示遮罩层），弹窗允许宽高超出初始化卡片范围 */
+				position: fixed;
+				inset: 0;
+				background: transparent;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				z-index: 10;
+			}
+			.confirm-dialog {
+				/* 允许宽高超出初始化卡片，仅受窗口边界约束 */
+				width: 360px;
+				max-width: 92vw;
+				background: #fff;
+				border: 1px solid #d9dce1;
+				/* 与初始化窗口圆角对齐（8px） */
+				border-radius: 8px;
+				/* 无遮罩层：依赖更深的阴影与卡片区分层级 */
+				box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+				padding: 20px;
+			}
+			.confirm-title {
+				font-size: 15px;
+				font-weight: 500;
+				color: #1d2129;
+				margin-bottom: 8px;
+			}
+			.confirm-text {
+				font-size: 13px;
+				color: #4e5969;
+				line-height: 1.7;
+				margin-bottom: 16px;
+				white-space: pre-line;
+			}
+			.confirm-actions {
+				display: flex;
+				gap: 12px;
+				justify-content: flex-end;
 			}
 
 			@keyframes arco-spin {
@@ -186,34 +264,41 @@
 	<body>
 		<div
 			id="card"
-			class="arco-modal-wrapper"
+			class="result-wrapper"
 		>
-			<div class="arco-modal-header">
-				<div class="header-left">
-					<img
-						class="header-icon"
-						src="favicon.png"
-						alt="OCS"
-					/>
-					<span
-						id="title"
-						class="arco-modal-title"
-						>OCS 初始化</span
-					>
-				</div>
-				<span class="arco-icon-close">
-					<svg
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<path d="M18 6L6 18M6 6l12 12" />
-					</svg>
-				</span>
+			<!-- 右上角常驻关闭按钮 -->
+			<span
+				class="result-close"
+				id="close-btn"
+				title="关闭"
+			>
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path d="M18 6L6 18M6 6l12 12" />
+				</svg>
+			</span>
+
+			<!-- a-result：icon 插槽 -->
+			<div class="result-icon">
+				<img
+					src="favicon.png"
+					alt="OCS"
+				/>
+			</div>
+			<!-- a-result：title（初始化状态） -->
+			<div
+				id="title"
+				class="result-title"
+			>
+				OCS桌面版软件初始化中
 			</div>
 
-			<div class="arco-modal-body">
+			<!-- a-result：内容区（步骤列表） -->
+			<div class="result-content">
 				<ul
 					id="log-list"
 					class="log-list"
@@ -230,45 +315,113 @@
 				</ul>
 			</div>
 
-			<div class="arco-modal-footer">
+			<!-- 底部关闭按钮仅在初始化出错时显示（正常初始化期间隐藏，仅保留右上角关闭） -->
+			<div
+				class="result-footer"
+				id="footer"
+				style="display: none"
+			>
 				<button
 					id="footer-btn"
 					type="button"
-					class="arco-btn arco-btn-primary"
-					disabled
+					class="arco-btn arco-btn-danger"
 				>
-					请稍候
+					关闭软件
 				</button>
+			</div>
+
+			<!-- 初始化期间点击关闭的确认弹窗（绝对定位于卡片内部，遮罩与卡片同宽高同圆角） -->
+			<div
+				class="confirm-overlay"
+				id="confirm-overlay"
+			>
+				<div class="confirm-dialog">
+					<div class="confirm-title">确认关闭？</div>
+					<div
+						class="confirm-text"
+						id="confirm-text"
+					>
+						初始化尚未完成：内置浏览器可能尚未下载完毕，其他初始化进程也可能尚未结束。现在关闭后软件将无法正常运行。
+
+确定要立即关闭并退出 OCS桌面版 吗？
+					</div>
+					<div class="confirm-actions">
+						<button
+							id="confirm-cancel"
+							type="button"
+							class="arco-btn arco-btn-secondary"
+						>
+							继续等待
+						</button>
+						<button
+							id="confirm-ok"
+							type="button"
+							class="arco-btn arco-btn-danger"
+						>
+							立即关闭
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 
 		<script>
 			(function () {
-				var titleEl = document.getElementById('title');
-				var listEl = document.getElementById('log-list');
-				var footerBtn = document.getElementById('footer-btn');
-
-				// 从 query 读取端口（由主进程 createLoadingWindow 注入），默认 15319
-				var port = (function () {
-					var m = /(?:[?&]port=)(\d+)/.exec(window.location.search);
-					return m ? m[1] : '15319';
-				})();
-				var STATUS_URL = 'http://localhost:' + port + '/api/init/status';
-
+				// ===================== 通用常量 =====================
+				/** 软件名称（各文案统一引用） */
+				var APP_NAME = 'OCS桌面版';
+				/** 初始化状态对应的标题文案 */
 				var TITLE_MAP = {
-					idle: 'OCS 初始化',
-					loading: 'OCS 初始化',
+					idle: APP_NAME + '软件初始化中',
+					loading: APP_NAME + '软件初始化中',
 					done: '初始化完成',
-					restart: '初始化完成',
+					restart: '初始化完成，即将重启',
 					error: '初始化失败'
 				};
-				var FOOTER_MAP = {
-					idle: '请稍候',
-					loading: '请稍候',
-					done: '完成',
-					restart: '重启中…',
-					error: '失败'
-				};
+
+				// ===================== DOM 引用 =====================
+				var titleEl = document.getElementById('title');
+				var confirmTextEl = document.getElementById('confirm-text');
+				var listEl = document.getElementById('log-list');
+				var footerBtn = document.getElementById('footer-btn');
+				var footerEl = document.getElementById('footer');
+				var confirmOverlay = document.getElementById('confirm-overlay');
+
+				// 状态经 IPC 与主进程通信（preload 暴露 window.ocsInit，无任何网络能力）。
+				// preload 缺失（异常场景）时页面保持静态初始状态。
+				var ocsInit = window.ocsInit;
+
+				/** 当前初始化状态（render 时更新），用于决定关闭行为 */
+				var currentStatus = 'idle';
+
+				// 静态文案统一由常量注入（HTML 中同名静态文本为 JS 未执行时的兜底）
+				confirmTextEl.textContent =
+					'初始化尚未完成：内置浏览器可能尚未下载完毕，其他初始化进程也可能尚未结束。' +
+					'现在关闭后软件将无法正常运行。\n\n确定要立即关闭并退出 ' +
+					APP_NAME +
+					' 吗？';
+
+				// 右上角关闭按钮常驻：初始化进行中先弹确认，出错/完成/重启中直接关闭窗口
+				function requestClose() {
+					if (!ocsInit) return;
+					if (currentStatus === 'loading' || currentStatus === 'idle') {
+						confirmOverlay.style.display = 'flex';
+						return;
+					}
+					ocsInit.close();
+				}
+				document.getElementById('close-btn').addEventListener('click', requestClose);
+
+				// 底部「关闭软件」按钮（仅出错时显示）：初始化已中止，直接关闭窗口
+				footerBtn.addEventListener('click', requestClose);
+
+				// 确认弹窗：继续等待 → 收起；立即关闭 → 停止初始化并退出软件（不重启）
+				document.getElementById('confirm-cancel').addEventListener('click', function () {
+					confirmOverlay.style.display = 'none';
+				});
+				document.getElementById('confirm-ok').addEventListener('click', function () {
+					if (ocsInit) ocsInit.forceQuit();
+				});
 
 				function iconHtml(state) {
 					if (state === 'active') {
@@ -293,9 +446,10 @@
 				function render(data) {
 					var status = data.status || 'idle';
 					var logs = data.logs || [];
-					titleEl.textContent = TITLE_MAP[status] || 'OCS 初始化';
-					footerBtn.textContent = FOOTER_MAP[status] || '请稍候';
-					footerBtn.className = 'arco-btn ' + (status === 'error' ? 'arco-btn-danger' : 'arco-btn-primary');
+					currentStatus = status;
+					titleEl.textContent = TITLE_MAP[status] || TITLE_MAP.loading;
+					// 底部关闭按钮仅在出错时显示，正常初始化期间隐藏
+					footerEl.style.display = status === 'error' ? '' : 'none';
 
 					// 日志列表为空时显示占位
 					if (!logs.length) {
@@ -327,22 +481,15 @@
 					});
 				}
 
-				function poll() {
-					fetch(STATUS_URL, { cache: 'no-store' })
-						.then(function (res) {
-							if (res.ok) return res.json();
-							throw new Error('HTTP ' + res.status);
-						})
-						.then(function (data) {
-							if (data && typeof data === 'object') render(data);
-						})
-						.catch(function () {
-							// 服务器可能尚未就绪，忽略错误继续下轮重试
-						});
+				if (ocsInit) {
+					// 先拉取一次当前状态（覆盖订阅前已产生的进度），再订阅主进程推送
+					ocsInit.getStatus().then(function (data) {
+						if (data && typeof data === 'object') render(data);
+					});
+					ocsInit.onStatus(function (data) {
+						if (data && typeof data === 'object') render(data);
+					});
 				}
-
-				poll();
-				setInterval(poll, 500);
 			})();
 		</script>
 	</body>
