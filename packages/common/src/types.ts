@@ -4,16 +4,14 @@
  *
  * 本文件仅包含类型（type/interface），不产生运行时代码，可安全用于浏览器环境。
  */
-import type { AxiosRequestConfig } from 'axios';
 import type { LaunchOptions } from 'playwright-core';
 import type { AutomationScript } from './scripts/script';
 import type { Config } from './scripts/interface';
+import type { UpdateInformationResource } from './api';
 
 /** 生成产物（remote-methods.generated.ts）所需的类型转发 */
 export type { ValidBrowser } from './interface';
 export type { SystemScriptPhase } from './scripts/script';
-import type { UpdateInformationResource } from './api';
-import type { getValidBrowsers } from './utils/valid.browser';
 
 /** 应用持久化存储结构（主进程 electron-store 与渲染进程共享） */
 export interface AppStore {
@@ -265,19 +263,6 @@ export interface ScriptWorkerEventPayload {
 }
 
 /**
- * 内置浏览器文件完整性检查结果（checkBuiltinChromeIntegrity 返回值）。
- * 实现见 @ocs-desktop/app src/tasks/chrome.integrity.ts（特性代码后续提交）。
- */
-export interface ChromeIntegrityResult {
-	/** ok：完整；corrupted：文件被杀软等删改；missing：浏览器未安装/可执行文件不存在 */
-	status: 'ok' | 'corrupted' | 'missing';
-	/** 是否存在逐文件哈希基准清单（旧版本安装无清单，仅做关键文件降级检查） */
-	hasManifest: boolean;
-	/** status=corrupted 时的损坏详情（缺失/被篡改文件示例） */
-	detail?: string;
-}
-
-/**
  * 内置浏览器安装进度（builtin-chrome-install-progress 事件负载）。
  * 实现见 @ocs-desktop/app src/tasks/init.chrome.ts。
  */
@@ -290,7 +275,6 @@ export interface BuiltinChromeInstallProgress {
 	rate?: number;
 	message: string;
 }
-
 
 /**
  * 主进程 → 渲染进程 事件推送契约：频道名 → 参数元组。

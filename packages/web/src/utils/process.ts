@@ -16,7 +16,6 @@ import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
 import { notifyOcrMissingAfterLaunch, promptOcrChoiceBeforeLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
-import { handleBuiltinChromeLaunchFailure } from './browser-repair';
 
 /** 用户脚本安装结果（由 worker 回传） */
 interface InstallResult {
@@ -327,8 +326,6 @@ export class Process extends EventEmitter {
 				// 若状态仍停留在 launching，回落为 closed，解除卡片一直转圈的状态
 				if (this.status === 'launching') {
 					this.status = 'closed';
-					// 启动失败复检：内置浏览器文件被杀毒软件破坏时引导修复，成功后自动重新启动
-					handleBuiltinChromeLaunchFailure(this.browser);
 				}
 				// 开启预览图显示时，保留最后一帧作为"浏览器关闭后的预览图"，由界面层展示/关闭
 				if (store.render.setting.browser.screenshotPreview && this.frameUrl) {
