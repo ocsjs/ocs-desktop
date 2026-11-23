@@ -369,7 +369,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 			}
 			return { mb: await getPidsMemoryMB(pids), cpuTime };
 		} catch (e) {
-			console.warn('[memory] 获取浏览器资源占用失败：', e);
+			// 资源占用为辅助指标：失败仅记日志（stdout），不得写 stderr——
+			// 渲染端会将 stderr 弹为错误通知，阻断/干扰脚本安装与拓展安装流程
+			console.log('[memory] 获取浏览器资源占用失败（已跳过）：', e instanceof Error ? e.message : String(e));
 			return { mb: 0, cpuTime: 0 };
 		}
 	}
@@ -1313,13 +1315,21 @@ async function getPidsMemoryMB(pids: number[]): Promise<number> {
 		const totalKB = out.split('\n').reduce((sum, line) => sum + (parseInt(line.trim(), 10) || 0), 0);
 		return Math.round(totalKB / 1024);
 	}
-	// Windows
-	const out = await execCmd('powershell', [
-		'-NoProfile',
-		'-Command',
-		`(Get-Process -Id ${pids.join(',')} -ErrorAction SilentlyContinue | Measure-Object WorkingSet64 -Sum).Sum`
-	]);
-	return Math.round((parseInt(out.trim(), 10) || 0) / 1024 / 1024);
+	// Windows：Get-CimInstance 按过滤器查询——对枚举后已退出的 PID 天然容忍
+	// （Get-Process -Id 遇死 PID 会写入错误记录并导致 powershell 退出码非 0；
+	// 注意 Win32_Process 的属性名是 WorkingSetSize，与 Get-Process 的 WorkingSet64 不同）
+	const filter = pids.map((id) => `ProcessId=${id}`).join(' OR ');
+	try {
+		const out = await execCmd('powershell', [
+			'-NoProfile',
+			'-Command',
+			`(Get-CimInstance Win32_Process -Filter "${filter}" | Measure-Object WorkingSetSize -Sum).Sum`
+		]);
+		return Math.round((parseInt(out.trim(), 10) || 0) / 1024 / 1024);
+	} catch {
+		// 资源占用为辅助指标：测量失败静默回退 0，不干扰脚本安装/拓展安装等主流程
+		return 0;
+	}
 }
 
 /**
