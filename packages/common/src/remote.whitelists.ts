@@ -8,16 +8,31 @@
  * 2. ipc:introspect 自省输出（preload facade 生成面 = 白名单）
  * 3. tsc 声明发射的类型 Pick 键集（bridge-types.entry.ts）
  */
-export const fsWhitelist = ['existsSync', 'readFileSync', 'writeFileSync', 'readdirSync', 'rmSync', 'unlinkSync', 'mkdirSync'] as const;
+export const fsWhitelist = [
+	'existsSync',
+	'readFileSync',
+	'writeFileSync',
+	'readdirSync',
+	'rmSync',
+	'unlinkSync',
+	'mkdirSync'
+] as const;
 export const pathWhitelist = ['join', 'resolve', 'sep'] as const;
 export const osWhitelist = ['platform', 'release', 'cpus', 'freemem', 'totalmem'] as const;
 export const winWhitelist = ['setTitle', 'setAlwaysOnTop', 'setTitleBarOverlay'] as const;
-export const webContentsWhitelist = ['copy', 'cut', 'paste', 'undo', 'redo', 'openDevTools', 'executeJavaScript'] as const;
+export const webContentsWhitelist = [
+	'copy',
+	'cut',
+	'paste',
+	'undo',
+	'redo',
+	'openDevTools',
+	'executeJavaScript'
+] as const;
 export const appWhitelist = ['getAppPath', 'getPath', 'getVersion'] as const;
 export const dialogWhitelist = ['showOpenDialog', 'showSaveDialog', 'showOpenDialogSync'] as const;
 export const electronStoreWhitelist = ['store'] as const;
 export const loggerWhitelist = ['error', 'info'] as const;
-
 /** 内置拓展域（bridge.bundledExtensions.*）：安装/卸载/检测/列举/完整性校验 */
 export const bundledExtensionsWhitelist = ['list', 'install', 'remove', 'isInstalled', 'verifyIntegrity'] as const;
 

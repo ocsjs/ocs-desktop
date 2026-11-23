@@ -129,7 +129,7 @@ const store = new Store<typeof OriginalAppStore>();
  * - set()：点路径写入（唯一推荐写入入口）
  * - invalidateCache()：手动失效（绕过 set 的写入兜底）
  */
-let storeDataCache: (typeof OriginalAppStore) | undefined;
+let storeDataCache: typeof OriginalAppStore | undefined;
 
 /** 任何写入（set/顶层 setter）后使整树缓存失效 */
 store.onDidAnyChange?.(() => {

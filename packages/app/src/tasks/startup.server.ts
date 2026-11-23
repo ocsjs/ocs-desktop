@@ -479,24 +479,24 @@ export async function startupServer() {
 				return;
 			}
 			NetUtils.get(devOrigin + req.originalUrl, {
-					responseType: 'stream',
-					timeout: 10000,
-					maxRedirects: 0,
-					validateStatus: () => true,
-					headers: {
-						host: devHost,
-						accept: req.headers.accept || '*/*',
-						// 让上游返回未压缩内容，避免压缩流与响应头转发不一致
-						'accept-encoding': 'identity',
-						// 保留条件请求头，维持 vite 的 304 缓存行为
-						...(typeof req.headers['if-none-match'] === 'string'
-							? { 'if-none-match': req.headers['if-none-match'] }
-							: {}),
-						...(typeof req.headers['if-modified-since'] === 'string'
-							? { 'if-modified-since': req.headers['if-modified-since'] }
-							: {})
-					}
-				})
+				responseType: 'stream',
+				timeout: 10000,
+				maxRedirects: 0,
+				validateStatus: () => true,
+				headers: {
+					host: devHost,
+					accept: req.headers.accept || '*/*',
+					// 让上游返回未压缩内容，避免压缩流与响应头转发不一致
+					'accept-encoding': 'identity',
+					// 保留条件请求头，维持 vite 的 304 缓存行为
+					...(typeof req.headers['if-none-match'] === 'string'
+						? { 'if-none-match': req.headers['if-none-match'] }
+						: {}),
+					...(typeof req.headers['if-modified-since'] === 'string'
+						? { 'if-modified-since': req.headers['if-modified-since'] }
+						: {})
+				}
+			})
 				.then((upstream) => {
 					res.status(upstream.status);
 					for (const [key, value] of Object.entries(upstream.headers)) {
