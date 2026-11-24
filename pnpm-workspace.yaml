@@ -8,7 +8,7 @@ catalog:
   axios: ^0.25.0
   chalk: 4.1.0
   dayjs: ^1.10.7
-  playwright-core: ^1.52.0
+  playwright-core: 1.48.2
   typescript: ^4.5.5
   vitest: ^3.0.0
   xlsx: ^0.17.5

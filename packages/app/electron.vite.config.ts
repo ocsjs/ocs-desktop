@@ -25,6 +25,8 @@ export default defineConfig({
 		},
 		build: {
 			outDir: 'out/main',
+			// 显式钉住 Node16 语法目标（Electron 22 内置 Node 16.17），防止输出高版本语法
+			target: 'node16.17',
 			rollupOptions: {
 				input: {
 					index: path.resolve(__dirname, 'index.ts'),
@@ -42,6 +44,8 @@ export default defineConfig({
 		},
 		build: {
 			outDir: 'out/preload',
+			// 显式钉住 Node16 语法目标（preload 运行在 Electron 22 的 Node 16 环境）
+			target: 'node16.17',
 			rollupOptions: {
 				input: {
 					index: path.resolve(__dirname, 'src/preload/index.ts'),
@@ -63,6 +67,8 @@ export default defineConfig({
 		},
 		build: {
 			outDir: path.resolve(__dirname, 'out/renderer'),
+			// 显式钉住 Chromium 108 语法/特性目标（Electron 22 内核）
+			target: 'chrome108',
 			rollupOptions: {
 				input: path.resolve(__dirname, '../web/index.html'),
 				output: {

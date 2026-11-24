@@ -28,24 +28,9 @@ jobs:
     strategy:
       matrix:
         include:
-          # Windows x64
+          # Windows x64（win7 分支仅构建 Windows）
           - os: windows-latest
             platform: win
-            arch: x64
-
-          # macOS x64 (Intel Mac runner 原生构建)
-          - os: macos-15-intel
-            platform: mac
-            arch: x64
-
-          # macOS ARM64
-          - os: macos-latest
-            platform: mac
-            arch: arm64
-
-          # Linux x64
-          - os: ubuntu-latest
-            platform: linux
             arch: x64
 
     runs-on: ${{ matrix.os }}
@@ -86,21 +71,6 @@ jobs:
           USE_HARD_LINKS: false
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
-
-      # mac 防回归冒烟：electronFuses 改写 Electron Framework 后若未重签，
-      # arm64 会在启动首次读 fuse 时被内核 SIGKILL（Code Signature Invalid）。
-      # codesign --verify 全量校验页哈希；ELECTRON_RUN_AS_NODE 真实执行一次二进制走启动路径。
-      - name: Verify mac app code signature
-        if: matrix.platform == 'mac'
-        shell: bash
-        run: |
-          set -e
-          APP_DIR=$(find releases -maxdepth 2 -name "OCS Desktop.app" | head -1)
-          echo "Verifying: $APP_DIR"
-          codesign --verify --deep --strict --verbose=2 "$APP_DIR"
-          codesign -dv --verbose=2 "$APP_DIR" 2>&1 | head -20
-          ELECTRON_RUN_AS_NODE=1 "$APP_DIR/Contents/MacOS/OCS Desktop" -e "process.exit(0)"
-          echo "mac app signature & launch smoke test OK"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -175,12 +145,8 @@ jobs:
           CUSTOM_NOTES="
           ---
           ## 📦 下载地址
-          ### Windows (不支持Win7)
+          ### Windows（Win7 特别版，支持 Win7 SP1 及以上）
           - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe)
-          ### macOS
-          - [M系列芯片(ARM64)](${DL}ocs-${VER}-setup-mac-arm64.dmg) | [Intel芯片(x64)](${DL}ocs-${VER}-setup-mac-x64.dmg)
-          ### Linux
-          - [AppImage](${DL}ocs-${VER}-setup-linux-x64.AppImage) | [Debian/Ubuntu (deb)](${DL}ocs-${VER}-setup-linux-x64.deb)
           ### 🔗 快捷访问
           - [官网](https://docs.ocsjs.com/)
           - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)

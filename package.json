@@ -15,7 +15,6 @@
 		"lint:fix": "prettier -c ./.prettierrc.json --write \"**/*.{ts,js,vue,css}\" && eslint ./packages --ext .ts,.tsx,.js,.jsx,.vue --fix",
 		"test": "pnpm --filter @ocs-desktop/common test && pnpm --filter @ocs-desktop/app test",
 		"prepare": "husky",
-		"postinstall": "pnpm --filter @ocs-desktop/app exec install-electron",
 		"setup": "bash ./scripts/setup.sh",
 		"dev": "pnpm --filter @ocs-desktop/app dev"
 	},
