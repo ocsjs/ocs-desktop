@@ -9,7 +9,7 @@ html,
 	max-height: 100%;
 	min-width: 500px;
 	min-height: 300px;
-	--title-height: 32px;
+	--title-height: 36px;
 }
 
 /* 仅桌面端禁止 body 滚动：布局为 100vh + 内部滚动容器，
@@ -21,10 +21,23 @@ html:not(.in-browser) #app {
 	overflow: hidden;
 }
 
+/* Win7 风格窗口边框：外侧 1px 纯黑主边框 + 内侧 2px 浅灰色间隔（方角，模拟 Win7 非 Aero 窗口）。
+   用双层 border 实现而非 inset box-shadow：阴影会被 body 背景遮盖，border 才是真实占位。
+   height/box-sizing：约束 html/body 恰好填满窗口（否则内容 100vh 超出双层 border 的 6px，
+   body 底边被 html overflow:hidden 裁掉）。
+   注：圆角方案已放弃——Win7 上真圆角依赖透明窗口，而 DWM 禁用（Basic 主题）时透明失效 */
 html.window-frame {
-	border: 1px solid #e1e1e1;
+	border: 1px solid #000;
 	overflow: hidden;
 	box-shadow: 0px 0px 12px #d3d3d3;
+	height: 100%;
+	box-sizing: border-box;
+
+	body {
+		border: 2px solid #d3d3d3;
+		height: 100%;
+		box-sizing: border-box;
+	}
 }
 
 #app {

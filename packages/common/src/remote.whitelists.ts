@@ -19,7 +19,17 @@ export const fsWhitelist = [
 ] as const;
 export const pathWhitelist = ['join', 'resolve', 'sep'] as const;
 export const osWhitelist = ['platform', 'release', 'cpus', 'freemem', 'totalmem'] as const;
-export const winWhitelist = ['setTitle', 'setAlwaysOnTop', 'setTitleBarOverlay'] as const;
+export const winWhitelist = [
+	'setTitle',
+	'setAlwaysOnTop',
+	'setTitleBarOverlay',
+	// win7 分支：自绘窗口控制按钮（替代 titleBarOverlay，解决其无法下移遮挡自绘边框的问题）
+	'minimize',
+	'maximize',
+	'unmaximize',
+	'isMaximized',
+	'close'
+] as const;
 export const webContentsWhitelist = [
 	'copy',
 	'cut',

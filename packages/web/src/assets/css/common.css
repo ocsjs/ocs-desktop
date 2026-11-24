@@ -9,7 +9,7 @@ html,
 	max-height: 100%;
 	min-width: 500px;
 	min-height: 300px;
-	--title-height: 32px;
+	--title-height: 36px;
 }
 /* 仅桌面端禁止 body 滚动：布局为 100vh + 内部滚动容器，
    防止右键菜单等挂载在 body 下的绝对定位弹层撑高文档，产生外层滚动条并挤压整个渲染区域。
@@ -20,9 +20,16 @@ html:not(.in-browser) #app {
 	overflow: hidden;
 }
 html.window-frame {
-	border: 1px solid #e1e1e1;
+	border: 1px solid #000;
 	overflow: hidden;
 	box-shadow: 0px 0px 12px #d3d3d3;
+	height: 100%;
+	box-sizing: border-box;
+}
+html.window-frame body {
+	border: 2px solid #d3d3d3;
+	height: 100%;
+	box-sizing: border-box;
 }
 #app {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue',

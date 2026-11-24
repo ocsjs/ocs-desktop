@@ -70,6 +70,8 @@ const barStyle = computed(() => {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	/* 浮层卡片化：细描边取状态色的 30% 透明度（color-mix 基于 currentColor），投影提供层级感 */
+	/* Chromium 108（Electron 22 / Win7）不支持 color-mix，先声明纯色边框作为降级 */
+	border: 1px solid rgba(0, 0, 0, 0.12);
 	border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
 

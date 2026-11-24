@@ -30,13 +30,9 @@ export function createWindow() {
 		hasShadow: true,
 		autoHideMenuBar: true,
 		titleBarStyle: 'hidden',
-		titleBarOverlay: {
-			color: 'white',
-			symbolColor: 'black',
-			// 显式指定覆盖层高度（与渲染端 --title-height 一致），
-			// 否则 Linux 下系统控制按钮（最小化/最大化/关闭）默认高度偏小，渲染位置太靠上
-			height: 32
-		},
+		// win7 分支：移除 titleBarOverlay（系统控制按钮覆盖层）——其无法垂直偏移，
+		// 始终从窗口 y=0 绘制，会遮挡自绘的顶部边框；控制按钮改由渲染层
+		// WindowControls.vue 自绘（bridge.win.minimize/maximize/close）
 		frame: false,
 		// Electron 43 起 roundedCorners 支持 Linux：支持 CSD 的桌面环境（GNOME/mutter）
 		// 下无边框窗口获得原生圆角；阴影与焦点区分由系统合成器绘制，

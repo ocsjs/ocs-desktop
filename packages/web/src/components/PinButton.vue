@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { store } from '../store';
 import { bridge } from '../utils/bridge';
 import { PinIcon } from 'lucide-vue-next';
@@ -22,42 +22,16 @@ import { PinIcon } from 'lucide-vue-next';
 /**
  * 顶部栏窗口置顶按钮
  *
- * 系统的窗口控制按钮（最小化/最大化/关闭）由 Electron titleBarOverlay 渲染在网页内容之上，
- * 并非 Vue 组件，需要避让：
- * - win/linux：控制按钮位于右上角，本按钮绝对定位，right 偏移由
- *   navigator.windowControlsOverlay.getTitlebarAreaRect() 动态测量（API 不可用时回退 135px）
- * - darwin：控制按钮（红绿灯）位于左上角，顶部栏整体右对齐并由 .title 的 padding-left
- *   统一预留红绿灯区域，本按钮静态定位于 flex 流末尾即可
+ * win7 分支：窗口控制按钮（最小化/最大化/关闭）为渲染层自绘（WindowControls.vue，
+ * 3×46px），并非系统 titleBarOverlay，本按钮绝对定位按固定宽度 138px 避让；
+ * darwin：控制按钮（红绿灯）位于左上角，顶部栏整体右对齐并由 .title 的 padding-left
+ * 统一预留红绿灯区域，本按钮静态定位于 flex 流末尾即可
  */
 const isDarwin = bridge.platform === 'darwin';
 const isLinux = bridge.platform === 'linux';
 
-/** 避让右上角系统控制按钮的 right 偏移（API 不可用时回退 Windows 三键宽度 135px） */
-const rightOffset = ref(135);
-
-/** 用 Window Controls Overlay 几何 API 精确测量控制按钮区域宽度 */
-function updateRightOffset() {
-	const wco = (navigator as any).windowControlsOverlay;
-	if (wco?.visible) {
-		const rect = wco.getTitlebarAreaRect();
-		// rect 为标题栏可拖拽区域，其右边缘即控制按钮区域的左边缘
-		const controlsWidth = Math.round(window.innerWidth - rect.x - rect.width);
-		if (controlsWidth > 0) {
-			rightOffset.value = controlsWidth;
-		}
-	}
-}
-
-onMounted(() => {
-	if (!isDarwin) {
-		updateRightOffset();
-		window.addEventListener('resize', updateRightOffset);
-	}
-});
-
-onUnmounted(() => {
-	window.removeEventListener('resize', updateRightOffset);
-});
+/** 避让右上角自绘控制按钮的 right 偏移（WindowControls 3×46px） */
+const rightOffset = ref(138);
 
 const positionStyle = computed(() => {
 	// darwin：静态定位；win/linux：right 动态避让；linux 采用 24px 小按钮对齐系统控制按钮风格

@@ -128,8 +128,11 @@
 		<!-- 当前界面标题：居中展示（不响应鼠标，不遮挡拖拽与菜单） -->
 		<span class="title-text">{{ store.render.state.title }}</span>
 
-		<!-- 窗口置顶按钮：绝对定位避让系统 traffic light 控制区域（mac 在左侧，其余在右上角） -->
+		<!-- 窗口置顶按钮：绝对定位避让窗口控制区域（mac 红绿灯在左侧，其余在右上角） -->
 		<PinButton />
+
+		<!-- win7 分支：自绘窗口控制按钮（最小化/最大化/关闭），位于边框与圆角内侧 -->
+		<WindowControls />
 	</div>
 </template>
 
@@ -150,6 +153,7 @@ import { Folder, root } from '../fs/folder';
 import { FolderOptions, FolderType } from '../fs/interface';
 import { Browser } from '../fs/browser';
 import PinButton from './PinButton.vue';
+import WindowControls from './WindowControls.vue';
 import {
 	SaveIcon,
 	UploadIcon,

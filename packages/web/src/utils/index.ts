@@ -359,15 +359,8 @@ export async function changeTheme() {
 	// 标题栏颜色需平台判断（macOS 不使用自定义标题栏）
 	const platform = await bridge.methods.getPlatform();
 	document.body.classList.add('platform-' + platform);
-	if (platform !== 'darwin') {
-		// height 与窗口创建时的 titleBarOverlay.height 保持一致（32 = --title-height），
-		// 否则主题切换后覆盖层高度被重置，Linux 下控制按钮渲染位置会太靠上
-		bridge.win.setTitleBarOverlay(
-			themeState.dark
-				? { color: '#2C2C2C', symbolColor: 'white', height: 32 }
-				: { color: '#fff', symbolColor: 'black', height: 32 }
-		);
-	}
+	// win7 分支：窗口控制按钮为渲染层自绘（WindowControls.vue），随 body 主题色自适应，
+	// 无需再维护 titleBarOverlay（已移除）的主题同步
 }
 
 /** 初始化系统深浅色偏好监听：auto 模式下系统切换时实时跟随（由主进程 nativeTheme 推送） */
