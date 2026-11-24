@@ -133,6 +133,7 @@ async function waitForInstallPage(
  * 防止误点未知页面的任意按钮：
  * 1. ScriptCat（install.html，React SPA）：固定 data-testid="install-primary"（安装/更新共用；
  *    skill 安装页为 skill-install）；成功标识 install-success-ribbon——拆包 install.js 实测确认；
+ *    MV2 旧版（0.x，Win7 分支）无 testid，按钮为 arco-design 的 button.arco-btn，文案 安装/更新；
  * 2. Tampermonkey（ask.html/install.html）：.ask_action_buttons（id 后缀 _install_buttons）容器内 input[type=button]，
  *    文案在 value 属性（textContent 为空），安装/更新恒为容器内动作按钮——拆包 extension.js 实测确认。
  *
@@ -142,9 +143,15 @@ async function clickInstallButton(installPage: Page): Promise<boolean> {
 	const scSelector = '[data-testid="install-primary"], [data-testid="skill-install"]';
 	const tmSelector = '.ask_action_buttons input[type="button"], [id$="_install_buttons"] input[type="button"]';
 	// 按钮为异步渲染（ScriptCat 加载脚本代码 / TM 拉取脚本信息后才出现），先等任一形态出现再操作
+	// 末项为 ScriptCat MV2（0.x，Win7 分支）：arco-design 按钮，文案 安装/更新（i18next install_script）
 	await installPage
 		.waitForFunction(
-			([sc, tm]) => !!document.querySelector(sc as string) || document.querySelectorAll(tm as string).length > 0,
+			([sc, tm]) =>
+				!!document.querySelector(sc as string) ||
+				document.querySelectorAll(tm as string).length > 0 ||
+				Array.from(document.querySelectorAll('button[class*="arco-btn"]')).some((el) =>
+					/^(安装|更新|安装订阅|更新订阅|Install|Update)/i.test(((el as HTMLElement).innerText || '').trim())
+				),
 			[scSelector, tmSelector] as any,
 			{ timeout: 10 * 1000 }
 		)
@@ -175,7 +182,15 @@ async function clickInstallButton(installPage: Page): Promise<boolean> {
 				'.ask_action_buttons input[type="button"], [id$="_install_buttons"] input[type="button"]'
 			)
 		);
-		return tmButtons.find((el) => /安装|更新|Install|Update|Reinstall/i.test(el.value || '')) || tmButtons[0] || null;
+		if (tmButtons.length) {
+			return tmButtons.find((el) => /安装|更新|Install|Update|Reinstall/i.test(el.value || '')) || tmButtons[0];
+		}
+		// 3. ScriptCat MV2（0.x，Win7 分支）：arco-design 按钮，文案 安装/更新
+		return (
+			Array.from(document.querySelectorAll<HTMLElement>('button[class*="arco-btn"]')).find((el) =>
+				/^(安装|更新|安装订阅|更新订阅|Install|Update)/i.test((el.innerText || '').trim())
+			) || null
+		);
 	});
 	const btn = handle.asElement();
 	if (!btn) return false;

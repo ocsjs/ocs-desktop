@@ -50,19 +50,20 @@ function extractFixture(id: string) {
 	});
 
 	it('植入多余文件：快检即拒绝', () => {
-		const { manifest, dir } = extractFixture('tampermonkey');
+		const { manifest, dir } = extractFixture('scriptcat');
 		fs.writeFileSync(path.join(dir, 'evil.js'), 'malicious');
 		expect(quickVerifyExtension(dir, manifest)).toBe(false);
 		expect(fullVerifyExtension(dir, manifest)).toBe(false);
 	});
 
 	it('同尺寸替换内容（绕过 size 快检）：全量哈希兜底拒绝', () => {
-		const { manifest, dir } = extractFixture('tampermonkey');
+		const { manifest, dir } = extractFixture('scriptcat');
 		const target = path.join(dir, 'manifest.json');
 		const content = fs.readFileSync(target, 'utf-8');
-		// 替换为等长字符串（数字 5 → 6），size 不变但哈希变化
-		const tampered = content.replace(/5/g, '6');
+		// 替换首个数字为另一数字（等长、必然变化），size 不变但哈希变化
+		const tampered = content.replace(/[0-9]/, (d) => (d === '5' ? '6' : '5'));
 		expect(tampered.length).toBe(content.length);
+		expect(tampered).not.toBe(content);
 		fs.writeFileSync(target, tampered);
 		expect(quickVerifyExtension(dir, manifest)).toBe(true); // 快检被绕过（预期行为）
 		expect(fullVerifyExtension(dir, manifest)).toBe(false); // 全量哈希兜底

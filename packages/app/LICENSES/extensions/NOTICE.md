@@ -8,7 +8,9 @@
 | 拓展 | 版本 | 来源 | 许可证 |
 |---|---|---|---|
 | ScriptCat 脚本猫 | 见 `resources/extensions/extensions.lock.json` | <https://github.com/scriptscat/scriptcat> | GPL-3.0 |
-| Tampermonkey 油猴 | 见 `resources/extensions/extensions.lock.json` | <https://www.tampermonkey.net> | GPL-3.0 |
+
+> Win7 分支说明：Tampermonkey 已移除（其 MV2 Legacy 版 2026-08 从 Chrome Web Store 下架后无官方可信分发源），
+> 本分支内置 ScriptCat 0.16.6（最后的 MV2 稳定版，适配 Chrome ≤109）。
 
 - 上述拓展由其各自作者/团队开发并保留所有权利，与 OCS Desktop 无隶属或背书关系。
 - 拓展内容在构建期从官方发布渠道获取并经 SHA256 校验，与本声明版本一一对应；

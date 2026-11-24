@@ -77,11 +77,12 @@ function stripCrxHeader(buf) {
 	throw new Error('不支持的 CRX 版本: ' + version);
 }
 
-/** 权限审计：官方包声明的权限必须是 lock 白名单的子集 */
+/** 权限审计：官方包声明的权限必须是 lock 白名单的子集；manifest 版本下限默认 MV3，可经 lock 的 minManifestVersion 放宽（Win7 分支 MV2） */
 function auditPermissions(ext, manifest) {
 	const problems = [];
 	const mv = manifest.manifest_version || 2;
-	if (mv < 3) problems.push(`manifest_version=${mv} 低于 MV3`);
+	const minMv = ext.minManifestVersion || 3;
+	if (mv < minMv) problems.push(`manifest_version=${mv} 低于要求的 MV${minMv}`);
 	for (const p of manifest.permissions || []) {
 		if (!ext.permissions.includes(p)) problems.push(`新增权限未在白名单: ${p}`);
 	}

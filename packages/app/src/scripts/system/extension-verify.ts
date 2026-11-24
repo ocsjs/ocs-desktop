@@ -66,6 +66,10 @@ export function resolveExtensionId(browser: BrowserContext, extensionPath: strin
 	for (const sw of browser.serviceWorkers()) {
 		if (sw.url().startsWith('chrome-extension://')) hosts.add(new URL(sw.url()).host);
 	}
+	// MV2 拓展（Win7 分支 ScriptCat 0.x）：后台页而非 service worker
+	for (const bg of browser.backgroundPages()) {
+		if (bg.url().startsWith('chrome-extension://')) hosts.add(new URL(bg.url()).host);
+	}
 	for (const page of browser.pages()) {
 		if (page.url().startsWith('chrome-extension://')) hosts.add(new URL(page.url()).host);
 	}
@@ -87,10 +91,18 @@ export async function waitExtensionSwStable(
 	const expectedIds = new Set(extensionPaths.flatMap((p) => computeExtensionIdCandidates(p)));
 	if (!expectedIds.size) return;
 	const swKey = () =>
-		browser
-			.serviceWorkers()
-			.filter((sw) => sw.url().startsWith('chrome-extension://') && expectedIds.has(new URL(sw.url()).host))
-			.map((sw) => sw.url())
+		[
+			// MV3：service worker
+			...browser
+				.serviceWorkers()
+				.filter((sw) => sw.url().startsWith('chrome-extension://') && expectedIds.has(new URL(sw.url()).host))
+				.map((sw) => sw.url()),
+			// MV2（Win7 分支 ScriptCat 0.x）：persistent background page
+			...browser
+				.backgroundPages()
+				.filter((bg) => bg.url().startsWith('chrome-extension://') && expectedIds.has(new URL(bg.url()).host))
+				.map((bg) => bg.url())
+		]
 			.sort()
 			.join('|');
 
@@ -141,8 +153,12 @@ export const extensionVerifyScript = new SystemAutomationScript({
 		}
 
 		const findSw = () => {
-			const all = browser.serviceWorkers().filter((s) => /chrome-extension:\/\//.test(s.url()));
-			const matched = all.find((s) => expectedIds.has(new URL(s.url()).host));
+			const all = [
+				...browser.serviceWorkers().map((s) => s.url()),
+				// MV2 拓展（Win7 分支）：后台页而非 service worker
+				...browser.backgroundPages().map((p) => p.url())
+			].filter((url) => /chrome-extension:\/\//.test(url));
+			const matched = all.find((url) => expectedIds.has(new URL(url).host));
 			return { all, matched };
 		};
 
@@ -166,27 +182,28 @@ export const extensionVerifyScript = new SystemAutomationScript({
 		}
 
 		if (matched) {
-			const id = new URL(matched.url()).host;
+			const id = new URL(matched).host;
 			console.log(
-				'脚本管理器拓展加载检测通过（service worker）：',
+				'脚本管理器拓展加载检测通过（service worker / background page）：',
 				path.basename(expectedIds.get(id) || ''),
-				matched.url()
+				matched
 			);
 			return;
 		}
 
 		if (all.length > 0) {
-			// 存在其他扩展 SW 但未匹配到脚本管理器拓展：特殊环境下 ID 推导可能不一致（符号链接/短路径）。
+			// 存在其他扩展 SW/后台页但未匹配到脚本管理器拓展：特殊环境下 ID 推导可能不一致（符号链接/短路径）。
 			// 不再静默放行：通知渲染端提示用户脚本功能可能失效
-			const urls = all.map((s) => s.url());
-			console.warn('检测到扩展 service worker，但未能匹配脚本管理器拓展：', urls.join('、'));
-			send('extension-verify-degraded', uid, urls);
+			console.warn('检测到扩展 service worker/background page，但未能匹配脚本管理器拓展：', all.join('、'));
+			send('extension-verify-degraded', uid, all);
 			return;
 		}
 
-		// 两轮检测均未发现任何扩展 service worker：降级为告警而非中断启动——
+		// 两轮检测均未发现任何扩展 service worker/后台页：降级为告警而非中断启动——
 		// 浏览器本体仍可用，仅脚本功能缺失（用户可重启浏览器或在应用中心重装脚本管理器）
-		console.error('脚本管理器拓展 service worker 未检测到（两轮共 30s），浏览器将继续启动，脚本功能不可用');
+		console.error(
+			'脚本管理器拓展 service worker/background page 未检测到（两轮共 30s），浏览器将继续启动，脚本功能不可用'
+		);
 		send('extension-verify-failed', uid);
 	}
 });

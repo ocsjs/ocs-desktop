@@ -1,74 +1,35 @@
 {
-	"comment": "内置拓展锁定清单（提交入库，改动需 code review）。sha256 为「最终打入 asar 的 zip 字节」的钉值：scriptcat 为官方 GitHub Release zip 的原值（与 GitHub API digest 一致）；tampermonkey 无官方 zip，来源为 Edge 扩展商店官方 crx（国内可达），sha256 为剥离 crx3 头后的 zip 字节哈希。权限白名单用于构建期审计：官方包新增任何权限都会导致构建失败，需人工评审后更新本文件。description 取自官方包 manifest 的 description（zh_CN 本地化文案），升级版本时需同步核对。",
+	"comment": "内置拓展锁定清单（提交入库，改动需 code review）。sha256 为「最终打入 asar 的 zip 字节」的钉值：scriptcat 为官方 GitHub Release zip 的原值（与 GitHub API digest 一致）。权限白名单用于构建期审计：官方包新增任何权限都会导致构建失败，需人工评审后更新本文件。description 取自官方包 manifest 的 description（zh_CN 本地化文案），升级版本时需同步核对。minManifestVersion：manifest 版本下限（默认 3）。【Win7 分支】ScriptCat 降级为 v0.16.6（最后的 MV2 稳定版，1.x MV3 依赖 chrome.userScripts 需 Chrome 120+）；Tampermonkey 移除（其 MV2 Legacy 版 2026-08 已从 CWS 下架，无官方可信源）。",
 	"extensions": [
 		{
 			"id": "scriptcat",
 			"name": "ScriptCat 脚本猫",
-			"version": "1.5.1",
+			"version": "0.16.6",
 			"format": "zip",
+			"minManifestVersion": 2,
 			"sources": [
-				"https://github.com/scriptscat/scriptcat/releases/download/v1.5.1/scriptcat-v1.5.1-chrome.zip"
+				"https://github.com/scriptscat/scriptcat/releases/download/v0.16.6/scriptcat-v0.16.6-chrome.zip"
 			],
-			"sha256": "b8d327bdef031b0df23ecf1b59bfa42fc1bbf9b8c401716d42c9686f7c8a68f1",
+			"sha256": "36958f7c41e55ec5c469cfac890ff9acb5baed768c87c9ccbf34d15700b72887",
 			"license": "GPL-3.0",
 			"sourceUrl": "https://github.com/scriptscat/scriptcat",
 			"homepage": "https://docs.scriptcat.org",
-			"description": "强大的用户脚本管理器，激活浏览器的无限可能！",
+			"description": "脚本猫,一个用户脚本管理器,支持后台脚本、定时脚本、页面脚本,可编写脚本每天帮你自动处理事务.",
 			"icon": "https://docs.scriptcat.org/img/logo.png",
 			"permissions": [
 				"tabs",
-				"alarms",
-				"storage",
 				"cookies",
-				"offscreen",
-				"scripting",
+				"storage",
 				"downloads",
-				"activeTab",
 				"webRequest",
-				"userScripts",
+				"background",
+				"<all_urls>",
 				"contextMenus",
-				"webNavigation",
 				"notifications",
 				"clipboardWrite",
-				"unlimitedStorage",
-				"declarativeNetRequest"
+				"webRequestBlocking"
 			],
-			"hostPermissions": ["<all_urls>"]
-		},
-		{
-			"id": "tampermonkey",
-			"name": "Tampermonkey 油猴",
-			"version": "5.5.1",
-			"format": "crx",
-			"sources": [
-				"https://edge.microsoft.com/extensionwebstorebase/v1/crx?response=redirect&prod=edgecrx&acceptformat=crx3&x=id%3Diikmkjmpaadaobahmlepeloendndfphd%26installsource%3Dondemand%26uc"
-			],
-			"sha256": "20eaf044d4d096e8c292f9a5d3d0755037be7cf609c5a02e1075b074d32b157a",
-			"license": "GPL-3.0",
-			"sourceUrl": "https://www.tampermonkey.net",
-			"homepage": "https://www.tampermonkey.net",
-			"description": "使用用户脚本自由地改变网络",
-			"icon": "https://tampermonkey.net/favicon.ico",
-			"permissions": [
-				"notifications",
-				"unlimitedStorage",
-				"tabs",
-				"idle",
-				"webNavigation",
-				"webRequest",
-				"webRequestBlocking",
-				"storage",
-				"contextMenus",
-				"chrome://favicon/",
-				"clipboardWrite",
-				"cookies",
-				"alarms",
-				"declarativeNetRequestWithHostAccess",
-				"scripting",
-				"userScripts",
-				"offscreen"
-			],
-			"hostPermissions": ["<all_urls>"]
+			"hostPermissions": []
 		}
 	]
 }
