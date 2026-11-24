@@ -3,7 +3,10 @@ import {
 	LoggerCore,
 	DEFAULT_SERVER_PORT,
 	SUPPORTED_BROWSER_MAX_MAJOR,
-	formatExtensionArguments
+	SUPPORTED_BROWSER_MAX_MAJOR_WIN7,
+	formatExtensionArguments,
+	isWin7Platform,
+	isSupermiumPath
 } from '@ocs-desktop/common';
 import path, { basename } from 'path';
 import fs from 'fs';
@@ -178,6 +181,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 		/** 添加拓展启动参数 */
 		options.args = formatExtensionArguments(this.extensionPaths);
+		// 启动参数快照：Windows 资源监控（WMI 进程树定位）兜底使用
+		this.launchInfo = { executablePath: options.executablePath, userDataDir: options.userDataDir };
 		const start_time = Date.now();
 
 		/** =============================== 检测谷歌浏览器是否可用 =============================== */
@@ -192,14 +197,21 @@ export class ScriptWorker implements ScriptWorkerContract {
 			return await this.close();
 		}
 
+		/** Win7 平台：无内置浏览器（CfT 137 要求 Win10），只接受系统低版本浏览器（Chrome/Edge ≤109） */
+		const isWin7 = isWin7Platform();
+
 		if (process.platform === 'win32') {
 			const major = getBrowserMajorVersion(options.executablePath);
 			console.log('major', major);
-			if (major && major > SUPPORTED_BROWSER_MAX_MAJOR) {
+			const maxMajor = isWin7 ? SUPPORTED_BROWSER_MAX_MAJOR_WIN7 : SUPPORTED_BROWSER_MAX_MAJOR;
+			// Win7 下 Supermium 不受 109 上限约束（Chromium 150 移植版，Win7 可运行且保留 MV2/拓展加载）
+			if (major && major > maxMajor && !(isWin7 && isSupermiumPath(options.executablePath))) {
 				console.error(
 					ScriptWorker.lang(
 						'error_when_browser_version_too_high',
-						'当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
+						isWin7
+							? '当前浏览器版本过高，Windows 7 仅支持 Chrome/Edge 109 及以下版本，请在设置-浏览器路径中切换低版本浏览器'
+							: '当前浏览器版本过高，无法自动加载脚本管理器，请在设置-浏览器路径中切换“软件内置”浏览器，如果没有内置浏览器，请重新在官网下载最新OCS软件并安装'
 					)
 				);
 				return await this.close();
@@ -219,8 +231,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 			}
 
 			const manifest = JSON.parse(fs.readFileSync(path.join(extensionPath, 'manifest.json'), 'utf-8'));
-			// 检查是否为 MV2 拓展，如果是则报错
-			if (_get(manifest, 'manifest_version', 2) < 3) {
+			// 检查拓展 manifest 版本：常规平台要求 MV3（Chrome 137+ 已禁用 MV2）；
+			// Win7（Chrome ≤109）反过来只能使用 MV2 旧版脚本管理器（MV3 依赖 chrome.userScripts，Chrome 120+）
+			if (_get(manifest, 'manifest_version', 2) < (isWin7 ? 2 : 3)) {
 				const name = getExtensionName(extensionPath);
 				console.error(
 					ScriptWorker.lang(
@@ -349,11 +362,20 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 	/**
 	 * 获取该浏览器实例的真实资源占用（内存 MB + 全部子进程累计 cpuTime 秒）。
-	 * CDP 的 SystemInfo.getProcessInfo 只提供进程 PID 与 cpuTime（无内存字段），
-	 * 内存需再经系统 API 按 PID 汇总（见 getPidsMemoryMB）。
+	 *
+	 * Windows 走 WMI 进程树查询（见 getWindowsTreeUsage + findWindowsBrowserRootPid）：
+	 * Win7 自带 PowerShell 2.0 无 Get-CimInstance，且 Chrome 109 的 CDP
+	 * SystemInfo.getProcessInfo 兼容性存疑——WMI 一条命令同时返回内存与 CPU 时间，
+	 * PS 2.0/5.1 通吃（Win7~Win11），进程定位也不依赖 CDP。
 	 */
 	async getResourceUsage(): Promise<{ mb: number; cpuTime: number }> {
 		if (!this.browser) return { mb: 0, cpuTime: 0 };
+		if (process.platform === 'win32') {
+			const rootPid =
+				this.browserPid ?? (this.launchInfo ? await findWindowsBrowserRootPid(this.launchInfo) : undefined);
+			if (!rootPid) return { mb: 0, cpuTime: 0 };
+			return getWindowsTreeUsage(rootPid);
+		}
 		try {
 			const pwBrowser = this.browser.browser();
 			if (!pwBrowser) return { mb: 0, cpuTime: 0 };
@@ -417,6 +439,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 		this.closing = true;
 		this.stopMemoryReporting();
 		this.stopPageListTracking();
+		// Windows 兜底：CDP 捕获 PID 失败（旧内核 Chrome 109）时按命令行特征 WMI 定位，
+		// 保证 forceKillBrowserProcess 的孤儿进程清理可用
+		if (!this.browserPid && process.platform === 'win32' && this.launchInfo) {
+			this.browserPid = await findWindowsBrowserRootPid(this.launchInfo).catch(() => undefined);
+		}
 		// 仅内部停止推流（detach session），不发 screencast-cleared：
 		// 渲染进程在 browser-closed 时保留最后一帧，用于"浏览器关闭后的预览图"展示
 		// detach 也可能挂起（在途帧背压），加 3s 超时防 close 流程整体卡死
@@ -465,6 +492,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 	/** Chromium 主进程 PID（启动时经 CDP SystemInfo 捕获；close 挂起/异常路径的强杀兜底） */
 	browserPid?: number;
+
+	/** 启动参数快照（Windows 下 WMI 按命令行特征定位浏览器根进程，见 findWindowsBrowserRootPid） */
+	private launchInfo?: { executablePath: string; userDataDir: string };
 
 	/** 强杀 Chromium 主进程（幂等：进程已退出时静默失败） */
 	private forceKillBrowserProcess() {
@@ -1333,6 +1363,70 @@ async function getPidsMemoryMB(pids: number[]): Promise<number> {
 	} catch {
 		// 资源占用为辅助指标：测量失败静默回退 0，不干扰脚本安装/拓展安装等主流程
 		return 0;
+	}
+}
+
+/**
+ * Windows 进程树资源占用（WMI，Win7 兼容路径）：
+ * 从根 PID 出发按 ParentProcessId 递归收集整棵 Chromium 进程树，
+ * 一次查询汇总内存（WorkingSetSize → MB）与累计 CPU 时间（KernelModeTime+UserModeTime，100ns → 秒）。
+ *
+ * 为何用 Get-WmiObject 而非 Get-CimInstance：Win7 自带 PowerShell 2.0 没有 CIM cmdlet；
+ * Get-WmiObject 在 PS 2.0（Win7）与 PS 5.1（Win10/11）均可用。单命令聚合避免多进程 PID 逐个查询的开销。
+ */
+async function getWindowsTreeUsage(rootPid: number): Promise<{ mb: number; cpuTime: number }> {
+	// 按 ParentProcessId BFS 展开整棵进程树（PowerShell 2.0 语法兼容）
+	const bfs =
+		`while($q.Count){$c=$q[0];$q=@($q|Select-Object -Skip 1);` +
+		`foreach($p in $all){if($p.ParentProcessId -eq $c -and -not ($ids -contains $p.ProcessId)){` +
+		`$ids+=$p.ProcessId;$q+=$p.ProcessId}}}`;
+	const script = [
+		`$all=@(Get-WmiObject Win32_Process)`,
+		`$ids=@(${rootPid})`,
+		`$q=@(${rootPid})`,
+		bfs,
+		`$sel=@($all|Where-Object{$ids -contains $_.ProcessId})`,
+		`$mem=($sel|Measure-Object WorkingSetSize -Sum).Sum;if($null -eq $mem){$mem=0}`,
+		`$cpu=0.0;foreach($p in $sel){$cpu+=([double]$p.KernelModeTime+[double]$p.UserModeTime)}`,
+		`Write-Output ($mem.ToString() + ' ' + $cpu.ToString())`
+	].join(';');
+	try {
+		const out = await execCmd('powershell', ['-NoProfile', '-Command', script]);
+		const [memBytes, cpu100ns] = out.trim().split(/\s+/);
+		return {
+			mb: Math.round((parseInt(memBytes, 10) || 0) / 1024 / 1024),
+			cpuTime: (parseFloat(cpu100ns) || 0) / 1e7
+		};
+	} catch (e) {
+		// 资源占用为辅助指标：失败静默回退 0（日志走 stdout，不弹错误通知）
+		console.log('[memory] WMI 资源查询失败（已跳过）：', e instanceof Error ? e.message : String(e));
+		return { mb: 0, cpuTime: 0 };
+	}
+}
+
+/**
+ * 按命令行特征定位浏览器根进程 PID（WMI，不依赖 CDP）。
+ * Playwright launchPersistentContext 必带 --user-data-dir=<path>，该路径每个浏览器实例唯一；
+ * 候选集中「父进程不在候选集内」的进程即根进程（renderer/GPU 等子进程的父进程均在树内）。
+ */
+async function findWindowsBrowserRootPid(info: {
+	executablePath: string;
+	userDataDir: string;
+}): Promise<number | undefined> {
+	// WQL 字符串转义（单引号 doubling）；用 .Contains 而非 LIKE 规避反斜杠转义问题
+	const ud = info.userDataDir.replace(/'/g, "''");
+	const script = [
+		`$sel=@(Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${ud}') })`,
+		`$root=$sel | Where-Object { $pp=$_.ParentProcessId; -not ($sel | Where-Object { $_.ProcessId -eq $pp }) }` +
+			` | Select-Object -First 1`,
+		`if($root){ Write-Output $root.ProcessId }`
+	].join(';');
+	try {
+		const out = await execCmd('powershell', ['-NoProfile', '-Command', script]);
+		const pid = parseInt(out.trim(), 10);
+		return Number.isFinite(pid) ? pid : undefined;
+	} catch {
+		return undefined;
 	}
 }
 
