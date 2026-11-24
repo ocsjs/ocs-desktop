@@ -9,7 +9,7 @@ const logger = Logger('crypto');
 // --- 常量 ---
 /** 主密钥文件名（位于 userData，与 config.json 同级） */
 const KEY_FILE_NAME = 'ocs.key';
-/** 密钥文件前缀：safeStorage 异步 API 包裹（首选） */
+/** 密钥文件前缀：safeStorage 包裹（首选） */
 const KEY_PREFIX_SS = 'v1:ssa:';
 /** 密钥文件前缀：safeStorage 不可用时的明文回退（混淆级防护） */
 const KEY_PREFIX_PLAIN = 'v1:plain:';
@@ -54,8 +54,8 @@ function toBytes(buf: Buffer): Uint8Array {
 export function initCrypto(): Promise<void> {
 	if (!initPromise) {
 		initPromise = (async () => {
-			// ⚠️ safeStorage 异步加密器在 app ready 后首次调用时才初始化，
-			// ready 前 isAsyncEncryptionAvailable() 恒为 false 会误判降级为明文密钥存储。
+			// ⚠️ safeStorage 在 app ready 后才保证可用（尤其 Linux 密钥环后端），
+			// ready 前 isEncryptionAvailable() 可能误判降级为明文密钥存储。
 			// bootstrap 在模块顶层（ready 之前）即启动，此处必须等待。
 			await app.whenReady();
 			await resolveMasterKey();
@@ -76,12 +76,8 @@ async function resolveMasterKey(): Promise<void> {
 		const content = fs.readFileSync(keyFile, 'utf-8');
 		if (content.startsWith(KEY_PREFIX_SS)) {
 			const blob = Buffer.from(content.slice(KEY_PREFIX_SS.length), 'base64');
-			const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(blob);
-			masterKey = Buffer.from(result, 'hex');
-			// OS 密钥轮换（key rotation）：异步重写包裹，不阻塞启动
-			if (shouldReEncrypt) {
-				wrapAndStoreKey(keyFile).catch((e) => logger.warn('密钥轮换重写失败', e));
-			}
+			// Electron 22 无异步 safeStorage API（36+ 才有），回退同步版（无密钥轮换语义）
+			masterKey = Buffer.from(safeStorage.decryptString(blob), 'hex');
 			logger.info('从 ocs.key 解包主密钥');
 			return;
 		}
@@ -89,7 +85,7 @@ async function resolveMasterKey(): Promise<void> {
 			masterKey = Buffer.from(content.slice(KEY_PREFIX_PLAIN.length), 'hex');
 			// 安全升级：历史版本因 ready 前误判 safeStorage 不可用而写入了明文密钥，
 			// 此处可用时立即重新包裹为 v1:ssa:（数据无需变动，密钥不变）
-			if (await safeStorage.isAsyncEncryptionAvailable()) {
+			if (safeStorage.isEncryptionAvailable()) {
 				await wrapAndStoreKey(keyFile);
 				logger.info('检测到明文存储的主密钥，已升级为 safeStorage 包裹存储');
 			} else {
@@ -136,8 +132,8 @@ async function readKeytarKey(): Promise<Buffer | null> {
 async function wrapAndStoreKey(keyFile: string): Promise<void> {
 	if (!masterKey) return;
 	let content: string;
-	if (await safeStorage.isAsyncEncryptionAvailable()) {
-		const wrapped = await safeStorage.encryptStringAsync(masterKey.toString('hex'));
+	if (safeStorage.isEncryptionAvailable()) {
+		const wrapped = safeStorage.encryptString(masterKey.toString('hex'));
 		content = KEY_PREFIX_SS + wrapped.toString('base64');
 	} else {
 		content = KEY_PREFIX_PLAIN + masterKey.toString('hex');

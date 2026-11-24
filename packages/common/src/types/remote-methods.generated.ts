@@ -94,8 +94,9 @@ export declare const methods: {
     /**
      * 获取 Linux 密钥环后端（'basic_text' 表示无可用密钥环，如 gnome-keyring/kwallet）。
      * 非 Linux 平台返回 undefined（该 API 仅 Linux 有意义）。
+     * 兼容说明：getSelectedStorageBackend 为 Electron 23+ API，Electron 22 下恒返回 undefined。
      */
-    getStorageBackend: () => "unknown" | "basic_text" | "gnome_libsecret" | "kwallet" | "kwallet5" | "kwallet6" | undefined;
+    getStorageBackend: () => any;
     getDisplayEnv: () => Record<string, string>;
     /** HTTP 磁盘缓存统计（网络缓存加速的缓存检测） */
     httpCacheStats: () => {

@@ -169,8 +169,12 @@ export const methods = {
 	/**
 	 * 获取 Linux 密钥环后端（'basic_text' 表示无可用密钥环，如 gnome-keyring/kwallet）。
 	 * 非 Linux 平台返回 undefined（该 API 仅 Linux 有意义）。
+	 * 兼容说明：getSelectedStorageBackend 为 Electron 23+ API，Electron 22 下恒返回 undefined。
 	 */
-	getStorageBackend: () => (process.platform === 'linux' ? safeStorage.getSelectedStorageBackend() : undefined),
+	getStorageBackend: () =>
+		process.platform === 'linux' && typeof (safeStorage as any).getSelectedStorageBackend === 'function'
+			? (safeStorage as any).getSelectedStorageBackend()
+			: undefined,
 	getDisplayEnv: () => {
 		// Linux 打包版：Chromium 沙箱会清理渲染进程环境变量（DISPLAY 丢失），
 		// worker 由渲染进程 fork 继承残缺 env，内置 Chrome 报 "Missing X server"。

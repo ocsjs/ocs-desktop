@@ -177,7 +177,7 @@ async function downloadBundledExtensionFallback(manifest: BundledExtensionManife
 		try {
 			logger.warn(`${manifest.name} 从 asar 释放失败，远程下载兜底：${url}`);
 			await NetUtils.download(url, tempFile);
-			let zipBuf = fs.readFileSync(tempFile);
+			let zipBuf: Buffer = fs.readFileSync(tempFile);
 			if (manifest.format === 'crx') {
 				zipBuf = stripCrxHeader(zipBuf);
 			}
