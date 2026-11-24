@@ -2,7 +2,10 @@ export {
 	BUILTIN_CHROME_VERSION,
 	BUILTIN_CHROME_SHA256,
 	resolveCftPlatform,
-	getChromeDownloadSources
+	getChromeDownloadSources,
+	isWin7Platform,
+	SUPERMIUM_BROWSER,
+	getSupermiumDownloadSources
 } from './src/utils/chrome.source';
 export type { CftPlatform, ChromeDownloadSource, ChromeDownloadSourceType } from './src/utils/chrome.source';
 export * from './src/constants';

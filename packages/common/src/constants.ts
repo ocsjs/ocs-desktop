@@ -69,3 +69,14 @@ export function siteOfUrl(url: string): CacheableSite | undefined {
 /** 受支持的浏览器最高主版本号（超出则无法自动加载脚本管理器拓展）。
  *  web 端环境检测（utils/environment.ts）与 worker 启动校验（worker/index.ts）共用此阈值 */
 export const SUPPORTED_BROWSER_MAX_MAJOR = 137;
+
+/** Win7 平台受支持的浏览器最高主版本号。
+ *  Chrome/Edge 109 是最后支持 Win7 的版本（110+ 要求 Win10），109 支持命令行加载拓展 */
+export const SUPPORTED_BROWSER_MAX_MAJOR_WIN7 = 109;
+
+/** 是否 Supermium 浏览器（按可执行文件路径判断）。
+ *  Supermium 为 Chromium 移植版（Win7 可运行 150+ 内核，保留 MV2 与命令行拓展加载），
+ *  Win7 下不受 SUPPORTED_BROWSER_MAX_MAJOR_WIN7 上限约束 */
+export function isSupermiumPath(executablePath: string): boolean {
+	return /supermium/i.test(executablePath);
+}

@@ -38,3 +38,11 @@ export function getBuiltinChromeRoot(): string {
 export function getBuiltinChromeRuntimePath(): string {
 	return path.join(app.getPath('userData'), 'bin', 'chrome', 'chrome', BUILTIN_CHROME_FILENAME);
 }
+
+/**
+ * Supermium 运行时可执行路径（init.chrome.ts 的 Win7 内置浏览器解压目标）。
+ * `<userData>/bin/supermium/chrome/chrome.exe`，供 getValidBrowsers 探测与路径配置写入。
+ */
+export function getSupermiumRuntimePath(): string {
+	return path.join(app.getPath('userData'), 'bin', 'supermium', 'chrome', 'chrome.exe');
+}

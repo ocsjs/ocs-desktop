@@ -1,11 +1,23 @@
 import { getRemoteInfos } from '.';
 import { store } from '../store';
 import { bridge } from './bridge';
-import { Infos, ResourceFile, SUPPORTED_BROWSER_MAX_MAJOR } from '@ocs-desktop/common/web';
+import {
+	Infos,
+	ResourceFile,
+	SUPPORTED_BROWSER_MAX_MAJOR,
+	SUPPORTED_BROWSER_MAX_MAJOR_WIN7,
+	isSupermiumPath
+} from '@ocs-desktop/common/web';
+import { isWin7Platform } from './os';
 import { ResourceLoader } from './resources.loader';
 import _get from 'lodash/get';
 import { ref } from 'vue';
 type Extension = ResourceFile & { installed?: boolean };
+
+/** 受支持的浏览器最高主版本号：Win7 平台限 109（110+ 无法运行），其余平台 137 */
+async function supportedBrowserMaxMajor(): Promise<number> {
+	return (await isWin7Platform()) ? SUPPORTED_BROWSER_MAX_MAJOR_WIN7 : SUPPORTED_BROWSER_MAX_MAJOR;
+}
 
 /** 资源加载器 */
 const resourceLoader = new ResourceLoader({
@@ -59,11 +71,13 @@ export const Environment = {
 		// 排序版本，从大到小
 		browsers = browsers.sort((a, b) => (b.major_version || 0) - (a.major_version || 0));
 
-		if (browsers.some((b) => b.major_version && b.major_version <= SUPPORTED_BROWSER_MAX_MAJOR)) {
-			const valid_version_browser = browsers.find(
-				(_, i) => browsers?.[i] && (browsers?.[i].major_version || 999) <= SUPPORTED_BROWSER_MAX_MAJOR
-			);
-			return valid_version_browser;
+		const win7 = await isWin7Platform();
+		const maxMajor = win7 ? SUPPORTED_BROWSER_MAX_MAJOR_WIN7 : SUPPORTED_BROWSER_MAX_MAJOR;
+		// Win7 下 Supermium 不受 109 上限约束（Chromium 150 移植版，Win7 可运行且保留 MV2）
+		const isSupported = (b: (typeof browsers)[number]) =>
+			!!b.major_version && (b.major_version <= maxMajor || (win7 && isSupermiumPath(b.path)));
+		if (browsers.some(isSupported)) {
+			return browsers.find(isSupported);
 		}
 	},
 
@@ -72,7 +86,11 @@ export const Environment = {
 		const current_browser_path = store.render.setting.launchOptions.executablePath;
 		if (!current_browser_path) return false;
 		const current_browser_version = await bridge.methods.getBrowserMajorVersion(current_browser_path);
-		if (current_browser_version && current_browser_version <= SUPPORTED_BROWSER_MAX_MAJOR) {
+		if (current_browser_version && current_browser_version <= (await supportedBrowserMaxMajor())) {
+			return true;
+		}
+		// Win7 下 Supermium 不受 109 上限约束
+		if ((await isWin7Platform()) && isSupermiumPath(current_browser_path)) {
 			return true;
 		}
 		return false;
@@ -94,6 +112,9 @@ export const Environment = {
 		for (const extension of extensions) {
 			extension.installed = await resourceLoader.isZipFileExists('extensions', extension);
 		}
+		// Win7（Chrome ≤109）：MV3 脚本管理器依赖 chrome.userScripts（Chrome 120+），
+		// 只能使用 MV2 旧版（TM 4.x / ScriptCat 0.x），故放宽 manifest 版本下限
+		const minManifestVersion = (await isWin7Platform()) ? 2 : 3;
 		// 遍历所有"文件夹存在"的候选拓展：文件夹存在但 manifest 缺失/损坏/版本过低时继续检查下一个，
 		// 避免安装中断留下的空目录（如篡改猴残留）遮蔽真正可用的脚本管理器（如脚本猫）
 		for (const installed_extension of extensions.filter((e) => e.installed)) {
@@ -117,8 +138,8 @@ export const Environment = {
 				// manifest.json 不存在或解析失败（如 OCR 等非扩展文件夹），跳过该候选
 				continue;
 			}
-			// 跳过 MV2 拓展
-			if (_get(manifest, 'manifest_version', 2) < 3) {
+			// 跳过低于版本下限的拓展（常规平台要求 MV3，Win7 放宽到 MV2）
+			if (_get(manifest, 'manifest_version', 2) < minManifestVersion) {
 				continue;
 			}
 			return installed_extension;
@@ -139,7 +160,7 @@ export const Environment = {
 				if (await bridge.methods.isDirectory(manifestPath)) continue;
 
 				const manifest = JSON.parse(String(await bridge.fs.readFileSync(manifestPath, 'utf-8')));
-				if (_get(manifest, 'manifest_version', 2) >= 3) {
+				if (_get(manifest, 'manifest_version', 2) >= minManifestVersion) {
 					return {
 						id: file,
 						name: _get(manifest, 'name', file),

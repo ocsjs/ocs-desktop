@@ -6,6 +6,8 @@ import {
 	BUILTIN_CHROME_SHA256,
 	ChromeDownloadSource,
 	getChromeDownloadSources,
+	getSupermiumDownloadSources,
+	isWin7Platform,
 	resolveCftPlatform
 } from '@ocs-desktop/common';
 import { Logger } from '../logger';
@@ -27,24 +29,47 @@ export interface ChromeDownloadProgress {
 }
 
 /**
- * 三级源降级下载内置浏览器压缩包。
- *
- * 按 getChromeDownloadSources() 优先级（国内镜像 → 谷歌官方 → OCS 自建 CDN）依次尝试：
- * 1. 下载到 destZipPath + '.downloading' 临时文件（防止中断残留被误判为可用）
- * 2. 下载过程中流式计算 SHA256，与内置常量比对
- * 3. 校验通过 rename 为 destZipPath 并返回；下载失败或校验失败删除临时文件并切换下一源
- *
- * 全部源失败时抛出聚合错误（message 含各源失败原因），由调用方引导用户手动获取文件。
+ * 多源降级下载内置浏览器压缩包：Win7 平台为 Supermium（GitHub 官方 → OCS 自建 CDN），
+ * 其余平台为 CfT 137（国内镜像 → 谷歌官方 → OCS 自建 CDN）。多源降级逻辑见 downloadWithSources。
  */
 export async function downloadBuiltinChromeZip(
 	destZipPath: string,
 	onProgress?: (progress: ChromeDownloadProgress) => void
 ): Promise<void> {
-	const platform = resolveCftPlatform();
-	const expectedSha256 = BUILTIN_CHROME_SHA256[platform];
+	let allSources: ChromeDownloadSource[];
+	let expectedSha256: string;
+	if (isWin7Platform()) {
+		const supermium = getSupermiumDownloadSources();
+		if (!supermium) {
+			throw new Error(`Supermium 不支持当前架构: ${process.arch}（仅支持 x64/ia32）`);
+		}
+		allSources = supermium.sources;
+		expectedSha256 = supermium.sha256;
+	} else {
+		const platform = resolveCftPlatform();
+		allSources = getChromeDownloadSources(undefined, platform);
+		expectedSha256 = BUILTIN_CHROME_SHA256[platform];
+	}
+	await downloadWithSources({ allSources, expectedSha256, destZipPath, onProgress });
+}
+
+/**
+ * 多源降级下载 + SHA256 校验：
+ * 1. 下载到 destZipPath + '.downloading' 临时文件（防止中断残留被误判为可用）
+ * 2. 下载完成后整体校验 SHA256，与钉值比对
+ * 3. 校验通过 rename 为 destZipPath 并返回；下载失败或校验失败删除临时文件并切换下一源
+ *
+ * 全部源失败时抛出聚合错误（message 含各源失败原因），由调用方引导用户手动获取文件。
+ */
+async function downloadWithSources(opts: {
+	allSources: ChromeDownloadSource[];
+	expectedSha256: string;
+	destZipPath: string;
+	onProgress?: (progress: ChromeDownloadProgress) => void;
+}): Promise<void> {
+	const { allSources, expectedSha256, destZipPath, onProgress } = opts;
 	// 开发者设置中可强制指定下载源（测试下载链路），默认按优先级降级
 	const sourceOverride = StoreData.get().updater?.chromeSource;
-	const allSources = getChromeDownloadSources(undefined, platform);
 	const sources = sourceOverride ? allSources.filter((s) => s.type === sourceOverride) : allSources;
 	const tempZipPath = destZipPath + '.downloading';
 
@@ -58,7 +83,7 @@ export async function downloadBuiltinChromeZip(
 
 	for (let i = 0; i < sources.length; i++) {
 		const source = sources[i];
-		logger.info(`尝试从 ${source.name} 下载内置浏览器`, { url: source.url });
+		logger.info(`尝试从 ${source.name} 下载浏览器`, { url: source.url });
 		try {
 			await downloadAndVerify(source, expectedSha256, tempZipPath, (rate, totalLength, chunkLength) => {
 				onProgress?.({
@@ -71,7 +96,7 @@ export async function downloadBuiltinChromeZip(
 				});
 			});
 			fs.renameSync(tempZipPath, destZipPath);
-			logger.info(`内置浏览器下载完成（${source.name}）`, { destZipPath });
+			logger.info(`浏览器下载完成（${source.name}）`, { destZipPath });
 			return;
 		} catch (e) {
 			const reason = formatError(e);

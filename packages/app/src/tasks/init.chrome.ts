@@ -4,7 +4,13 @@ import fs from 'fs';
 import { sleep, unzip, moveDirWithRetry, isDevMode } from '../utils';
 import { Logger } from '../logger';
 import { glob } from 'glob';
-import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
+import {
+	BUILTIN_CHROME_FILENAME,
+	getBuiltinChromeRoot,
+	getBuiltinChromeRuntimePath,
+	getSupermiumRuntimePath,
+	isWin7Platform
+} from '@ocs-desktop/common/node';
 import { StoreData } from '../store';
 import { createLoadingWindow } from '../window';
 import { setInitStatus, updateInitLogText, setInitLoadingWindow } from './init.status';
@@ -17,6 +23,23 @@ const logger = Logger('chrome-init');
 export type { BuiltinChromeInstallProgress };
 
 /**
+ * 平台相关的内置浏览器描述：Win7 为 Supermium（CfT 137 要求 Win10），其余平台为 CfT 137。
+ * 下载/解压/初始化全链路共用同一套代码，仅以下三处取值不同。
+ */
+/** 解压运行目录（userData/bin/{chrome|supermium}） */
+function getBuiltinRuntimeDir(): string {
+	return path.join(app.getPath('userData'), 'bin', isWin7Platform() ? 'supermium' : 'chrome');
+}
+/** 安装完成后的可执行文件路径 */
+function getBuiltinFinalPath(): string {
+	return isWin7Platform() ? getSupermiumRuntimePath() : getBuiltinChromeRuntimePath();
+}
+/** 进度展示名称 */
+function builtinBrowserLabel(): string {
+	return isWin7Platform() ? 'Supermium 浏览器' : '内置浏览器';
+}
+
+/**
  * 解压内置浏览器压缩包并完成配置（移动、chmod、旧路径迁移）。
  * initChrome 与远程 installBuiltinChrome 共用此逻辑。
  *
@@ -26,11 +49,11 @@ async function extractAndConfigureBuiltinChrome(
 	chromeZipPath: string,
 	onProgress?: (p: BuiltinChromeInstallProgress) => void
 ): Promise<string> {
-	const chromeRuntimePath = path.join(app.getPath('userData'), 'bin', 'chrome');
+	const chromeRuntimePath = getBuiltinRuntimeDir();
 	const chromeTempPath = path.join(chromeRuntimePath, 'chrome_temp');
-	const chromeFinalPath = getBuiltinChromeRuntimePath();
+	const chromeFinalPath = getBuiltinFinalPath();
 
-	onProgress?.({ phase: 'extract', message: '正在解压内置浏览器...' });
+	onProgress?.({ phase: 'extract', message: `正在解压${builtinBrowserLabel()}...` });
 	fs.rmSync(chromeTempPath, { recursive: true, force: true });
 	// 统一解压管线：暂存解压（恢复软链/执行位）→ 原子换入，失败不污染旧目录
 	await unzip(chromeZipPath, chromeTempPath);
@@ -74,7 +97,7 @@ async function extractAndConfigureBuiltinChrome(
  * @returns 安装完成后的浏览器可执行文件路径
  */
 export async function installBuiltinChrome(onProgress?: (p: BuiltinChromeInstallProgress) => void): Promise<string> {
-	const chromeFinalPath = getBuiltinChromeRuntimePath();
+	const chromeFinalPath = getBuiltinFinalPath();
 	if (fs.existsSync(chromeFinalPath)) {
 		ensureChromeExecutablePermission(chromeFinalPath);
 		migrateLegacyBuiltinBrowserPath(chromeFinalPath);
@@ -82,7 +105,7 @@ export async function installBuiltinChrome(onProgress?: (p: BuiltinChromeInstall
 	}
 
 	const chromeResourcePath = getBuiltinChromeRoot();
-	const chromeRuntimePath = path.join(app.getPath('userData'), 'bin', 'chrome');
+	const chromeRuntimePath = getBuiltinRuntimeDir();
 	fs.mkdirSync(chromeRuntimePath, { recursive: true });
 
 	let chromeZipPath = [path.join(chromeResourcePath, 'chrome.zip'), path.join(chromeRuntimePath, 'chrome.zip')].find(
@@ -99,7 +122,7 @@ export async function installBuiltinChrome(onProgress?: (p: BuiltinChromeInstall
 				sourceCount: progress.sourceCount,
 				rate: progress.rate,
 				message:
-					`正在下载内置浏览器（${progress.sourceName}，` +
+					`正在下载${builtinBrowserLabel()}（${progress.sourceName}，` +
 					`第 ${progress.sourceIndex}/${progress.sourceCount} 个下载源）... ${progress.rate}%`
 			});
 		});
@@ -113,13 +136,13 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 		// chrome.zip 来源：打包模式 resources/bin/chrome（旧版完整包），开发模式 项目根 bin/chrome/<platform>-<arch>
 		const chromeResourcePath = getBuiltinChromeRoot();
 		// 解压目标：userData 下可写目录（AppImage 的 /tmp/.mount_* 只读，无法直接写入）
-		const chromeRuntimePath = path.join(app.getPath('userData'), 'bin', 'chrome');
+		const chromeRuntimePath = getBuiltinRuntimeDir();
 
-		const chromeFinalPath = getBuiltinChromeRuntimePath();
+		const chromeFinalPath = getBuiltinFinalPath();
 		if (fs.existsSync(chromeFinalPath)) {
 			ensureChromeExecutablePermission(chromeFinalPath);
 			migrateLegacyBuiltinBrowserPath(chromeFinalPath);
-			logger.log(`内置浏览器已存在，无需初始化`);
+			logger.log(`${builtinBrowserLabel()}已存在，无需初始化`);
 			return false;
 		}
 
@@ -138,21 +161,21 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 				path.join(chromeRuntimePath, 'chrome.zip')
 			].find((p) => fs.existsSync(p));
 
-			// 精简版安装包不再内置浏览器压缩包：本地不存在时从远程下载源拉取（三级源自动降级 + SHA256 校验）
+			// 精简版安装包不再内置浏览器压缩包：本地不存在时从远程下载源拉取（多源自动降级 + SHA256 校验）
 			if (!chromeZipPath) {
 				chromeZipPath = path.join(chromeRuntimePath, 'chrome.zip');
-				setInitStatus({ status: 'loading', message: '正在下载内置浏览器...' });
+				setInitStatus({ status: 'loading', message: `正在下载${builtinBrowserLabel()}...` });
 				try {
 					await downloadBuiltinChromeZip(chromeZipPath, (progress) => {
 						updateInitLogText(
-							`正在下载内置浏览器（${progress.sourceName}，` +
+							`正在下载${builtinBrowserLabel()}（${progress.sourceName}，` +
 								`第 ${progress.sourceIndex}/${progress.sourceCount} 个下载源）... ${progress.rate}%`
 						);
 					});
 				} catch (e) {
 					// 全部下载源失败/网络不可用：错误展示在初始化窗口内（替代原生弹窗，避免被
 					// alwaysOnTop 的 loading 窗口遮挡导致弹窗按钮无法点击），等待用户主动关闭
-					logger.error('内置浏览器下载失败，所有下载源均不可用', e);
+					logger.error(`${builtinBrowserLabel()}下载失败，所有下载源均不可用`, e);
 					const detail = e instanceof Error && e.message ? e.message : String(e);
 					// 用户可能在下载期间已关闭窗口：重建并重新注册，用于展示错误
 					if (loadingWin.isDestroyed()) {
@@ -163,7 +186,7 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 					setInitStatus({
 						status: 'error',
 						message:
-							'内置浏览器下载失败：所有下载源均不可用。\n' +
+							`${builtinBrowserLabel()}下载失败：所有下载源均不可用。\n` +
 							'请检查网络连接（若开启了代理/VPN 软件，请确认其正在正常运行）后重启软件重试；' +
 							'也可以暂时使用系统中已安装的其他浏览器。\n\n' +
 							detail
@@ -171,7 +194,7 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 					await waitInitWindowClosed(loadingWin);
 					return false;
 				}
-				setInitStatus({ status: 'loading', message: '内置浏览器下载完成' });
+				setInitStatus({ status: 'loading', message: `${builtinBrowserLabel()}下载完成` });
 			}
 
 			// 解压 + 移动 + 配置（与前端环境修复共用同一套逻辑）
@@ -183,13 +206,13 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 			// quit 会让 electron-vite 判定应用退出并杀死整个 dev 进程（dev server 随之停止），
 			// 而 relaunch 拉起的新实例脱离其进程管理，仍加载已失效的 dev server 地址，
 			// 表现为白屏僵尸窗口（渲染进程未加载，close 事件无人响应，只能任务管理器强杀）。
-			// 浏览器二进制已就绪，直接继续正常启动流程即可，无需重启。
+			// 浏览器二进制已就绪，返回 false 直接继续正常启动流程（主窗口继续加载渲染层），无需重启。
 			if (isDevMode()) {
-				setInitStatus({ status: 'done', message: '内置浏览器初始化完成' });
-				return true;
+				setInitStatus({ status: 'done', message: `${builtinBrowserLabel()}初始化完成` });
+				return false;
 			}
 
-			setInitStatus({ status: 'restart', message: '内置浏览器初始化完成，即将重启...' });
+			setInitStatus({ status: 'restart', message: `${builtinBrowserLabel()}初始化完成，即将重启...` });
 			await sleep(1000);
 			if (process.platform === 'linux' && process.env.APPIMAGE) {
 				app.relaunch({
