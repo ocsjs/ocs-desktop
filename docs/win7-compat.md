@@ -83,6 +83,7 @@
 
 | 位置 | 改动 | 目的 |
 |------|------|------|
+| 全链路（worker/web/common） | **移除浏览器增强功能**（防节流启动参数 + 静音音频保活注入 + 设置开关 + 4 实例并发限制） | 低配 Win7 与「多开省资源」目标直接对立；恢复 Chromium 默认后台节流/标签冻结/省内存行为 |
 | `packages/web/src/utils/os.ts` | `getWindowsRelease` 结果缓存 + 新增 `isWin7Platform()` | 渲染层平台判定（避免重复 IPC） |
 | `packages/app/src/extensions/bundled.ts` | `zipBuf` 显式类型标注 | typecheck 适配 |
 | `packages/app/src/tasks/init.chrome.ts`（dev 模式） | 浏览器初始化完成后 dev 下 `return false` 继续启动（原 `return true` 导致启动中断、无任何窗口） | 修复 main 分支存量死胡同（本分支实测暴露） |
