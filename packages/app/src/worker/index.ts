@@ -371,14 +371,17 @@ export class ScriptWorker implements ScriptWorkerContract {
 	async getResourceUsage(): Promise<{ mb: number; cpuTime: number }> {
 		if (!this.browser) return { mb: 0, cpuTime: 0 };
 		if (process.platform === 'win32') {
-			const rootPid =
-				this.browserPid ?? (this.launchInfo ? await findWindowsBrowserRootPid(this.launchInfo) : undefined);
-			if (!rootPid) {
+			// 定位成功后缓存到 browserPid：WMI 全进程表扫描在低配机器（Win7 虚拟机）上耗时数秒，
+			// 不缓存会导致每 10s 重复 PowerShell 冷启动 + 全表扫描
+			if (!this.browserPid && this.launchInfo) {
+				this.browserPid = await findWindowsBrowserRootPid(this.launchInfo);
+			}
+			if (!this.browserPid) {
 				// 静默归零会表现为「内存/CPU 一直 0%」无从排查，必须留痕（stdout → 浏览器日志面板）
 				console.log('[memory] 未定位到浏览器根进程 PID，本次跳过（browserPid/launchInfo 均不可用）');
 				return { mb: 0, cpuTime: 0 };
 			}
-			return getWindowsTreeUsage(rootPid);
+			return getWindowsTreeUsage(this.browserPid);
 		}
 		try {
 			const pwBrowser = this.browser.browser();
@@ -1317,10 +1320,12 @@ function send(event: string, ...args: any[]) {
 	sendToParent({ event, args });
 }
 
-/** execFile 的 Promise 包装（用于系统内存查询命令） */
+/** execFile 的 Promise 包装（用于系统内存查询命令）。
+ *  超时 30s：低配 Windows 虚拟机（Win7 + PS 2.0）上 PowerShell 冷启动 + WMI 全进程表
+ *  扫描可超过 10s，10s 超时会被误杀导致资源占用恒为 0 */
 function execCmd(file: string, args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
-		child_process.execFile(file, args, { timeout: 10_000, windowsHide: true }, (err, stdout) => {
+		child_process.execFile(file, args, { timeout: 30_000, windowsHide: true }, (err, stdout) => {
 			if (err) reject(err);
 			else resolve(String(stdout));
 		});
