@@ -93,7 +93,7 @@
 			</a-alert>
 
 			<!-- 主体内容（container 居中） -->
-			<div class="container main-content">
+			<div class="container-sm main-content">
 				<div
 					v-if="visibleTips.length"
 					class="tips-section"
@@ -908,6 +908,7 @@ function openInApp() {
 	display: flex;
 	flex-direction: column;
 	padding-top: 24px;
+	max-width: 760px;
 
 	> .tips-section,
 	> .empty-result {
@@ -1051,11 +1052,11 @@ function openInApp() {
 	font-weight: 400;
 }
 
-// 搜索引擎
+// 搜索引擎（宽度铺满：外围 .container 已按分辨率自适应限宽并居中）
 .search-section {
 	position: relative;
 	z-index: 10;
-	max-width: 760px;
+	min-width: 520px;
 	margin: 0 auto 24px auto;
 	animation: fadeInUp 0.6s ease backwards;
 }
@@ -1272,24 +1273,21 @@ function openInApp() {
 	}
 }
 
-// 平台列表提示小字（宽度对齐搜索区域）
+// 平台列表提示小字（宽度跟随 container 自适应）
 .bookmarks-caption {
 	width: 100%;
-	max-width: 760px;
-	margin: 0 auto 10px auto;
+	margin-bottom: 10px;
 	font-size: 12px;
 	color: @text-muted;
 	letter-spacing: 1px;
 }
 
-// 书签网格（宽度对齐搜索区域，居中显示，紧凑间距）
+// 书签网格（宽度跟随 container 自适应，紧凑间距）
 .bookmarks-grid {
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
 	width: 100%;
-	max-width: 760px;
-	margin: 0 auto;
 }
 
 // 快捷访问骨架屏：与书签分组卡片同尺寸占位，骨架颜色适配暗色背景
@@ -1310,8 +1308,6 @@ function openInApp() {
 	flex-wrap: wrap;
 	gap: 8px;
 	width: 100%;
-	max-width: 760px;
-	margin: 0 auto;
 }
 
 // 自定义网站小卡片：加深描边，防止与背景颜色重合
