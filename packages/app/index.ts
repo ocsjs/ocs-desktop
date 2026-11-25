@@ -15,6 +15,7 @@ import { startCloseWatchdog } from './src/close.watchdog';
 import { updater } from './src/tasks/updater';
 import { startupServer } from './src/tasks/startup.server';
 import { initChrome } from './src/tasks/init.chrome';
+import { startResourceMonitor } from './src/tasks/resource-monitor';
 import { ensureExtensionsIntegrity } from './src/extensions/bundled';
 import { initCrypto } from './src/crypto';
 import { integrateAppImageDesktop } from './src/tasks/appimage.desktop';
@@ -155,6 +156,9 @@ function bootstrap() {
 				await storeReady.catch(() => {});
 				task('初始化远程通信模块', () => remoteRegister(window));
 				task('注册app事件监听器', () => globalListenerRegister(window));
+				// 软件整体资源占用监控（Windows；替代 worker 逐浏览器 WMI 统计——
+				// Get-WmiObject 全表扫描在低配 Win7 机器上分钟级不可用）
+				task('启动资源占用监控', () => startResourceMonitor(window));
 				// 系统托盘按需创建：仅「后台运行」开启时显示托盘图标；
 				// 运行时切换即时生效（关闭时若窗口正处于托盘隐藏状态则先恢复显示再销毁托盘）
 				task('初始化系统托盘', () => {

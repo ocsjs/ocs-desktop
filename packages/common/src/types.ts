@@ -288,6 +288,8 @@ export interface IpcEventMap {
 	download: [channel: string, rate: number, totalLength: number, chunkLength: number];
 	/** 内置浏览器安装进度（installBuiltinChrome 推送） */
 	'builtin-chrome-install-progress': [progress: BuiltinChromeInstallProgress];
+	/** 软件整体资源占用（resource-monitor 每 10s 推送，Windows 整体口径，替代逐浏览器统计） */
+	'resource-usage': [payload: { mb: number; cpuPercent: number }];
 	/** 系统深浅色变化（nativeTheme updated，用于「自动」模式跟随系统） */
 	'system-theme-change': [dark: boolean];
 	/** 更新包下载进度（electron-updater download-progress，参数对齐 download 格式） */

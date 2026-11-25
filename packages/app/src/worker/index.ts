@@ -362,27 +362,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 	/**
 	 * 获取该浏览器实例的真实资源占用（内存 MB + 全部子进程累计 cpuTime 秒）。
-	 *
-	 * Windows 走 WMI 进程树查询（见 getWindowsTreeUsage + findWindowsBrowserRootPid）：
-	 * Win7 自带 PowerShell 2.0 无 Get-CimInstance，且 Chrome 109 的 CDP
-	 * SystemInfo.getProcessInfo 兼容性存疑——WMI 一条命令同时返回内存与 CPU 时间，
-	 * PS 2.0/5.1 通吃（Win7~Win11），进程定位也不依赖 CDP。
+	 * 仅非 Windows 平台使用（Windows 由主进程 resource-monitor 整体统计，见 startMemoryReporting）。
 	 */
 	async getResourceUsage(): Promise<{ mb: number; cpuTime: number }> {
 		if (!this.browser) return { mb: 0, cpuTime: 0 };
-		if (process.platform === 'win32') {
-			// 定位成功后缓存到 browserPid：WMI 全进程表扫描在低配机器（Win7 虚拟机）上耗时数秒，
-			// 不缓存会导致每 10s 重复 PowerShell 冷启动 + 全表扫描
-			if (!this.browserPid && this.launchInfo) {
-				this.browserPid = await findWindowsBrowserRootPid(this.launchInfo);
-			}
-			if (!this.browserPid) {
-				// 静默归零会表现为「内存/CPU 一直 0%」无从排查，必须留痕（stdout → 浏览器日志面板）
-				console.log('[memory] 未定位到浏览器根进程 PID，本次跳过（browserPid/launchInfo 均不可用）');
-				return { mb: 0, cpuTime: 0 };
-			}
-			return getWindowsTreeUsage(this.browserPid);
-		}
+		if (process.platform === 'win32') return { mb: 0, cpuTime: 0 };
 		try {
 			const pwBrowser = this.browser.browser();
 			if (!pwBrowser) return { mb: 0, cpuTime: 0 };
@@ -406,8 +390,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 		}
 	}
 
-	/** 启动资源占用定时上报：launch 后立即上报一次，此后每 10s 上报（事件：memory-usage） */
+	/** 启动资源占用定时上报：launch 后立即上报一次，此后每 10s 上报（事件：memory-usage）。
+	 *  Windows 平台跳过：逐浏览器 WMI 统计（Get-WmiObject 全表扫描）在低配 Win7 机器上
+	 *  分钟级不可用，已由主进程 resource-monitor 的软件整体占用监控（Get-Process）替代 */
 	private startMemoryReporting() {
+		if (process.platform === 'win32') return;
 		this.stopMemoryReporting();
 		this.lastCpuSample = undefined;
 		const report = async () => {
@@ -1383,55 +1370,6 @@ async function getPidsMemoryMB(pids: number[]): Promise<number> {
 	} catch {
 		// 资源占用为辅助指标：测量失败静默回退 0，不干扰脚本安装/拓展安装等主流程
 		return 0;
-	}
-}
-
-/** WMI 资源查询首次成功标记（仅打一次日志，见 getWindowsTreeUsage） */
-let wmiUsageLogged = false;
-
-/**
- * Windows 进程树资源占用（WMI，Win7 兼容路径）：
- * 从根 PID 出发按 ParentProcessId 递归收集整棵 Chromium 进程树，
- * 一次查询汇总内存（WorkingSetSize → MB）与累计 CPU 时间（KernelModeTime+UserModeTime，100ns → 秒）。
- *
- * 为何用 Get-WmiObject 而非 Get-CimInstance：Win7 自带 PowerShell 2.0 没有 CIM cmdlet；
- * Get-WmiObject 在 PS 2.0（Win7）与 PS 5.1（Win10/11）均可用。单命令聚合避免多进程 PID 逐个查询的开销。
- */
-async function getWindowsTreeUsage(rootPid: number): Promise<{ mb: number; cpuTime: number }> {
-	// 按 ParentProcessId BFS 展开整棵进程树（PowerShell 2.0 语法兼容）
-	const bfs =
-		`while($q.Count){$c=$q[0];$q=@($q|Select-Object -Skip 1);` +
-		`foreach($p in $all){if($p.ParentProcessId -eq $c -and -not ($ids -contains $p.ProcessId)){` +
-		`$ids+=$p.ProcessId;$q+=$p.ProcessId}}}`;
-	const script = [
-		// -ErrorAction SilentlyContinue：无权读取的进程（其他用户/系统进程）只产生非终止错误，
-		// 抑制后避免 -Command 以退出码 1 结束
-		`$all=@(Get-WmiObject Win32_Process -ErrorAction SilentlyContinue)`,
-		`$ids=@(${rootPid})`,
-		`$q=@(${rootPid})`,
-		bfs,
-		`$sel=@($all|Where-Object{$ids -contains $_.ProcessId})`,
-		`$mem=($sel|Measure-Object WorkingSetSize -Sum).Sum;if($null -eq $mem){$mem=0}`,
-		`$cpu=0.0;foreach($p in $sel){$cpu+=([double]$p.KernelModeTime+[double]$p.UserModeTime)}`,
-		`Write-Output ($mem.ToString() + ' ' + $cpu.ToString())`
-	].join(';');
-	try {
-		const out = await execCmd('powershell', ['-NoProfile', '-Command', script]);
-		const [memBytes, cpu100ns] = out.trim().split(/\s+/);
-		const result = {
-			mb: Math.round((parseInt(memBytes, 10) || 0) / 1024 / 1024),
-			cpuTime: (parseFloat(cpu100ns) || 0) / 1e7
-		};
-		// 首次成功留痕（Win7 排障：正向确认 WMI 路径生效，之后静默）
-		if (!wmiUsageLogged && result.mb > 0) {
-			wmiUsageLogged = true;
-			console.log(`[memory] WMI 资源查询已生效：${result.mb}MB / cpuTime ${result.cpuTime.toFixed(1)}s`);
-		}
-		return result;
-	} catch (e) {
-		// 资源占用为辅助指标：失败静默回退 0（日志走 stdout，不弹错误通知）
-		console.log('[memory] WMI 资源查询失败（已跳过）：', e instanceof Error ? e.message : String(e));
-		return { mb: 0, cpuTime: 0 };
 	}
 }
 
