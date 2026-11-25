@@ -1,5 +1,62 @@
 # Changelog
 
+## [3.10.0](https://github.com/ocsjs/ocs-desktop/compare/v3.9.1...v3.10.0) (2026-11-23)
+
+
+### ✨ 新功能
+
+* **app-center:** 新增内置拓展卡片区（版本/描述/许可证展示与单选安装），废弃远程 extensions 组加载 ([a16b091](https://github.com/ocsjs/ocs-desktop/commit/a16b091b6dbac93a412423a60126fcc7afae7cdc))
+* **common:** 网络加速新增三个适配平台 ([7aa9d92](https://github.com/ocsjs/ocs-desktop/commit/7aa9d92dba780ed6faa4f32183330aa1b3de5e2e))
+* **contract:** 建立 IPC 契约「实现即真相源」生成管线 ([9086af6](https://github.com/ocsjs/ocs-desktop/commit/9086af6a45b39ff29b1857f0e583c48c682f7db1))
+* **extensions:** scriptcat 升级 1.5.1，内置清单透传展示元数据（描述/图标） ([4e8f97b](https://github.com/ocsjs/ocs-desktop/commit/4e8f97b9e176702640ea6d6f59743f506ac8d688))
+* **extensions:** 内置拓展新增卸载/安装检测能力，收敛独立命名空间 api（list/install/remove/isinstalled/verifyintegrity） ([4051ce2](https://github.com/ocsjs/ocs-desktop/commit/4051ce2864cc24b21544cd0fa1fbef1b2cbc875e))
+* **ipc:** 注册 bridge.bundledextensions 独立命名空间，下线 methods 旧平铺 api ([93b4f87](https://github.com/ocsjs/ocs-desktop/commit/93b4f8741c3d1ac697647f1b1e6c5d198730d450))
+* **ipc:** 注册框架集中至 src/ipc 并注入 bridge 门面（旧面并存） ([bfa85ab](https://github.com/ocsjs/ocs-desktop/commit/bfa85ab04ccb8c53c80709e14b6554878added8a))
+* **net:** 新增 NetUtils 统一网络层并迁移全部消费方 ([00196a4](https://github.com/ocsjs/ocs-desktop/commit/00196a43f7f577e63cb9cff3d9cdbfc1e44b47e7))
+* **setting:** 脚本配置修改后自动开启同步并在离开时提示 ([15757bd](https://github.com/ocsjs/ocs-desktop/commit/15757bdb2540465e349c414462a0481dd0d24e7d))
+* **web:** 全部 IPC 调用点迁移至 bridge 统一门面并删除旧 remote 访问层 ([53ade39](https://github.com/ocsjs/ocs-desktop/commit/53ade39b4345cc0e91aa6029b8a22fda420d4282))
+* **worker:** 迁移脚本工作进程至 utilityProcess 托管 ([efffadc](https://github.com/ocsjs/ocs-desktop/commit/efffadc32e81b9a24e57ad3ca059403c61d217c4))
+* 关闭确认弹窗增加强制退出倒计时，渲染层接管关闭流程时取消主进程看门狗 ([a9c7dca](https://github.com/ocsjs/ocs-desktop/commit/a9c7dcaefbd7135749aa6210344e89519f4d3b83))
+* 初始化窗口交互与界面优化（a-result 布局、拖拽移动、关闭确认流程） ([74f0ee8](https://github.com/ocsjs/ocs-desktop/commit/74f0ee82cb6bdc236248c31637236bf3782b622d))
+
+
+### 🐛 问题修复
+
+* **app:** 修复 getCurrentWebContents 空窗口崩溃 ([357334d](https://github.com/ocsjs/ocs-desktop/commit/357334da288fa94aacd8355b2f1d98ca0fd6635a))
+* **app:** 修复 initStore 与 remoteRegister 启动竞态（Bug1） ([10e3e12](https://github.com/ocsjs/ocs-desktop/commit/10e3e1298bbb5aeb9594d2955e2c855f18ea2a18))
+* **app:** 修复 second-instance 窗口销毁后恢复崩溃 ([4a6fe17](https://github.com/ocsjs/ocs-desktop/commit/4a6fe17dcdfa231a27cd3f6baf57d128fcd34ac6))
+* **app:** 修复构建产物直跑时三类路径解析失败（Bug2） ([b9e5913](https://github.com/ocsjs/ocs-desktop/commit/b9e59139a06415203d07a0fcd370d2d3f1b4dbef))
+* **common:** 修复 normalizeUrl 误判 localhost:port 为自带协议（Bug4） ([ab4c0fa](https://github.com/ocsjs/ocs-desktop/commit/ab4c0fa4a7f319233ca3e2e53f990ec64490862c))
+* **store:** 新增 store facade 根治 conf 副本写入静默丢失 ([2771f78](https://github.com/ocsjs/ocs-desktop/commit/2771f783d4e9a1d6a60192bce1623538a757e710))
+* **web:** 修复 getMetaUrl 携带额外查询参数时 meta 链接生成失效（Bug5） ([97015ac](https://github.com/ocsjs/ocs-desktop/commit/97015ac1fd0fd8c9756d476a5885a087e369acbc))
+* **worker:** 修复 ocs-action 未知动作导致 worker 抛出 TypeError ([472a494](https://github.com/ocsjs/ocs-desktop/commit/472a49457619b04cfdd1db416455d775764e19fd))
+* **worker:** 修复浏览器内存测量对死 PID 报错并弹错误弹窗 ([26c8d9b](https://github.com/ocsjs/ocs-desktop/commit/26c8d9b2f6457dcbf734f74a5f44860ee43b3703))
+* **worker:** 修复过期关闭兜底误杀重启浏览器致自动关闭 ([89704a3](https://github.com/ocsjs/ocs-desktop/commit/89704a33adf02ef7c22823005f9784b9aa0988ed))
+* 修复mac版fuse改写后未重签导致启动即被内核SIGKILL ([ee71bce](https://github.com/ocsjs/ocs-desktop/commit/ee71bce626a8d48b26e943caa74b3b6b754599f6))
+* 修复应用中心安装应用并删除后没有重置状态的问题 ([eaf0095](https://github.com/ocsjs/ocs-desktop/commit/eaf00959bd51fb4fe1a60ceb2e6509176c0f11c3))
+* 修复篡改猴拓展安装脚本报错问题 ([5bf01c6](https://github.com/ocsjs/ocs-desktop/commit/5bf01c629908a975c58c2a100786a7d97a0d0541))
+
+
+### ⚡ 优化改进
+
+* 优化OCS配置弹窗显示 ([2f3f654](https://github.com/ocsjs/ocs-desktop/commit/2f3f6549ff0657112243bd062cf5fc16f5a3c2b8))
+* 更新项目开发文档和对 Agents 工具规范适配 ([7e7ba47](https://github.com/ocsjs/ocs-desktop/commit/7e7ba473aa143f14506fe62d420312cdb9ad5ae2))
+
+
+### ♻️ 重构
+
+* **ipc:** 拆除旧 remote 面与同步调用通道 ([a034185](https://github.com/ocsjs/ocs-desktop/commit/a034185ad3af84f70fcf51fe1a32777a945faadb))
+* **web:** 拓展加载逻辑迁移至 bridge.bundledextensions 域 ([fe31153](https://github.com/ocsjs/ocs-desktop/commit/fe311531689a19c9ef48dd3ad4d9107ea5b0df00))
+* 主窗口启用 sandbox/contextIsolation 安全基线 ([39f6bb9](https://github.com/ocsjs/ocs-desktop/commit/39f6bb96d350368286a69677a6663dae5459fc58))
+
+
+### 💄 样式更新
+
+* 优化网络脚本搜索结果弹窗样式 ([12d783a](https://github.com/ocsjs/ocs-desktop/commit/12d783aca7b1b3a4b7e3ca92f26c1b2f853adc95))
+* 修复 pre-push 钩子 lint 阻塞 ([8932198](https://github.com/ocsjs/ocs-desktop/commit/893219820f30f4c80768ae5ff557bc8331d1b3b6))
+* 修复 pre-push 钩子 lint 阻塞并移除 void 调用语法 ([b94ca47](https://github.com/ocsjs/ocs-desktop/commit/b94ca479eff44ba5edcdd60a8814cb67ee415830))
+* 格式化与类型写法整理 ([aff55a5](https://github.com/ocsjs/ocs-desktop/commit/aff55a5f0b8e73a0d94cf2494c83fa8b90b83138))
+
 ## [3.9.1](https://github.com/ocsjs/ocs-desktop/compare/v3.9.0...v3.9.1) (2026-11-03)
 
 
