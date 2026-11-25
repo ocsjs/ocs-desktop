@@ -64,7 +64,8 @@
 
 | 位置 | 改动 | 目的 |
 |------|------|------|
-| `packages/app/src/worker/index.ts` | Windows 平台资源监控改走 WMI：`findWindowsBrowserRootPid`（按 --user-data-dir 命令行定位根进程，不依赖 CDP）+ `getWindowsTreeUsage`（进程树内存/CPU 汇总）；close() 强杀兜底 PID 同样接 WMI | Win7 自带 PS 2.0 无 `Get-CimInstance`（PS 3.0+）；CDP `SystemInfo.getProcessInfo` 在 Chrome 109 兼容性存疑——原实现两者归零 |
+| `packages/app/src/tasks/resource-monitor.ts`（新增） | 主进程软件整体资源监控：`Get-Process` 按进程名聚合 OCS 整体占用（不经 WMI，PS 2.0 兼容，实测 622ms vs WMI 分钟级），每 10s 推送 `resource-usage` 事件 | 替代逐浏览器 WMI 统计（低配 Win7 上不可用） |
+| `packages/app/src/worker/index.ts` | 逐浏览器资源统计下线（win32 跳过）；`findWindowsBrowserRootPid` 保留供 close 强杀兜底；`execCmd` 有输出即采用（PS 非终止错误置退出码 1 会误丢有效输出） | 资源监控链路修复 |
 
 ## 6. 窗口样式（Win7 风格）
 
