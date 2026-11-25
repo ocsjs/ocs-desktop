@@ -3,6 +3,7 @@ import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import path from 'path';
 import url from 'url';
 import fs from 'fs';
+import { isDevMode } from './utils';
 
 /**
  * 窗口图标路径：
@@ -117,12 +118,17 @@ export function createLoadingWindow(): BrowserWindow {
 	// 1. 打包（asar 根下 out/renderer，publicDir 拷贝产物）
 	// 2. 构建产物直跑（getAppPath=out/main，上一级即 out/renderer）
 	// 3. dev 模式读 web 源文件（packages/web/public，不依赖 dev server）
-	const loadingHtmlCandidates = [
-		path.join(app.getAppPath(), 'out', 'renderer', 'loading.html'),
-		path.join(app.getAppPath(), '..', 'renderer', 'loading.html'),
-		path.join(app.getAppPath(), '..', 'web', 'public', 'loading.html')
-	];
-	const loadingHtmlPath = loadingHtmlCandidates.find((p) => fs.existsSync(p)) ?? loadingHtmlCandidates[1];
+	// 注意：dev 模式下必须优先读源文件——out/renderer 是 electron-vite build 的历史产物，
+	// dev 不更新它，优先匹配会加载到过期内容（改动需重复构建才生效）
+	const devLoadingHtml = path.join(app.getAppPath(), '..', 'web', 'public', 'loading.html');
+	const loadingHtmlCandidates = isDevMode()
+		? [devLoadingHtml]
+		: [
+				path.join(app.getAppPath(), 'out', 'renderer', 'loading.html'),
+				path.join(app.getAppPath(), '..', 'renderer', 'loading.html'),
+				devLoadingHtml
+		  ];
+	const loadingHtmlPath = loadingHtmlCandidates.find((p) => fs.existsSync(p)) ?? loadingHtmlCandidates[0];
 	win.loadURL(url.pathToFileURL(loadingHtmlPath).href);
 
 	return win;
