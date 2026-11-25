@@ -1292,7 +1292,9 @@ function execCmd(file: string, args: string[]): Promise<string> {
 		child_process.execFile(file, args, { timeout: 10_000, windowsHide: true }, (err, stdout, stderr) => {
 			if (err && !String(stdout).trim()) {
 				const e = err as any;
-				const tail = String(stderr || '').trim().slice(-200);
+				const tail = String(stderr || '')
+					.trim()
+					.slice(-200);
 				e.message = `${e.message}${tail ? '\nstderr: ' + tail : ''}`;
 				reject(e);
 			} else {
