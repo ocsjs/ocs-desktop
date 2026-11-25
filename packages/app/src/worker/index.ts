@@ -1283,12 +1283,21 @@ function send(event: string, ...args: any[]) {
 	sendToParent({ event, args });
 }
 
-/** execFile 的 Promise 包装（用于系统内存查询命令） */
+/** execFile 的 Promise 包装（用于系统内存查询命令）。
+ *  有 stdout 输出即采用、忽略非零退出码：PowerShell -Command 出现非终止错误（如无权
+ *  读取其他用户进程的 CommandLine）时以退出码 1 结束，但 stdout 中的结果依然有效，
+ *  按退出码判失败会误丢正确输出（win7 分支实测：输出正常但报 Command failed） */
 function execCmd(file: string, args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
-		child_process.execFile(file, args, { timeout: 10_000, windowsHide: true }, (err, stdout) => {
-			if (err) reject(err);
-			else resolve(String(stdout));
+		child_process.execFile(file, args, { timeout: 10_000, windowsHide: true }, (err, stdout, stderr) => {
+			if (err && !String(stdout).trim()) {
+				const e = err as any;
+				const tail = String(stderr || '').trim().slice(-200);
+				e.message = `${e.message}${tail ? '\nstderr: ' + tail : ''}`;
+				reject(e);
+			} else {
+				resolve(String(stdout));
+			}
 		});
 	});
 }

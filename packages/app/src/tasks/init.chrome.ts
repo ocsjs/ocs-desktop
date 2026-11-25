@@ -183,10 +183,12 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 			// quit 会让 electron-vite 判定应用退出并杀死整个 dev 进程（dev server 随之停止），
 			// 而 relaunch 拉起的新实例脱离其进程管理，仍加载已失效的 dev server 地址，
 			// 表现为白屏僵尸窗口（渲染进程未加载，close 事件无人响应，只能任务管理器强杀）。
-			// 浏览器二进制已就绪，直接继续正常启动流程即可，无需重启。
+			// 浏览器二进制已就绪，返回 false 直接继续正常启动流程（主窗口继续加载渲染层），无需重启。
+			// （此前误返回 true：bootstrap 收到 true 会中断启动且 loading 闪屏已销毁，
+			//  表现为「初始化完成后无任何反应」——win7 分支实测发现并修复）
 			if (isDevMode()) {
 				setInitStatus({ status: 'done', message: '内置浏览器初始化完成' });
-				return true;
+				return false;
 			}
 
 			setInitStatus({ status: 'restart', message: '内置浏览器初始化完成，即将重启...' });

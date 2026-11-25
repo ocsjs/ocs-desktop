@@ -46,6 +46,9 @@
 					0 4px 10px -4px rgba(0, 0, 0, 0.2),
 					0 12px 40px 8px rgba(0, 0, 0, 0.12);
 				overflow: hidden;
+				/* 长错误信息（多下载源失败详情）适配：卡片限高 + 内容区滚动，
+				   否则错误文本撑破卡片超出窗口边界无法查看（win7 分支实测） */
+				max-height: calc(100vh - 32px);
 				user-select: none;
 				/* 无边框窗口：整卡可拖拽移动，鼠标显示为移动样式（交互元素单独排除） */
 				-webkit-app-region: drag;
@@ -55,7 +58,7 @@
 			.result-wrapper button,
 			.result-wrapper a,
 			.result-close,
-			.log-list,
+			.result-content,
 			.confirm-overlay {
 				-webkit-app-region: no-drag;
 				cursor: default;
@@ -104,26 +107,27 @@
 				margin-bottom: 16px;
 				cursor: inherit;
 			}
-			/* a-result 内容区（步骤列表） */
+			/* a-result 内容区（步骤列表）：占据剩余空间，错误详情过长时滚动适配 */
 			.result-content {
 				width: 100%;
 				padding: 24px 0px;
+				flex: 1;
+				min-height: 0;
+				overflow-y: auto;
+			}
+			.result-content::-webkit-scrollbar {
+				width: 6px;
+			}
+			.result-content::-webkit-scrollbar-thumb {
+				background: #e5e6eb;
+				border-radius: 3px;
 			}
 
 			.log-list {
 				list-style: none;
-				max-height: 160px;
-				overflow-y: auto;
 				display: flex;
 				flex-direction: column;
 				gap: 10px;
-			}
-			.log-list::-webkit-scrollbar {
-				width: 6px;
-			}
-			.log-list::-webkit-scrollbar-thumb {
-				background: #e5e6eb;
-				border-radius: 3px;
 			}
 			.log-item {
 				display: flex;
