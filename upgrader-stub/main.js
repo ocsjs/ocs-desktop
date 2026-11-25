@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 更新源目录：与 packages/common/src/constants.ts 的 OCS_UPDATER.feedUrl 保持一致（本文件为独立运行时，无法 import）
-const UPDATER_BASE_URL = 'https://cdn.ocsjs.com/app/electron-updater/';
+const UPDATER_BASE_URL = 'https://cdn.ocsjs.com/app/electron-updater-win7/';
 const FALLBACK_DOWNLOAD_PAGE = 'https://docs.ocsjs.com';
 
 function fetchText(url) {

@@ -21,9 +21,11 @@ export const OCS_API = {
 	guide: `${OCS_CDN}/articles/app/guide-v2.md`
 };
 
-/** electron-updater 更新源（latest.yml / 安装包 / blockmap / CHANGELOG.md 所在目录） */
+/** electron-updater 更新源（latest.yml / 安装包 / blockmap / CHANGELOG.md 所在目录）。
+ *  win7 分支使用独立通道 electron-updater-win7：与 main 的 electron-updater 隔离，
+ *  防止 win7 构建的 latest.yml 劫持 Win10+ 客户端的自动更新（反之亦然） */
 export const OCS_UPDATER = {
-	feedUrl: `${OCS_CDN}/app/electron-updater/`,
+	feedUrl: `${OCS_CDN}/app/electron-updater-win7/`,
 	changelogFileName: 'CHANGELOG.md'
 };
 

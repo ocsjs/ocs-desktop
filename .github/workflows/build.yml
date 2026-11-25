@@ -2,6 +2,10 @@ name: Build and Upload
 
 on:
   workflow_dispatch:
+  push:
+    # win7 分支：每次推送自动构建（仅出构建产物 artifacts）；发版走 win7-v* 标签
+    branches: [feat/win7-compat]
+    tags: ['win7-v*']
 
 env:
   # 腾讯云 COS（非机密；机密仅需 secrets.TENCENT_SECRET_ID / TENCENT_SECRET_KEY）
@@ -10,12 +14,11 @@ env:
   # 全球加速 endpoint：GitHub runner（美国）→ 国内跨境链路慢且部分 runner 路由不通，
   # 走加速域名经腾讯骨干网回源（需 COS 控制台开启全球加速；coscmd 的 -r 与 -e 二选一）
   COS_ENDPOINT: cos.accelerate.myqcloud.com
-  # COS 统一存储目录：安装包、blockmap、latest*.yml、CHANGELOG.md 全部存放于此，
-  # 客户端更新源与官网下载共用同一份文件（与 packages/common/src/constants.ts 的
-  # OCS_UPDATER.feedUrl 保持同步）。安装包文件名自带版本号不会互相覆盖；
-  # 旧版本由 COS 生命周期规则自动清理（控制台配置：前缀 /app/electron-updater/ocs-，
-  # N 天后过期删除；latest*.yml 与 CHANGELOG.md 不以 ocs- 开头，不受影响）
-  COS_UPDATER_DIR: /app/electron-updater/
+  # win7 分支独立更新通道（与 main 的 /app/electron-updater/ 完全隔离）：
+  # 防止 win7 构建的 latest.yml 劫持 Win10+ 客户端的自动更新。
+  # 与 packages/common/src/constants.ts 的 OCS_UPDATER.feedUrl 保持同步。
+  # 安装包文件名自带版本号不会互相覆盖；旧版本由 COS 生命周期规则自动清理
+  COS_UPDATER_DIR: /app/electron-updater-win7/
   # coscmd 调优：跨境慢链路下 16MB 分片单片 2-4 分钟会被服务端 UserNetworkTooSlow 踢断，
   # 4MB 分片约 30s 完成；低并发保证单流带宽；120s 快速失败避免坏路由空等 10 分钟
   COS_THREAD_NUM: "3"
@@ -90,7 +93,7 @@ jobs:
 
   upload-release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/win7-v')
     runs-on: ubuntu-latest
 
     steps:
@@ -107,7 +110,8 @@ jobs:
         run: |
           VERSION=$(jq -r .version package.json)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/"
+          # win7 标签带前缀（win7-v*），下载链接用完整标签名而非 v+版本号
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF#refs/tags/}/"
           echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_ENV
           BUILDTIME=$(TZ=Asia/Shanghai date)
           echo "BUILDTIME=$BUILDTIME" >> $GITHUB_ENV
@@ -146,7 +150,7 @@ jobs:
           ---
           ## 📦 下载地址
           ### Windows（Win7 特别版，支持 Win7 SP1 及以上）
-          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe)
+          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe) | [32位安装包](${DL}ocs-${VER}-setup-win-ia32.exe) | [双架构组合包](${DL}ocs-${VER}-setup-win.exe)
           ### 🔗 快捷访问
           - [官网](https://docs.ocsjs.com/)
           - [官网软件下载（更快）](https://docs.ocsjs.com/docs/app)
@@ -155,7 +159,7 @@ jobs:
 
   upload-cos:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/win7-v')
     runs-on: ubuntu-latest
     # 腾讯云 COS 上传 — 需要配置 secrets
     # 如果是 fork 仓库没有密钥，此 job 会自动跳过
@@ -224,7 +228,7 @@ jobs:
   # 按当前版本与最新版本的区间自行截取日志并以 markdown 展示，无需维护 infos.json。
   upload-changelog:
     needs: upload-cos
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/win7-v')
     runs-on: ubuntu-latest
     continue-on-error: true
 
@@ -271,7 +275,7 @@ jobs:
   # 补发/重发历史版本请用独立的 publish-update.yml（手动触发，可指定任意 tag）。
   publish-update:
     needs: upload-changelog
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/win7-v')
     runs-on: ubuntu-latest
     environment: publish-update
     # fork 仓库无 COS 密钥时跳过不报错

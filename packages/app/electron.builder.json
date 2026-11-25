@@ -34,7 +34,7 @@
 	"electronLanguages": ["en-US", "en-GB", "zh-CN"],
 	"publish": {
 		"provider": "generic",
-		"url": "https://cdn.ocsjs.com/app/electron-updater/"
+		"url": "https://cdn.ocsjs.com/app/electron-updater-win7/"
 	},
 	"win": {
 		"icon": "public/favicon.png",
