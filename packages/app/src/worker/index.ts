@@ -1322,12 +1322,23 @@ function send(event: string, ...args: any[]) {
 
 /** execFile 的 Promise 包装（用于系统内存查询命令）。
  *  超时 30s：低配 Windows 虚拟机（Win7 + PS 2.0）上 PowerShell 冷启动 + WMI 全进程表
- *  扫描可超过 10s，10s 超时会被误杀导致资源占用恒为 0 */
+ *  扫描可超过 10s，10s 超时会被误杀导致资源占用恒为 0。
+ *  有 stdout 输出即采用、忽略非零退出码：PowerShell -Command 出现非终止错误（如无权
+ *  读取其他用户进程的 CommandLine）时以退出码 1 结束，但 stdout 中的结果依然有效，
+ *  按退出码判失败会误丢正确输出（Win7 实测现象：输出正常但报 Command failed） */
 function execCmd(file: string, args: string[]): Promise<string> {
 	return new Promise((resolve, reject) => {
-		child_process.execFile(file, args, { timeout: 30_000, windowsHide: true }, (err, stdout) => {
-			if (err) reject(err);
-			else resolve(String(stdout));
+		child_process.execFile(file, args, { timeout: 30_000, windowsHide: true }, (err, stdout, stderr) => {
+			if (err && !String(stdout).trim()) {
+				const e = err as any;
+				const tail = String(stderr || '')
+					.trim()
+					.slice(-200);
+				e.message = `${e.message}${tail ? '\nstderr: ' + tail : ''}`;
+				reject(e);
+			} else {
+				resolve(String(stdout));
+			}
 		});
 	});
 }
@@ -1393,7 +1404,9 @@ async function getWindowsTreeUsage(rootPid: number): Promise<{ mb: number; cpuTi
 		`foreach($p in $all){if($p.ParentProcessId -eq $c -and -not ($ids -contains $p.ProcessId)){` +
 		`$ids+=$p.ProcessId;$q+=$p.ProcessId}}}`;
 	const script = [
-		`$all=@(Get-WmiObject Win32_Process)`,
+		// -ErrorAction SilentlyContinue：无权读取的进程（其他用户/系统进程）只产生非终止错误，
+		// 抑制后避免 -Command 以退出码 1 结束
+		`$all=@(Get-WmiObject Win32_Process -ErrorAction SilentlyContinue)`,
 		`$ids=@(${rootPid})`,
 		`$q=@(${rootPid})`,
 		bfs,
@@ -1434,7 +1447,9 @@ async function findWindowsBrowserRootPid(info: {
 	// WQL 字符串转义（单引号 doubling）；用 .Contains 而非 LIKE 规避反斜杠转义问题
 	const ud = info.userDataDir.replace(/'/g, "''");
 	const script = [
-		`$sel=@(Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${ud}') })`,
+		// -ErrorAction SilentlyContinue：无权读取的进程只产生非终止错误，抑制后避免退出码非 0
+		`$sel=@(Get-WmiObject Win32_Process -ErrorAction SilentlyContinue |` +
+			` Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${ud}') })`,
 		`$root=$sel | Where-Object { $pp=$_.ParentProcessId; -not ($sel | Where-Object { $_.ProcessId -eq $pp }) }` +
 			` | Select-Object -First 1`,
 		`if($root){ Write-Output $root.ProcessId }`
