@@ -50,6 +50,9 @@
 		"target": [
 			{
 				"target": "nsis"
+			},
+			{
+				"target": "zip"
 			}
 		]
 	},

@@ -109,6 +109,7 @@ jobs:
           # 产物目录：仓库根 releases/（electron.builder.json directories.output）
           path: |
             releases/*.exe
+            releases/*.zip
             releases/*.blockmap
             releases/*.dmg
             releases/*.AppImage
@@ -176,7 +177,7 @@ jobs:
           ---
           ## 📦 下载地址
           ### Windows (不支持Win7)
-          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe)
+          - [64位安装包](${DL}ocs-${VER}-setup-win-x64.exe) | [64位免安装版(zip)](${DL}ocs-${VER}-setup-win-x64.zip)
           ### macOS
           - [M系列芯片(ARM64)](${DL}ocs-${VER}-setup-mac-arm64.dmg) | [Intel芯片(x64)](${DL}ocs-${VER}-setup-mac-x64.dmg)
           ### Linux
@@ -239,7 +240,7 @@ jobs:
         run: |
           set -e
           shopt -s nullglob
-          for file in artifacts/*.exe artifacts/*.dmg artifacts/*.AppImage artifacts/*.deb artifacts/*.rpm artifacts/*.blockmap; do
+          for file in artifacts/*.exe artifacts/*.zip artifacts/*.dmg artifacts/*.AppImage artifacts/*.deb artifacts/*.rpm artifacts/*.blockmap; do
             [ -f "$file" ] || continue
             for attempt in 1 2 3 4 5; do
               echo "Uploading $file (attempt $attempt/5)"
