@@ -50,14 +50,6 @@ export class Browser extends Entity implements BrowserOptions {
 	 * @returns 被预检测拦截时返回 false
 	 */
 	async launch(opts?: { skipGuardCheck?: boolean }): Promise<number | false | undefined> {
-		// 浏览器增强开启时限制并发数量：运行中（启动中+已启动）达到上限直接拒绝启动
-		if (store.render.setting.browser.browserEnhancement) {
-			const runningCount = processes.filter((p) => p.status === 'launching' || p.status === 'launched').length;
-			if (runningCount >= 4) {
-				Message.error('浏览器增强已开启：最多同时运行 4 个浏览器，请先关闭其他浏览器，或在设置中关闭浏览器增强功能');
-				return;
-			}
-		}
 		// 内存/CPU 启动预检测（设置中「内存检测」关闭时内部直接放行）
 		if (!opts?.skipGuardCheck) {
 			const guard = await checkLaunchCapacity();

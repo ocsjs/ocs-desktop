@@ -68,8 +68,6 @@ export type WebStore = {
 			screenshotFramerate: 'high' | 'medium' | 'low';
 			/** 预览画质档位：控制分辨率与 jpeg 质量（帧尺寸 = min(显示尺寸×DPR, 档位上限)，背压自动降速），ultra(2K) / high / medium / low */
 			screenshotQuality: 'ultra' | 'high' | 'medium' | 'low';
-			/** 浏览器增强（防休眠/防冻结）：启动时附加防节流参数并注入静音音频豁免，仅对新启动的浏览器生效 */
-			browserEnhancement: boolean;
 			/** CPU/内存启动预检测：启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动；关闭后忽略警告直接启动 */
 			memoryCheck: boolean;
 			/** 网络缓存加速：脚本猫/GreasyFork 等站点的脚本下载与搜索 API 磁盘缓存；关闭后恢复原始实时加载 */
@@ -198,7 +196,6 @@ export const DEFAULT_RENDER = {
 			screenshotPreview: true,
 			screenshotFramerate: 'low' as const,
 			screenshotQuality: 'medium' as const,
-			browserEnhancement: false,
 			memoryCheck: true,
 			networkCache: true,
 			networkCacheSites: {},

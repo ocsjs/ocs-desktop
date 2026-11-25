@@ -35,8 +35,6 @@ type BrowserConfig = {
 	enable_dialog?: boolean;
 	/** 是否启用浏览器界面预览（Page.startScreencast 推流） */
 	screenshot_preview?: boolean;
-	/** 浏览器增强（防休眠/防冻结）：附加防节流启动参数 + 注入静音音频豁免脚本 */
-	browser_enhancement?: boolean;
 	/** 软件辅助：监听浏览器路由与用户脚本联动（默认开启，关闭后自动化增强不可用） */
 	script_assistance?: boolean;
 	/** 文件下载优化：恢复浏览器原生下载行为（默认开启，关闭后可能无法下载文件） */
@@ -926,131 +924,12 @@ export class ScriptWorker implements ScriptWorkerContract {
 	}
 }
 
-/**
- * 浏览器增强（防休眠/防冻结）启动参数：
- * 最小化/后台窗口下仍可长时间运行 JS。开关关闭时不附加任何参数。
- *
- * 注意：Chromium CommandLine 对重复开关为"last wins"语义，且 Playwright 1.60 默认
- * 已带一个 --disable-features 列表，此处必须携带其默认禁用项的并集，
- * 升级 playwright-core 时需同步核对（lib/coreBundle.js 中 chromiumSwitches 的 disabledFeatures）。
- * 其余独立开关与 Playwright 默认参数重复但无副作用（重复传入无影响）。
- */
-function formatBrowserEnhancementArgs(config?: BrowserConfig): string[] {
-	if (!config?.browser_enhancement) return [];
-	return [
-		// 禁用后台页面定时器节流：隐藏页面的 setTimeout/setInterval 不再被对齐到 1 秒/次
-		'--disable-background-timer-throttling',
-		// 禁止渲染进程在后台时被降级（降低进程优先级/调度权重）
-		'--disable-renderer-backgrounding',
-		// 窗口被遮挡或最小化时不将页面视为后台，避免合成/调度被暂停
-		'--disable-backgrounding-occluded-windows',
-		// 禁用 IPC 洪泛保护，避免 worker 高频 CDP 调用（evaluate/推流 ack）被限流
-		'--disable-ipc-flooding-protection',
-		// 允许无用户手势自动播放（静音音频保活的前提，否则 AudioContext 会一直处于 suspended）
-		'--autoplay-policy=no-user-gesture-required',
-		'--disable-features=' +
-			[
-				// ↓ Playwright 1.60 默认禁用项（last-wins 语义下必须保留，否则丢失默认行为）
-				// 禁用 beforeunload 同步检查，避免自动化时页面卸载被阻塞（playwright#14047）
-				'AvoidUnnecessaryBeforeUnloadCheckSync',
-				// 修正节点移除时的边界事件派发跟踪，避免误判（playwright#38568）
-				'BoundaryEventDispatchTracksNodeRemoval',
-				// 关闭浏览器进程时不销毁用户数据目录（持久化上下文必需）
-				'DestroyProfileOnBrowserClose',
-				// 禁用拨号媒体路由提供方，避免投屏相关干扰（playwright#13854）
-				'DialMediaRouteProvider',
-				// 禁用全局媒体控制（工具栏媒体播放控制按钮）
-				'GlobalMediaControls',
-				// 禁用 HTTP 自动升级为 HTTPS，避免自动化导航被意外改写（playwright#27605）
-				'HttpsUpgrades',
-				// 隐藏地址栏 Lens 识图入口（非官方构建中不可用）
-				'LensOverlay',
-				// 禁用媒体路由/投屏功能（playwright#8162）
-				'MediaRouter',
-				// 禁用导航期间的绘制保持，避免旧页面残影（playwright#28023）
-				'PaintHolding',
-				// 禁用第三方存储分区，保持第三方 cookie 传统行为（playwright#32230）
-				'ThirdPartyStoragePartitioning',
-				// 禁用页面翻译弹窗（playwright#16126）
-				'Translate',
-				// 禁用自动提权（chromium issue 435410220）
-				'AutoDeElevate',
-				// 禁用新版 RenderDocument 导航行为，避免跨进程导航异常（playwright#37714）
-				'RenderDocument',
-				// 禁止启动时下载优化提示数据（减少启动网络活动）
-				'OptimizationHints',
-				// 禁用 Edge 强制浏览器登录
-				'msForceBrowserSignIn',
-				// 禁止 macOS 上更新 LaunchServices 首选版本记录
-				'msEdgeUpdateLaunchServicesPreferredVersion',
-				// ↓ 增强新增
-				// 禁用后台加强唤醒节流：页面隐藏 5 分钟后定时器不再被限制为 1 次/分钟（长时挂机关键）
-				'IntensiveWakeUpThrottling',
-				// 禁用后台标签页冻结（Chrome 对长时间不活跃标签的 freeze 机制）
-				'TabFreeze',
-				// 禁用省内存模式（防止不活跃标签被丢弃/杀进程，feature 名随版本可能变化，未知项会被忽略）
-				'MemorySaverMode'
-			].join(',')
-	];
-}
-
 function loggerPrefix() {
 	return `[OCS] ${new Date().toLocaleTimeString()}`;
 }
 
 /** 步骤提示函数：将初始化进度渲染到导航页 */
 type StepTips = (tips: string | string[], opts?: { loading?: boolean; warn?: boolean }) => Promise<void>;
-
-/**
- * 浏览器增强：注入静音音频保活脚本（防休眠/防冻结），未开启时直接跳过。
- * 隐身实现：闭包内局部状态，无全局变量、无函数/方法暴露、无原型篡改、无控制台输出，
- * 页面被 Chrome 判定为"播放音频"，豁免后台加强节流与页面冻结；
- * AudioContext 实例仅存于闭包，站点 JS 无任何 API 可枚举到。
- */
-async function injectEnhancementKeepalive(browser: BrowserContext, config?: BrowserConfig) {
-	if (!config?.browser_enhancement) return;
-	await browser.addInitScript(() => {
-		// 仅顶层 frame，避免 iframe 重复创建
-		if (window.top !== window) return;
-		let started = false;
-		const start = () => {
-			if (started) return;
-			started = true;
-			try {
-				const Ctor: typeof AudioContext | undefined = window.AudioContext || (window as any).webkitAudioContext;
-				if (!Ctor) return;
-				const ctx = new Ctor();
-				const osc = ctx.createOscillator();
-				const gain = ctx.createGain();
-				gain.gain.value = 0; // 静音
-				osc.frequency.value = 1;
-				osc.connect(gain);
-				gain.connect(ctx.destination);
-				osc.start();
-				// 若上下文被挂起（autoplay 策略未生效时），首次真实手势时恢复
-				if (ctx.state === 'suspended') {
-					const resume = () => {
-						ctx.resume().catch(() => {});
-					};
-					for (const e of ['click', 'keydown', 'touchstart']) {
-						window.addEventListener(e, resume, { once: true, passive: true, capture: true });
-					}
-				}
-			} catch {
-				// 静默：不向页面暴露任何痕迹
-			}
-		};
-		// --autoplay-policy=no-user-gesture-required 下可立即启动；否则首个真实手势时启动
-		start();
-		if (!started) {
-			for (const e of ['click', 'keydown', 'touchstart']) {
-				window.addEventListener(e, start, { once: true, passive: true, capture: true });
-			}
-		}
-	});
-	// 浏览器日志输出（仅测试观察用，网站无法读取进程日志，不构成探查面）
-	console.log(bgGray(loggerPrefix()), '[enhancement] 静音音频保活脚本已注入（浏览器增强已开启）');
-}
 
 /**
  * 创建步骤提示函数：将初始化进度渲染到导航页（顶层页，worker 直接导航 localhost 导航页 URL）。
@@ -1191,8 +1070,6 @@ export async function launchBrowser({
 									process.env.DISPLAY ? '--ozone-platform-hint=auto' : '--ozone-platform=wayland'
 							  ]
 							: []),
-						// 浏览器增强（防休眠/防冻结）附加参数，开关关闭时为空数组
-						...formatBrowserEnhancementArgs(config),
 						...args
 					]
 				})
@@ -1229,9 +1106,6 @@ export async function launchBrowser({
 					if (config?.download_optimization !== false) {
 						watchDownloadFolder(uid, downloadsPath);
 					}
-
-					// 浏览器增强：注入静音音频保活脚本（防休眠/防冻结，未开启时内部直接跳过）
-					await injectEnhancementKeepalive(browser, config);
 
 					try {
 						// 加载起始页：自定义导航页（localhost URL）或浏览器默认新标签页，启动即导航

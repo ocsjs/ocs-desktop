@@ -162,8 +162,6 @@ export interface ScriptWorkerBrowserConfig {
 	enable_dialog?: boolean;
 	/** 是否启用浏览器界面预览（Page.startScreencast 推流） */
 	screenshot_preview?: boolean;
-	/** 浏览器增强（防休眠/防冻结）：附加防节流启动参数 + 注入静音音频豁免脚本 */
-	browser_enhancement?: boolean;
 	/**
 	 * 软件辅助：监听浏览器路由（ocs-environment / ocs-script-actions）与用户脚本联动。
 	 * 默认 true；关闭后脚本不再识别为软件环境（自动化增强不可用），用于卡顿排查。

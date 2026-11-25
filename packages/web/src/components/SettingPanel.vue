@@ -87,28 +87,6 @@
 			</template>
 			<BrowserPath></BrowserPath>
 
-			<Description>
-				<template #label>
-					{{ t('setting_browser_enhancement_label', '浏览器增强（实验性）') }}
-					<a-popover>
-						<template #content>
-							<div v-html="t.html('setting_browser_enhancement_notice', browserEnhancementNotice)"></div>
-						</template>
-						<CircleHelpIcon class="label-help-icon" />
-					</a-popover>
-				</template>
-				<a-tooltip
-					:content="
-						t(
-							'setting_browser_enhancement_tip',
-							'防休眠/防冻结：浏览器最小化或处于后台时仍可长时间运行 JS。仅对新启动的浏览器生效。'
-						)
-					"
-				>
-					<a-switch v-model="store.render.setting.browser.browserEnhancement" />
-				</a-tooltip>
-			</Description>
-
 			<Description label="CPU/内存检测">
 				<a-tooltip
 					content="启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动（含批量启动的剩余启动）；关闭后忽略警告直接启动"
@@ -452,7 +430,6 @@
 import { computed, reactive, ref } from 'vue';
 import Description from './Description.vue';
 import { store } from '../store';
-import { t } from '../utils/langs';
 import BrowserPath from './setting/BrowserPath.vue';
 import { changeTheme, size } from '../utils';
 import { checkBrowserCaches } from '../utils/browser';
@@ -462,18 +439,6 @@ import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon, FolderIcon } from 'luci
 import { Message } from '@arco-design/web-vue';
 
 const shell = bridge.shell;
-
-/**
- * 浏览器增强说明（「？」弹层）：单一文案段
- */
-const browserEnhancementNotice = [
-	'开启后浏览器将以"防休眠/防冻结"模式运行，请注意：',
-	'1. CPU / 内存 / 功耗显著上升，笔记本请注意电量；',
-	'2. 最多同时运行 4 个浏览器，超出将直接拒绝启动（需先关闭其他浏览器，或关闭浏览器增强功能）；',
-	'3. 会向所有页面注入一段静音音频以保持页面活跃（隐身实现，不暴露任何函数/全局变量）；',
-	'4. 仅对之后新启动的浏览器生效，已运行的浏览器需重启后生效；',
-	'5. ⚠️ 该功能为实验性功能，正在测试中，可能存在未知BUG，请谨慎使用。'
-].join('<br>');
 
 /** 主题颜色选项（value 对应 theme.less 中 body[theme-color='xxx'] 预设，color 用于选择器色点展示） */
 const themeColors = [
