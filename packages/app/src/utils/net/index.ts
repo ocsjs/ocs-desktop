@@ -22,6 +22,7 @@ import { probeNetwork } from './status';
 
 export type { NetProxyInfo } from './proxy';
 export type { DownloadOptions } from './download';
+export { DownloadAbortedError, isDownloadAborted } from './download';
 
 export class NetUtils {
 	// ── 代理解析 ──

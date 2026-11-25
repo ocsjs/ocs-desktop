@@ -7,7 +7,14 @@ import { glob } from 'glob';
 import { BUILTIN_CHROME_FILENAME, getBuiltinChromeRoot, getBuiltinChromeRuntimePath } from '@ocs-desktop/common/node';
 import { StoreData } from '../store';
 import { createLoadingWindow } from '../window';
-import { setInitStatus, updateInitLogText, setInitLoadingWindow } from './init.status';
+import {
+	setInitStatus,
+	updateInitLogText,
+	setInitLoadingWindow,
+	setInitCanSwitchToCdn,
+	setInitSwitchSourceHandler
+} from './init.status';
+import { isDownloadAborted } from '../utils/net/download';
 import { downloadBuiltinChromeZip } from './chrome.downloader';
 import type { BuiltinChromeInstallProgress } from '@ocs-desktop/common';
 
@@ -142,13 +149,54 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 			if (!chromeZipPath) {
 				chromeZipPath = path.join(chromeRuntimePath, 'chrome.zip');
 				setInitStatus({ status: 'loading', message: '正在下载内置浏览器...' });
+
+				// 高速下载源切换：非 CDN 源（镜像/谷歌官方，可能限流）下载超过 1 分钟未完成时，
+				// loading 页显示「切换为高速下载」按钮；点击后经 ocs-init:switch-source 中断当前
+				// 下载（DownloadAbortedError），仅用 OCS CDN 源重新下载
+				let aborter = new AbortController();
+				let cdnSwitchRequested = false;
+				let downloadStartedAt = 0;
+				let cdnOffered = false;
+				setInitSwitchSourceHandler(() => {
+					cdnSwitchRequested = true;
+					setInitCanSwitchToCdn(false);
+					setInitStatus({ status: 'loading', message: '已切换为高速下载源，正在重新下载...' });
+					aborter.abort();
+				});
 				try {
-					await downloadBuiltinChromeZip(chromeZipPath, (progress) => {
-						updateInitLogText(
-							`正在下载内置浏览器（${progress.sourceName}，` +
-								`第 ${progress.sourceIndex}/${progress.sourceCount} 个下载源）... ${progress.rate}%`
-						);
-					});
+					while (true) {
+						try {
+							await downloadBuiltinChromeZip(
+								chromeZipPath,
+								(progress) => {
+									if (!downloadStartedAt) downloadStartedAt = Date.now();
+									updateInitLogText(
+										`正在下载内置浏览器（${progress.sourceName}，` +
+											`第 ${progress.sourceIndex}/${progress.sourceCount} 个下载源）... ${progress.rate}%`
+									);
+									// 非 CDN 源超过 1 分钟未完成：提示可切换高速下载（只提示一次）
+									if (
+										!cdnOffered &&
+										!cdnSwitchRequested &&
+										progress.sourceType !== 'ocs-cdn' &&
+										Date.now() - downloadStartedAt > 60 * 1000
+									) {
+										cdnOffered = true;
+										setInitCanSwitchToCdn(true);
+									}
+								},
+								{ signal: aborter.signal, sourceTypes: cdnSwitchRequested ? ['ocs-cdn'] : undefined }
+							);
+							break;
+						} catch (e) {
+							// 用户点击切换：中断当前下载，仅用 CDN 源重试
+							if (cdnSwitchRequested && isDownloadAborted(e)) {
+								aborter = new AbortController();
+								continue;
+							}
+							throw e;
+						}
+					}
 				} catch (e) {
 					// 全部下载源失败/网络不可用：错误展示在初始化窗口内（替代原生弹窗，避免被
 					// alwaysOnTop 的 loading 窗口遮挡导致弹窗按钮无法点击），等待用户主动关闭
@@ -170,6 +218,9 @@ export async function initChrome(_win: BrowserWindow): Promise<boolean> {
 					});
 					await waitInitWindowClosed(loadingWin);
 					return false;
+				} finally {
+					setInitSwitchSourceHandler(undefined);
+					setInitCanSwitchToCdn(false);
 				}
 				setInitStatus({ status: 'loading', message: '内置浏览器下载完成' });
 			}

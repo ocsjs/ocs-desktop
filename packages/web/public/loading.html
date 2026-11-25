@@ -188,6 +188,20 @@
 			.result-footer {
 				margin-top: 16px;
 			}
+			/* 高速下载切换提示区（下载超时时显示） */
+			.cdn-switch {
+				margin-top: 8px;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 6px;
+			}
+			.cdn-switch-tip {
+				font-size: 12px;
+				color: #86909c;
+				line-height: 1.5;
+				text-align: center;
+			}
 			.arco-btn {
 				height: 32px;
 				padding: 0 15px;
@@ -205,6 +219,15 @@
 			.arco-btn-secondary:hover {
 				background-color: #e5e6eb;
 				border-color: #e5e6eb;
+			}
+			.arco-btn-primary {
+				background-color: #165dff;
+				border-color: #165dff;
+				color: #fff;
+			}
+			.arco-btn-primary:hover {
+				background-color: #4080ff;
+				border-color: #4080ff;
 			}
 			.arco-btn-danger {
 				background-color: #f53f3f;
@@ -319,6 +342,22 @@
 				</ul>
 			</div>
 
+			<!-- 高速下载切换：非 CDN 源下载超过 1 分钟未完成时由主进程置 canSwitchToCdn 显示 -->
+			<div
+				class="cdn-switch"
+				id="cdn-switch"
+				style="display: none"
+			>
+				<button
+					id="cdn-switch-btn"
+					type="button"
+					class="arco-btn arco-btn-primary"
+				>
+					切换为高速下载
+				</button>
+				<div class="cdn-switch-tip">当前下载源速度较慢，可切换为 OCS 高速 CDN 源重新下载</div>
+			</div>
+
 			<!-- 底部关闭按钮仅在初始化出错时显示（正常初始化期间隐藏，仅保留右上角关闭） -->
 			<div
 				class="result-footer"
@@ -390,6 +429,7 @@
 				var footerBtn = document.getElementById('footer-btn');
 				var footerEl = document.getElementById('footer');
 				var confirmOverlay = document.getElementById('confirm-overlay');
+				var cdnSwitchEl = document.getElementById('cdn-switch');
 
 				// 状态经 IPC 与主进程通信（preload 暴露 window.ocsInit，无任何网络能力）。
 				// preload 缺失（异常场景）时页面保持静态初始状态。
@@ -418,6 +458,13 @@
 
 				// 底部「关闭软件」按钮（仅出错时显示）：初始化已中止，直接关闭窗口
 				footerBtn.addEventListener('click', requestClose);
+
+				// 「切换为高速下载」：中断当前下载并用 OCS CDN 源重新下载；点击后立即隐藏防止重复点击
+				document.getElementById('cdn-switch-btn').addEventListener('click', function () {
+					if (!ocsInit) return;
+					cdnSwitchEl.style.display = 'none';
+					ocsInit.switchSource();
+				});
 
 				// 确认弹窗：继续等待 → 收起；立即关闭 → 停止初始化并退出软件（不重启）
 				document.getElementById('confirm-cancel').addEventListener('click', function () {
@@ -454,6 +501,8 @@
 					titleEl.textContent = TITLE_MAP[status] || TITLE_MAP.loading;
 					// 底部关闭按钮仅在出错时显示，正常初始化期间隐藏
 					footerEl.style.display = status === 'error' ? '' : 'none';
+					// 「切换为高速下载」仅在下载进行中出现（主进程在非 CDN 源下载超时后置位）
+					cdnSwitchEl.style.display = data.canSwitchToCdn && status === 'loading' ? 'flex' : 'none';
 
 					// 日志列表为空时显示占位
 					if (!logs.length) {

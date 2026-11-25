@@ -26,6 +26,8 @@ export interface InitStatusState {
 	status: InitStatus;
 	message: string;
 	logs: InitLogEntry[];
+	/** 是否显示「切换为高速下载」按钮（非 CDN 源下载超时未完成后置 true） */
+	canSwitchToCdn?: boolean;
 }
 
 const initStatus: InitStatusState = {
@@ -77,7 +79,8 @@ export function getInitStatus(): InitStatusState {
 	return {
 		status: initStatus.status,
 		message: initStatus.message,
-		logs: initStatus.logs.map((l) => ({ ...l }))
+		logs: initStatus.logs.map((l) => ({ ...l })),
+		canSwitchToCdn: initStatus.canSwitchToCdn
 	};
 }
 
@@ -86,7 +89,21 @@ export function resetInitStatus(): void {
 	initStatus.status = 'idle';
 	initStatus.message = '';
 	initStatus.logs = [];
+	initStatus.canSwitchToCdn = undefined;
 	logIndex = 0;
+}
+
+/** 设置「切换为高速下载」按钮可见性并推送（值不变时不重复推送） */
+export function setInitCanSwitchToCdn(v: boolean): void {
+	if (initStatus.canSwitchToCdn === v) return;
+	initStatus.canSwitchToCdn = v;
+	pushInitStatus();
+}
+
+/** 「切换为高速下载」处理器（initChrome 下载期间注册，下载结束注销） */
+let switchSourceHandler: (() => void) | undefined;
+export function setInitSwitchSourceHandler(fn: (() => void) | undefined): void {
+	switchSourceHandler = fn;
 }
 
 /** 初始化 loading 窗口引用（供 ocs-init:close 通道关闭、状态推送定位） */
@@ -105,6 +122,8 @@ export function setInitLoadingWindow(win: BrowserWindow | undefined): void {
 		initIpcRegistered = true;
 		ipcMain.handle('ocs-init:get-status', () => getInitStatus());
 		ipcMain.on('ocs-init:close', () => closeInitLoadingWindow());
+		// 「切换为高速下载」：loading 页按钮触发，由下载方注册的处理器中断并换源重下
+		ipcMain.on('ocs-init:switch-source', () => switchSourceHandler?.());
 		ipcMain.on('ocs-init:force-quit', () => {
 			// 用户在初始化期间确认放弃：立即停止初始化流程并退出软件（不重启，
 			// 与初始化成功路径的 relaunch 相反；进程退出即在途下载/解压一并中止）

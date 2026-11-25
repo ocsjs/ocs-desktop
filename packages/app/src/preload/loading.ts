@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('ocsInit', {
 	getStatus: (): Promise<InitStatusState> => ipcRenderer.invoke('ocs-init:get-status'),
 	/** 关闭初始化窗口 */
 	close: () => ipcRenderer.send('ocs-init:close'),
+	/** 切换为高速下载源（OCS CDN）：中断当前下载并用 CDN 源重新下载 */
+	switchSource: () => ipcRenderer.send('ocs-init:switch-source'),
 	/** 立即停止初始化流程并退出软件（不重启），经页面内确认后调用 */
 	forceQuit: () => ipcRenderer.send('ocs-init:force-quit')
 });
