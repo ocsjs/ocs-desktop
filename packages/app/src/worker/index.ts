@@ -373,7 +373,11 @@ export class ScriptWorker implements ScriptWorkerContract {
 		if (process.platform === 'win32') {
 			const rootPid =
 				this.browserPid ?? (this.launchInfo ? await findWindowsBrowserRootPid(this.launchInfo) : undefined);
-			if (!rootPid) return { mb: 0, cpuTime: 0 };
+			if (!rootPid) {
+				// 静默归零会表现为「内存/CPU 一直 0%」无从排查，必须留痕（stdout → 浏览器日志面板）
+				console.log('[memory] 未定位到浏览器根进程 PID，本次跳过（browserPid/launchInfo 均不可用）');
+				return { mb: 0, cpuTime: 0 };
+			}
 			return getWindowsTreeUsage(rootPid);
 		}
 		try {
@@ -1366,6 +1370,9 @@ async function getPidsMemoryMB(pids: number[]): Promise<number> {
 	}
 }
 
+/** WMI 资源查询首次成功标记（仅打一次日志，见 getWindowsTreeUsage） */
+let wmiUsageLogged = false;
+
 /**
  * Windows 进程树资源占用（WMI，Win7 兼容路径）：
  * 从根 PID 出发按 ParentProcessId 递归收集整棵 Chromium 进程树，
@@ -1393,10 +1400,16 @@ async function getWindowsTreeUsage(rootPid: number): Promise<{ mb: number; cpuTi
 	try {
 		const out = await execCmd('powershell', ['-NoProfile', '-Command', script]);
 		const [memBytes, cpu100ns] = out.trim().split(/\s+/);
-		return {
+		const result = {
 			mb: Math.round((parseInt(memBytes, 10) || 0) / 1024 / 1024),
 			cpuTime: (parseFloat(cpu100ns) || 0) / 1e7
 		};
+		// 首次成功留痕（Win7 排障：正向确认 WMI 路径生效，之后静默）
+		if (!wmiUsageLogged && result.mb > 0) {
+			wmiUsageLogged = true;
+			console.log(`[memory] WMI 资源查询已生效：${result.mb}MB / cpuTime ${result.cpuTime.toFixed(1)}s`);
+		}
+		return result;
 	} catch (e) {
 		// 资源占用为辅助指标：失败静默回退 0（日志走 stdout，不弹错误通知）
 		console.log('[memory] WMI 资源查询失败（已跳过）：', e instanceof Error ? e.message : String(e));
@@ -1424,8 +1437,14 @@ async function findWindowsBrowserRootPid(info: {
 	try {
 		const out = await execCmd('powershell', ['-NoProfile', '-Command', script]);
 		const pid = parseInt(out.trim(), 10);
-		return Number.isFinite(pid) ? pid : undefined;
-	} catch {
+		if (!Number.isFinite(pid)) {
+			// 未匹配到进程：打印特征串便于排查路径不一致（如大小写/符号链接）
+			console.log('[memory] WMI 未匹配到浏览器进程（按 --user-data-dir 特征），userDataDir=', info.userDataDir);
+			return undefined;
+		}
+		return pid;
+	} catch (e) {
+		console.log('[memory] WMI 根进程定位失败：', e instanceof Error ? e.message : String(e));
 		return undefined;
 	}
 }
