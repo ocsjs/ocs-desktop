@@ -4,7 +4,7 @@
  *
  * 本文件仅包含类型（type/interface），不产生运行时代码，可安全用于浏览器环境。
  */
-import type { LaunchOptions } from 'playwright-core';
+import type { Cookie, LaunchOptions } from 'playwright-core';
 import type { AutomationScript } from './scripts/script';
 import type { Config } from './scripts/interface';
 import type { UpdateInformationResource } from './api';
@@ -174,6 +174,11 @@ export interface ScriptWorkerBrowserConfig {
 	 * 默认 true；关闭后回退为 Playwright 托管下载，可能无法下载文件。
 	 */
 	download_optimization?: boolean;
+	/**
+	 * 会话状态保持：浏览器运行期间快照 Cookie 到主进程内存快照存储，下次启动注入恢复（session 语义原样注入）。
+	 * 默认 true；永不落盘，软件完全退出后失效。关闭后快照存储不再采集/注入。
+	 */
+	session_keepalive?: boolean;
 }
 
 export interface ScriptWorkerLangs {
@@ -200,6 +205,8 @@ export type ScriptWorkerLaunchOptions = Required<Pick<LaunchOptions, 'executable
 	userscripts: string[];
 	/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
 	enabledScriptCount: number;
+	/** 主进程内存快照存储下发的会话 Cookie（session 语义原样注入）；无/空表示无可恢复状态 */
+	sessionCookies?: Cookie[];
 };
 
 export interface ScreencastOptions {

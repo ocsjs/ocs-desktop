@@ -214,6 +214,8 @@ export function clearAllBrowserCaches(userDataDirsFolder: string, uids: string[]
 						});
 					})
 				);
+				// 连带清空主进程内存快照存储中的全部 Cookie（清缓存语义包含会话 Cookie）
+				await bridge.methods.clearCookieStore().catch(() => {});
 			} catch (err) {
 				console.error(err);
 				if (String(err).includes('CrashpadMetrics.pma') === false) {

@@ -109,6 +109,17 @@
 				</a-tooltip>
 			</Description>
 
+			<Description label="会话状态保持">
+				<a-tooltip
+					content="浏览器运行期间在内存中保持各平台的会话状态（登录 Cookie），关闭浏览器后重开无需重新登录。仅本次软件运行期间有效（软件完全退出后失效），不会在磁盘保存任何会话凭证。仅对新启动的浏览器生效。"
+				>
+					<a-switch
+						v-model="store.render.setting.browser.sessionKeepalive"
+						@change="onSessionKeepaliveChange"
+					/>
+				</a-tooltip>
+			</Description>
+
 			<Description label="CPU/内存检测">
 				<a-tooltip
 					content="启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动（含批量启动的剩余启动）；关闭后忽略警告直接启动"
@@ -462,6 +473,13 @@ import { SunMoonIcon, SunIcon, MoonIcon, CircleHelpIcon, FolderIcon } from 'luci
 import { Message } from '@arco-design/web-vue';
 
 const shell = bridge.shell;
+
+/** 「会话状态保持」开关变更：关闭时清空主进程内存快照存储中的存量 Cookie */
+function onSessionKeepaliveChange(enabled: string | number | boolean) {
+	if (enabled === false) {
+		bridge.methods.clearCookieStore().catch(() => {});
+	}
+}
 
 /**
  * 浏览器增强说明（「？」弹层）：单一文案段

@@ -8,6 +8,8 @@ import {
 import path, { basename } from 'path';
 import fs from 'fs';
 import { chromium, BrowserContext, Page, LaunchOptions, Response, Request, CDPSession } from 'playwright-core';
+import type { Cookie } from 'playwright-core';
+import { SessionKeepaliveSync, normalizeCookiesForInjection } from './session-keepalive';
 import type { AppStore, Config, ScriptWorker as ScriptWorkerContract, SystemScriptContext } from '@ocs-desktop/common';
 import { AutomationScripts, LegacyScriptMappings } from '../scripts/index';
 import { runSystemScripts } from '../scripts/system';
@@ -38,6 +40,8 @@ type BrowserConfig = {
 	script_assistance?: boolean;
 	/** 文件下载优化：恢复浏览器原生下载行为（默认开启，关闭后可能无法下载文件） */
 	download_optimization?: boolean;
+	/** 会话状态保持：快照 Cookie 到主进程内存快照存储，下次启动注入恢复（默认开启，永不落盘，软件退出即失效） */
+	session_keepalive?: boolean;
 };
 
 interface Langs {
@@ -95,6 +99,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 	private pageListCleanups: (() => void)[] = [];
 	/** 内存占用上报定时器（launch 后启动，close/dispose 时清理） */
 	private memoryReportTimer?: ReturnType<typeof setInterval>;
+	/** Cookie 快照同步器（launch 后启动，close/dispose 时清理；session_keepalive 关闭时为 undefined） */
+	private sessionSync?: SessionKeepaliveSync;
 	/** 上次 CPU 采样（累计 cpuTime 秒数 + 采样时间戳），用于计算占用率 */
 	private lastCpuSample?: { time: number; cpuTime: number };
 	static langs?: Langs;
@@ -165,6 +171,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 			userscripts: string[];
 			/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
 			enabledScriptCount: number;
+			/** 主进程内存快照存储下发的会话 Cookie（session 语义原样注入）；无/空表示无可恢复状态 */
+			sessionCookies?: Cookie[];
 		}
 	) {
 		if (this.extensionPaths.length) {
@@ -257,6 +265,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 
 					// 页面列表实时跟踪（新页面/关闭/导航时广播 pages-changed 给渲染进程）
 					this.setupPageListTracking(browser);
+
+					// Cookie 快照同步（session_keepalive 默认开启；凭证只上报主进程内存快照存储，不落盘）
+					this.setupSessionKeepalive(browser);
 
 					/** URL事件解析器 */
 					this.browser?.on('page', (page) => {
@@ -377,6 +388,17 @@ export class ScriptWorker implements ScriptWorkerContract {
 		}
 	}
 
+	/** 启动 Cookie 快照同步（会话状态保持）：周期 + 事件触发，差分后上报主进程内存快照存储（事件：session-cookies-sync） */
+	private setupSessionKeepalive(browser: BrowserContext) {
+		if (this.config?.session_keepalive === false) return;
+		this.sessionSync = new SessionKeepaliveSync(
+			browser,
+			(cookies) => send('session-cookies-sync', this.uid, cookies),
+			(...msg) => this.debug(...msg)
+		);
+		this.sessionSync.start();
+	}
+
 	/** 启动资源占用定时上报：launch 后立即上报一次，此后每 10s 上报（事件：memory-usage） */
 	private startMemoryReporting() {
 		this.stopMemoryReporting();
@@ -430,6 +452,9 @@ export class ScriptWorker implements ScriptWorkerContract {
 		await Promise.race([
 			(async () => {
 				try {
+					// 优雅关闭前的最终 Cookie 快照（best effort；浏览器已半死时 reject 静默）
+					await this.sessionSync?.snapshot('close').catch(() => {});
+					this.sessionSync?.stop();
 					await this.browser?.close();
 				} catch {}
 			})(),
@@ -452,6 +477,8 @@ export class ScriptWorker implements ScriptWorkerContract {
 		try {
 			this.stopMemoryReporting();
 			this.stopPageListTracking();
+			// 仅停同步器、不做最终快照：dispose 时 IPC 已断开，send 会抛错（见上方注释）
+			this.sessionSync?.stop();
 		} catch {}
 		try {
 			await this.stopScreencastInternal();
@@ -1080,6 +1107,7 @@ export async function launchBrowser({
 	userDataDir,
 	userscripts,
 	enabledScriptCount,
+	sessionCookies,
 	extensionPaths,
 	startPage,
 	automationScripts,
@@ -1099,6 +1127,8 @@ export async function launchBrowser({
 	userscripts: string[];
 	/** 总共启用的用户脚本数量（用于区分"无脚本"和"无需更新"） */
 	enabledScriptCount: number;
+	/** 主进程内存快照存储下发的会话 Cookie（session 语义原样注入）；无/空表示无可恢复状态 */
+	sessionCookies?: Cookie[];
 	/** 本次加载的扩展路径列表（用于精确匹配脚本管理器扩展的 service worker） */
 	extensionPaths: string[];
 	/** 起始页 URL：自定义导航页（localhost）或 chrome://newtab */
@@ -1173,6 +1203,18 @@ export async function launchBrowser({
 					]
 				})
 				.then(async (browser) => {
+					// Cookie 注入（会话状态保持）：关键路径最前端，先于起始页导航与一切系统/自动化流程（杜绝注入与脚本执行的竞态）；
+					// session 语义原样恢复，注入失败不阻塞启动
+					if (config?.session_keepalive !== false && sessionCookies?.length) {
+						const normalized = normalizeCookiesForInjection(sessionCookies);
+						if (normalized.length) {
+							await browser
+								.addCookies(normalized)
+								.then(() => console.log(bgGray(loggerPrefix()), `[session] 已恢复 Cookie ${normalized.length} 条`))
+								.catch((err) => console.error('[session] Cookie 注入失败：', String(err)));
+						}
+					}
+
 					// 恢复浏览器原生下载行为（behavior:'default'，保留 download 事件）：
 					// 下载气泡显示真实文件名、文件原生落盘到"文件下载"目录；
 					// 事件仍触发，供 page.on('download') 截胡转发到本地默认浏览器（取消失败时原生落盘兜底）

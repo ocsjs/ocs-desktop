@@ -70,6 +70,8 @@ export type WebStore = {
 			screenshotQuality: 'ultra' | 'high' | 'medium' | 'low';
 			/** 浏览器增强（防休眠/防冻结）：启动时附加防节流参数并注入静音音频豁免，仅对新启动的浏览器生效 */
 			browserEnhancement: boolean;
+			/** 会话状态保持：浏览器运行期间快照 Cookie 到主进程内存快照存储，下次启动注入恢复（永不落盘，软件退出即失效） */
+			sessionKeepalive: boolean;
 			/** CPU/内存启动预检测：启动浏览器前检测剩余内存与 CPU 负载，不足时拦截启动；关闭后忽略警告直接启动 */
 			memoryCheck: boolean;
 			/** 网络缓存加速：脚本猫/GreasyFork 等站点的脚本下载与搜索 API 磁盘缓存；关闭后恢复原始实时加载 */
@@ -199,6 +201,7 @@ export const DEFAULT_RENDER = {
 			screenshotFramerate: 'low' as const,
 			screenshotQuality: 'medium' as const,
 			browserEnhancement: false,
+			sessionKeepalive: true,
 			memoryCheck: true,
 			networkCache: true,
 			networkCacheSites: {},

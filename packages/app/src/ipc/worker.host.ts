@@ -6,6 +6,7 @@ import { sendToRenderer } from './events';
 import { NetUtils } from '../utils/net';
 import type { ScriptWorkerEventPayload } from '@ocs-desktop/common';
 import { OCS_CDN } from '@ocs-desktop/common';
+import { getSessionCookies, setSessionCookies } from '../session/cookie-store';
 
 const logger = Logger('script-worker-host');
 
@@ -63,7 +64,14 @@ export async function scriptWorkerLaunch(uid: string): Promise<number> {
 
 	child.stdout?.on('data', (data) => push({ uid, kind: 'stdout', chunk: String(data) }));
 	child.stderr?.on('data', (data) => push({ uid, kind: 'stderr', chunk: String(data) }));
-	child.on('message', (msg: any) => push({ uid, kind: 'message', event: msg?.event, args: msg?.args }));
+	child.on('message', (msg: any) => {
+		// Cookie 快照同步：拦截入主进程内存快照存储，不转发渲染层（凭证不出主进程）
+		if (msg?.event === 'session-cookies-sync') {
+			setSessionCookies(uid, msg.args?.[1]);
+			return;
+		}
+		push({ uid, kind: 'message', event: msg?.event, args: msg?.args });
+	});
 	(child as any).on('exit', (code: number | null, signal: string | null) => {
 		// 竞态防护：kill→重launch 后旧进程的 exit 晚到时，不得误删新 worker 的注册项、
 		// spawn 标记，也不得向渲染端推送伪造的退出事件（会导致新 worker 消息全部黑洞）
@@ -89,6 +97,14 @@ export function scriptWorkerSend(uid: string, message: { event: string; args: an
 		// 「浏览器无响应且无任何报错」的排查困境
 		logger.warn('script worker 不存在，消息被丢弃', { uid, event: message?.event });
 		return;
+	}
+	// Cookie 下发（会话状态保持）：launch 消息附加内存快照存储快照（渲染层无感知，协议向后兼容）
+	if (message.event === 'launch') {
+		const cookies = getSessionCookies(uid);
+		const opts = message.args?.[0];
+		if (cookies?.length && opts && typeof opts === 'object') {
+			message = { ...message, args: [{ ...opts, sessionCookies: cookies }] };
+		}
 	}
 	const doSend = () => {
 		try {

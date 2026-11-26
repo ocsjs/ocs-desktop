@@ -424,7 +424,9 @@ export class Process extends EventEmitter {
 				browser_enhancement: store.render.setting.browser.browserEnhancement,
 				// 开发者设置开关（默认开启）：软件辅助（脚本联动路由监听）与文件下载优化
 				script_assistance: store.render.setting.dev?.scriptAssistance !== false,
-				download_optimization: store.render.setting.dev?.downloadOptimization !== false
+				download_optimization: store.render.setting.dev?.downloadOptimization !== false,
+				// 会话状态保持（默认开启）：快照 Cookie 到主进程内存快照存储，下次启动注入恢复（不落盘）
+				session_keepalive: store.render.setting.browser.sessionKeepalive !== false
 			},
 			langs: store.render.langs as any
 		});

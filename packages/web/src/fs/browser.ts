@@ -173,6 +173,8 @@ export class Browser extends Entity implements BrowserOptions {
 
 		// 清理浏览器关闭后保留的预览图
 		clearClosedPreview(this.uid);
+		// 连带清除主进程内存快照存储中的 Cookie（浏览器实体已删除，凭证不应残留）
+		bridge.methods.clearCookieStore(this.uid).catch(() => {});
 
 		const parent = Folder.from(this.parent);
 		Reflect.deleteProperty(parent?.children || {}, this.uid);
@@ -211,6 +213,8 @@ export class Browser extends Entity implements BrowserOptions {
 	async cleanCache() {
 		try {
 			await bridge.fs.rmSync(this.cachePath, { recursive: true, force: true });
+			// 连带清除内存快照存储中的 Cookie（清缓存语义包含会话 Cookie）
+			await bridge.methods.clearCookieStore(this.uid).catch(() => {});
 		} catch (err) {
 			console.log(err);
 		}

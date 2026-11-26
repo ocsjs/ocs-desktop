@@ -152,6 +152,8 @@ export declare const methods: {
         args: any[];
     }) => void;
     scriptWorkerKill: (uid: string, expectedPid?: number) => void;
+    /** 清除内存 Cookie 快照存储（不传 uid 清空全部）。凭证仅有清除出口，无读取 API */
+    clearCookieStore: (uid?: string) => void;
     shellOpenPath: (p: string) => Promise<string>;
     shellShowItemInFolder: (p: string) => void;
     shellOpenExternal: (url: string) => Promise<void>;

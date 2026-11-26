@@ -41,6 +41,7 @@ import { iconCacheStats, clearIconCache } from '../tasks/startup.server';
 import { canOCR } from '../utils/ocr';
 import { sendToRenderer } from './events';
 import { scriptWorkerLaunch, scriptWorkerSend, scriptWorkerKill } from './worker.host';
+import { clearCookieStore } from '../session/cookie-store';
 import { cancelCloseWatchdog } from '../close.watchdog';
 
 /**
@@ -309,6 +310,8 @@ export const methods = {
 	scriptWorkerLaunch: (uid: string) => scriptWorkerLaunch(uid),
 	scriptWorkerSend: (...args: Parameters<typeof scriptWorkerSend>) => scriptWorkerSend(...args),
 	scriptWorkerKill: (uid: string, expectedPid?: number) => scriptWorkerKill(uid, expectedPid),
+	/** 清除内存 Cookie 快照存储（不传 uid 清空全部）。凭证仅有清除出口，无读取 API */
+	clearCookieStore: (uid?: string) => clearCookieStore(uid),
 	shellOpenPath: (p: string) => shell.openPath(p),
 	shellShowItemInFolder: (p: string) => shell.showItemInFolder(p),
 	shellOpenExternal: (url: string) => shell.openExternal(url),
