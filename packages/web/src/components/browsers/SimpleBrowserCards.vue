@@ -195,10 +195,18 @@
 							<div
 								v-if="!store.render.setting.simpleRunningOnly"
 								class="browser-card add-card"
+								:class="{ 'add-card-creating': creatingBrowser }"
 								@click="handleAddBrowser"
 							>
-								<CirclePlusIcon class="add-icon" />
-								<span class="mb-3">新建浏览器</span>
+								<LoaderCircleIcon
+									v-if="creatingBrowser"
+									class="add-icon icon-spin"
+								/>
+								<CirclePlusIcon
+									v-else
+									class="add-icon"
+								/>
+								<span class="mb-3">{{ creatingBrowser ? '正在创建...' : '新建浏览器' }}</span>
 								<span
 									class="text-secondary"
 									style="font-size: 11px"
@@ -227,7 +235,7 @@ import { root } from '../../fs/folder';
 import { Process, processes, closedPreviews, restoreClosedPreviews } from '../../utils/process';
 import { useScreencastVisibility } from '../../composables/useScreencastVisibility';
 import { BrowserOptions } from '../../fs/interface';
-import { newBrowserOrInit } from '../../utils/browser';
+import { newBrowserOrInit, creatingBrowser } from '../../utils/browser';
 import EmptyBrowserCard from '../EmptyBrowserCard.vue';
 import BeginnerGuide from '../BeginnerGuide.vue';
 import BrowserPreview from './BrowserPreview.vue';
@@ -238,7 +246,8 @@ import {
 	GlobeIcon,
 	MouseLeftIcon,
 	MouseRightIcon,
-	PlayCircleIcon
+	PlayCircleIcon,
+	LoaderCircleIcon
 } from 'lucide-vue-next';
 
 /** 获取所有浏览器（递归） */
@@ -608,6 +617,12 @@ onActivated(() => {
 		font-size: 32px;
 		margin-bottom: 8px;
 	}
+}
+
+/* 创建中：禁止点击并弱化 hover 反馈（点击拦截由 newBrowserOrInit 守卫兜底） */
+.add-card-creating {
+	pointer-events: none;
+	opacity: 0.7;
 }
 
 /** 响应式：小屏幕单列 */

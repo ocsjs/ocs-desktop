@@ -22,10 +22,17 @@
 			size="small"
 			type="primary"
 			trigger="hover"
+			:disabled="creatingBrowser"
 			@click="newBrowserOrInit()"
 			@select="onCreateSelect"
 		>
-			<a-space size="mini"><PlusIcon /> 新建 </a-space>
+			<a-space size="mini">
+				<LoaderCircleIcon
+					v-if="creatingBrowser"
+					class="icon-spin"
+				/>
+				<PlusIcon v-else /> 新建
+			</a-space>
 			<template #content>
 				<a-doption value="folder">
 					<a-space size="mini"><FolderIcon />新建文件夹</a-space>
@@ -155,12 +162,21 @@ import { reactive, h, ref } from 'vue';
 import { RawAutomationScript } from '../automation-scripts';
 import AutomationScriptSelector from '../automation-scripts/AutomationScriptSelector.vue';
 import AutomationScriptTable from '../automation-scripts/AutomationScriptTable.vue';
-import { newBrowser, newBrowserOrInit, newFolder } from '../../utils/browser';
+import { newBrowser, newBrowserOrInit, newFolder, creatingBrowser } from '../../utils/browser';
 import { store } from '../../store';
 import { root } from '../../fs/folder';
 import { Browser } from '../../fs/browser';
 import { Modal, Message, Tag } from '@arco-design/web-vue';
-import { DownloadIcon, UploadIcon, EllipsisIcon, PlusIcon, Trash2Icon, FolderIcon, GlobeIcon } from 'lucide-vue-next';
+import {
+	DownloadIcon,
+	UploadIcon,
+	EllipsisIcon,
+	PlusIcon,
+	Trash2Icon,
+	FolderIcon,
+	GlobeIcon,
+	LoaderCircleIcon
+} from 'lucide-vue-next';
 
 /** 批量创建表格组件引用（footer 插槽按钮经 defineExpose 调用其状态与动作） */
 const batchCreateTableRef = ref<InstanceType<typeof AutomationScriptTable>>();

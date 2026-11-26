@@ -7,6 +7,7 @@
 		<div class="mb-2 d-flex align-items-center justify-content-center flex-wrap">
 			<a-button
 				type="primary"
+				:loading="creatingBrowser"
 				@click="newBrowserOrInit()"
 			>
 				<a-space size="mini"> <PlusIcon /> 新建浏览器</a-space>
@@ -34,7 +35,7 @@
 
 <script lang="ts" setup>
 import { about, goto } from '../utils';
-import { newBrowserOrInit } from '../utils/browser';
+import { newBrowserOrInit, creatingBrowser } from '../utils/browser';
 import { OCS_WEBSITE } from '@ocs-desktop/common/web';
 import { CircleQuestionMarkIcon, HouseIcon, PlusIcon } from 'lucide-vue-next';
 </script>

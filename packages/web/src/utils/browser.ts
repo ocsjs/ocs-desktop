@@ -115,6 +115,9 @@ export function newBrowser(opts?: {
 	return browser;
 }
 
+/** 新建浏览器初始化中（环境检测/补全可能耗时数秒），期间界面进入加载态并拦截重复点击 */
+export const creatingBrowser = ref(false);
+
 /**
  * 新建浏览器：先做被动环境检测与自动补全（复用启动链路的 ensureEnvironmentReady，
  * 避免浏览器路径未配置时流程走到「新建浏览器」步骤才报错），
@@ -122,11 +125,17 @@ export function newBrowser(opts?: {
  * 浏览器名称由命名算法自动生成（流程内不再询问），如需自定义可在浏览器列表中重命名。
  */
 export async function newBrowserOrInit(): Promise<void> {
+	if (creatingBrowser.value) {
+		return;
+	}
+	creatingBrowser.value = true;
 	try {
 		await ensureEnvironmentReady();
 	} catch (e: any) {
 		Message.error('环境准备失败，请稍后重试：' + (e?.message || String(e)));
 		return;
+	} finally {
+		creatingBrowser.value = false;
 	}
 	store.render.state.newBrowserSetup = true;
 }
