@@ -46,6 +46,7 @@
 	},
 	"win": {
 		"icon": "public/favicon.png",
+		"sign": "./scripts/win-sign.js",
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{

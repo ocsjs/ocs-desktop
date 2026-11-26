@@ -86,6 +86,12 @@ jobs:
           USE_HARD_LINKS: false
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
+          # SignPath Windows 代码签名（win.sign 钩子逐文件提交）：
+          # 对所有平台注入、仅 win 构建实际调用；fork/PR 无 secrets 时钩子静默跳过不签名
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_POLICY_SLUG: ${{ secrets.SIGNPATH_POLICY_SLUG }}
 
       # mac 防回归冒烟：electronFuses 改写 Electron Framework 后若未重签，
       # arm64 会在启动首次读 fuse 时被内核 SIGKILL（Code Signature Invalid）。
