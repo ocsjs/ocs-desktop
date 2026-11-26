@@ -16,6 +16,9 @@ import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
 import { notifyOcrMissingAfterLaunch, promptOcrChoiceBeforeLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
+import { handleBuiltinChromeLaunchFailure } from './browser-repair';
+import { ensureEnvironmentReady } from './env-bootstrap';
+import { checkLaunchCapacity, warnLaunchBlocked } from './launch-check';
 
 /** 用户脚本安装结果（由 worker 回传） */
 interface InstallResult {
@@ -326,6 +329,8 @@ export class Process extends EventEmitter {
 				// 若状态仍停留在 launching，回落为 closed，解除卡片一直转圈的状态
 				if (this.status === 'launching') {
 					this.status = 'closed';
+					// 启动失败复检：内置浏览器文件被杀毒软件破坏时引导修复，成功后自动重新启动
+					handleBuiltinChromeLaunchFailure(this.browser);
 				}
 				// 开启预览图显示时，保留最后一帧作为"浏览器关闭后的预览图"，由界面层展示/关闭
 				if (store.render.setting.browser.screenshotPreview && this.frameUrl) {
@@ -591,14 +596,68 @@ export class Process extends EventEmitter {
 		}
 	}
 
-	/** 启动文件 */
-	launch() {
-		return new Promise<void | number | null>((resolve, reject) => {
+	/**
+	 * 启动前置流程：并发数限制（浏览器增强）→ 内存/CPU 预检 → 被动环境检测与自动补全，
+	 * 全部通过后初始化 worker 并执行脚本预检（launchPreCheck）。
+	 *
+	 * @returns false = 预检在 worker 初始化前被拦截（实例可直接移除）；
+	 *          undefined = launchPreCheck 失败（worker 已初始化，保留实例回落状态）；
+	 *          对象 = 预检通过（脚本安装参数）
+	 */
+	private async prepareLaunch(opts?: { skipGuardCheck?: boolean }) {
+		// 浏览器增强开启时限制并发数量：运行中（启动中+已启动，不含本实例）达到上限直接拒绝启动
+		if (store.render.setting.browser.browserEnhancement) {
+			const runningCount = processes.filter(
+				(p) => p.uid !== this.uid && (p.status === 'launching' || p.status === 'launched')
+			).length;
+			if (runningCount >= 4) {
+				Message.error('浏览器增强已开启：最多同时运行 4 个浏览器，请先关闭其他浏览器，或在设置中关闭浏览器增强功能');
+				return false;
+			}
+		}
+		// 内存/CPU 启动预检测（设置中「内存检测」关闭时内部直接放行；批量启动由调用方统一检测后跳过）
+		if (!opts?.skipGuardCheck) {
+			const guard = await checkLaunchCapacity();
+			if (!guard.pass) {
+				warnLaunchBlocked(guard.reason || '资源不足');
+				return false;
+			}
+		}
+		// 被动环境检测与自动补全：缺失浏览器/脚本管理器/官方脚本时自动安装（见 utils/env-bootstrap.ts）。
+		// 浏览器二进制不可用时抛错中断启动；拓展/脚本补全失败仅告警放行（下次启动重试）
+		try {
+			await ensureEnvironmentReady();
+		} catch (e: any) {
+			Message.error('环境准备失败，已取消启动：' + (e?.message || String(e)));
+			return false;
+		}
+		// worker 初始化（fork + 事件订阅）必须在预检通过之后：失败路径不残留 worker 进程
+		await this.init(console.log);
+		return this.launchPreCheck();
+	}
+
+	/**
+	 * 启动文件
+	 * @param opts.skipGuardCheck 跳过内存/CPU 预检测（批量启动由调用方统一检测后逐个点名，避免重复检测）
+	 * @returns false = 启动被预检拦截；number = worker 退出码；null = 启动失败/预检失败
+	 */
+	launch(opts?: { skipGuardCheck?: boolean }) {
+		return new Promise<void | number | null | false>((resolve, reject) => {
+			// 同步置为 launching：点击瞬间界面即进入加载态（Browser.launch 依此状态拦截重复点击）
 			this.status = 'launching';
 			// 重新启动：清理此前浏览器关闭时保留的预览图
 			clearClosedPreview(this.uid);
-			this.launchPreCheck()
-				.then((result) => {
+			this.prepareLaunch(opts)
+				.then((prepared) => {
+					// 预检在 worker 初始化前被拦截：无 worker 残留，直接移除实例并回落状态
+					if (prepared === false) {
+						this.status = 'closed';
+						Process.remove(this.uid);
+						Status.clear();
+						resolve(false);
+						return;
+					}
+					const result = prepared;
 					if (result) {
 						this.once('launched', () => {
 							// 启动流程结束，清除「正在启动...」加载状态
@@ -632,6 +691,8 @@ export class Process extends EventEmitter {
 				})
 				.catch((err) => {
 					this.status = 'closed';
+					Process.remove(this.uid);
+					Status.clear();
 					reject(err);
 				});
 		});

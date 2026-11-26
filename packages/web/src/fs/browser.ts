@@ -50,30 +50,6 @@ export class Browser extends Entity implements BrowserOptions {
 	 * @returns 被预检测拦截时返回 false
 	 */
 	async launch(opts?: { skipGuardCheck?: boolean }): Promise<number | false | undefined> {
-		// 浏览器增强开启时限制并发数量：运行中（启动中+已启动）达到上限直接拒绝启动
-		if (store.render.setting.browser.browserEnhancement) {
-			const runningCount = processes.filter((p) => p.status === 'launching' || p.status === 'launched').length;
-			if (runningCount >= 4) {
-				Message.error('浏览器增强已开启：最多同时运行 4 个浏览器，请先关闭其他浏览器，或在设置中关闭浏览器增强功能');
-				return;
-			}
-		}
-		// 内存/CPU 启动预检测（设置中「内存检测」关闭时内部直接放行）
-		if (!opts?.skipGuardCheck) {
-			const guard = await checkLaunchCapacity();
-			if (!guard.pass) {
-				warnLaunchBlocked(guard.reason || '资源不足');
-				return false;
-			}
-		}
-		// 被动环境检测与自动补全：缺失浏览器/脚本管理器/官方脚本时自动安装（见 utils/env-bootstrap.ts）。
-		// 浏览器二进制不可用时抛错中断启动；拓展/脚本补全失败仅告警放行（下次启动重试）
-		try {
-			await ensureEnvironmentReady();
-		} catch (e: any) {
-			Message.error('环境准备失败，已取消启动：' + (e?.message || String(e)));
-			return;
-		}
 		// 去重：同 uid 已存在实例则复用——每次 launch 无条件 new Process 会产生双实例残留
 		// （Process.remove 只删第一个匹配，残留实例的过期 close 兜底可误杀新 worker）
 		let process = Process.from(this.uid);
@@ -84,13 +60,22 @@ export class Browser extends Entity implements BrowserOptions {
 			});
 			processes.push(process);
 		}
+		// 经响应式数组取回实例（直接持有 new 出来的原始对象，其 status 变更不触发界面更新）
 		const reactiveProcess = Process.from(this.uid);
-		if (reactiveProcess) {
-			await reactiveProcess.init(console.log);
-			const code = await reactiveProcess.launch();
-			if (typeof code === 'number') {
-				return code;
-			}
+		if (!reactiveProcess) {
+			return;
+		}
+		// 防重入：Process.launch 会同步置 launching 状态（点击瞬间界面即进入加载态），
+		// 启动中/已启动的重复点击与并发调用在此拦截；并发数/资源/环境预检统一在 Process.launch 内执行
+		if (reactiveProcess.status === 'launching' || reactiveProcess.status === 'launched') {
+			return;
+		}
+		const code = await reactiveProcess.launch(opts);
+		if (typeof code === 'number') {
+			return code;
+		}
+		if (code === false) {
+			return false;
 		}
 
 		this.histories.unshift({ action: '运行', time: Date.now() });
