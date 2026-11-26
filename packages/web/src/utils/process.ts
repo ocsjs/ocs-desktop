@@ -16,7 +16,8 @@ import { Status } from './statusBar';
 import { filterScriptsNeedingInstall, ScriptToInstall } from './script-version';
 import { notifyOcrMissingAfterLaunch, promptOcrChoiceBeforeLaunch } from './ocr';
 import { detectWeakNetwork } from './index';
-import { handleBuiltinChromeLaunchFailure } from './browser-repair';
+// NOTE: browser-repair 模块（启动失败复检/修复引导）尚未提交，此处引用暂移除以恢复 CI；
+// 待 chrome-integrity 功能整体落地时恢复（import + browser-closed 内的复检调用）。
 import { ensureEnvironmentReady } from './env-bootstrap';
 import { checkLaunchCapacity, warnLaunchBlocked } from './launch-check';
 
@@ -329,8 +330,9 @@ export class Process extends EventEmitter {
 				// 若状态仍停留在 launching，回落为 closed，解除卡片一直转圈的状态
 				if (this.status === 'launching') {
 					this.status = 'closed';
-					// 启动失败复检：内置浏览器文件被杀毒软件破坏时引导修复，成功后自动重新启动
-					handleBuiltinChromeLaunchFailure(this.browser);
+					// 启动失败复检（browser-repair，未随当前版本提供）：内置浏览器文件被杀毒软件破坏时
+					// 引导修复，成功后自动重新启动。chrome-integrity 落地时恢复：
+					// handleBuiltinChromeLaunchFailure(this.browser);
 				}
 				// 开启预览图显示时，保留最后一帧作为"浏览器关闭后的预览图"，由界面层展示/关闭
 				if (store.render.setting.browser.screenshotPreview && this.frameUrl) {
