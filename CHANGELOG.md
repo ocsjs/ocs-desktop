@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.1](https://github.com/ocsjs/ocs-desktop/compare/v3.11.0...v3.11.1) (2026-11-27)
+
+
+### 🐛 问题修复
+
+* **signpath:** 适配 electron-builder 26 自定义签名配置与钩子签名 ([f3885bd](https://github.com/ocsjs/ocs-desktop/commit/f3885bd1038621764f838e7bbe7cf87920bdea17))
+
 ## [3.11.0](https://github.com/ocsjs/ocs-desktop/compare/v3.10.0...v3.11.0) (2026-11-26)
 
 
