@@ -46,7 +46,10 @@
 	},
 	"win": {
 		"icon": "public/favicon.png",
-		"sign": "./scripts/win-sign.js",
+		"signtoolOptions": {
+			"sign": "./scripts/win-sign.js",
+			"signingHashAlgorithms": ["sha256"]
+		},
 		"artifactName": "ocs-${version}-setup-${os}-${arch}.${ext}",
 		"target": [
 			{

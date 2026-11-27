@@ -100,11 +100,18 @@ async function downloadSignedArtifact(ctx, signingRequestId) {
 	fs.renameSync(tempPath, ctx.filePath);
 }
 
-module.exports = async function winSign(_configuration, filePath) {
+// electron-builder 26 CustomWindowsSign 签名：(configuration, packager?)，
+// 待签名文件路径在 configuration.path（v24/25 的第二参数 filePath 签名已废弃）
+module.exports = async function winSign(configuration) {
 	const token = process.env.SIGNPATH_API_TOKEN;
 	// fork/PR/本地构建无 secrets：静默降级为不签名（沿用 check-secrets 模式，不阻塞构建）
 	if (!token) {
 		return;
+	}
+
+	const filePath = configuration.path;
+	if (!filePath || !fs.existsSync(filePath)) {
+		throw new Error(`[win-sign] configuration.path 无效：${filePath}`);
 	}
 
 	const ctx = {
