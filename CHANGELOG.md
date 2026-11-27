@@ -1,5 +1,34 @@
 # Changelog
 
+## [3.11.0](https://github.com/ocsjs/ocs-desktop/compare/v3.10.0...v3.11.0) (2026-11-26)
+
+
+### ✨ 新功能
+
+* **browser:** 新建浏览器按钮增加创建中加载态，防止重复点击 ([788896b](https://github.com/ocsjs/ocs-desktop/commit/788896bc2d0a7caa2cfc896cf5ebba0366bd18c2))
+* **init:** 内置浏览器下载支持「切换为高速下载」 ([9bf5827](https://github.com/ocsjs/ocs-desktop/commit/9bf58279e101f2564aae60a3b267009db301c4ba))
+* 会话状态保持（Cookie 快照内存存储 + 启动注入恢复） ([53c837e](https://github.com/ocsjs/ocs-desktop/commit/53c837ecfd0bd1a069100df014eb352a19d6f5e6))
+* 增加Windows-Zip版本安装包构建上传 ([931ec8f](https://github.com/ocsjs/ocs-desktop/commit/931ec8fd0f30744b9741967936644a8fb1cbb071))
+* 导航页自定义网站位置可配置与快捷访问紧凑化 ([5ec43cf](https://github.com/ocsjs/ocs-desktop/commit/5ec43cfccec7b4b81de545532fac41071c2b945b))
+
+
+### 🐛 问题修复
+
+* **init:** dev 模式 loading 窗口误读过期构建产物 ([0981e87](https://github.com/ocsjs/ocs-desktop/commit/0981e8756d5a20d64dcb84aae9774a8b7471fb63))
+* 回流 win7 分支发现的通用修复与改进 ([e859cf9](https://github.com/ocsjs/ocs-desktop/commit/e859cf93f44289f1ad0c0ce678a1033edb538b1f))
+* 移除 process.ts 中悬空的 browser-repair 引用恢复 CI typecheck ([084d2f4](https://github.com/ocsjs/ocs-desktop/commit/084d2f48c9534306fbb16771e128aca5ac63be12))
+
+
+### ⚡ 优化改进
+
+* **browser:** 启动前置检查下沉 Process.launch，点击即入启动态并防重入 ([f5b1677](https://github.com/ocsjs/ocs-desktop/commit/f5b1677fa457f6e21419fb3d5228b099adc263ec))
+* 优化快捷导航页样式 ([9f24080](https://github.com/ocsjs/ocs-desktop/commit/9f240800239913f591db9a4f94c2b381022cc3a0))
+
+
+### 💄 样式更新
+
+* 代码格式化 ([2a61993](https://github.com/ocsjs/ocs-desktop/commit/2a619931043ff08087cf0e3d9008e0d3e13af6ec))
+
 ## [3.10.0](https://github.com/ocsjs/ocs-desktop/compare/v3.9.1...v3.10.0) (2026-11-23)
 
 
